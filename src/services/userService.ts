@@ -5,9 +5,9 @@ import crypto from 'crypto';
 import { html , resetLinkBtn} from "../constants/OTP";
 import { hashPassword, comparePassword } from "../utils/passwordManager";
 import { z } from 'zod'
-import { generateAccessToken, generateRefreshToken , forgotPasswordToken , verifyForgotPasswordToken} from "../utils/jwt";
+import { generateAccessToken, generateRefreshToken , forgotPasswordToken ,verifyRefreshToken, verifyForgotPasswordToken} from "../utils/jwt";
 import sendEmail from "../utils/mailSender";
-
+import cloudinary from '../utils/cloudinary'
 
 const userSchema = z.object({
     name: z.string().min(3, "Name must be at least 3 characters"),
@@ -17,6 +17,7 @@ const userSchema = z.object({
     profilePic: z.string().optional(),
     googleId: z.string().optional()
 });
+
 const generateTokens = (userId: string) => ({
     accessToken: generateAccessToken(userId),
     refreshToken: generateRefreshToken(userId),
@@ -111,9 +112,12 @@ class UserService {
             if (!userData.email || !userData.password) {
                 throw new Error('Fields are missing');
             }
-    
+            console.log('email ',userData.email);
+            
             // Check if user exists
             const user = await userRepo.findUserByEmail(userData.email);
+            console.log('user ',user);
+            
             if (!user) {
                 throw new Error('User not found');
             }
@@ -253,6 +257,75 @@ class UserService {
             throw new Error('Internal server error');
         }
     }
+
+    async getUserInfo(id:string){
+        try {
+            if (!id) {
+                throw new Error('Id is missing ')
+            }
+            const user = await userRepo.findUserById(id)
+            return user 
+        } catch (error) {
+            if (error instanceof Error) {
+                throw new Error(error.message)
+            }
+            throw new Error('Internal server error')
+        }
+    }
+
+    async refreshToken(token:string){
+        if (!token) {
+            throw new Error("Unauthorized - No refresh token provided");
+        }
+    
+        const refresh = verifyRefreshToken(token);
+        if (!refresh) {
+            throw new Error('Invalid refresh token');
+        }
+    
+        const newAccessToken = generateAccessToken(refresh.id);
+        const newRefreshToken = generateRefreshToken(refresh.id);
+
+    
+        return { newAccessToken, newRefreshToken };
+    }
+
+    async updateUserName(id:string,name:string){
+       if (!id || !name) {
+        throw new Error('Fields are missing')
+       }
+
+       const res = await userRepo.updateName(id,name)
+        return res?.name
+    }
+
+    async updateUserPhone(id:string,phone:number){
+       if (!id || !phone) {
+        throw new Error('Fields are missing')
+       }
+
+       const res = await userRepo.updatePhone(id,phone)
+        return res?.phone
+    }
+
+    async updateUserPfp(id:string,image:string){
+       if (!id || !image) {
+        throw new Error('Fields are missing')
+       }
+       
+       try {
+        
+        const res = await cloudinary.uploader.upload(image, {
+          folder: "/UserProfilePic",
+        });
+        const user = await userRepo.updatePfp(id,res.secure_url)
+        return user?.profilePic
+      } catch (error) {
+        console.error(`Failed to update user profile pic `, error);
+        throw new Error(error instanceof Error ? error.message : "Failed to update user pfp");
+      }
+    }
+
 }
 
 export default new UserService()

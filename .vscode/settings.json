@@ -5,6 +5,7 @@
         "minfo",
         "Neue",
         "signup",
-        "SOTP"
+        "SOTP",
+        "tsparser"
     ]
 }

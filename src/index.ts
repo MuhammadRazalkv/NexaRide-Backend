@@ -8,6 +8,7 @@ import logger from './utils/logger';
 import redis from './config/redis';
 import userRoutes from './routes/userRoutes';
 import driverRoutes from './routes/driverRoutes'
+import adminRoutes from './routes/adminRoute';
 
 dotenv.config();
 
@@ -20,10 +21,12 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }))
-app.use(cookieParser())
 
+
+app.use(express.json({ limit: "10mb" })); 
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
+app.use(cookieParser()) 
+ 
 // Morgan 
 const morganFormat = ":method :url :status :response-time ms";
 
@@ -58,6 +61,7 @@ redis.on("error", (err) => {
 // Routes
 app.use('/user', userRoutes);
 app.use('/driver',driverRoutes)
+app.use('/admin',adminRoutes)
 
 // Start the server
 connectDB().then(() => {

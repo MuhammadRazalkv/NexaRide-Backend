@@ -1,5 +1,6 @@
 import { Router } from "express";
 import userController from "../controllers/userController";
+import userAuthMiddleware from "../middlewares/userAuth";
 
 const userRoute = Router()
 
@@ -12,4 +13,10 @@ userRoute.post('/google-login',userController.googleLogin)
 userRoute.post('/requestPasswordReset',userController.requestPasswordReset)
 userRoute.post('/resetPassword',userController.resetPassword)
 
+userRoute.post('/refreshToken',userController.refreshToken  )
+userRoute.get('/getUserInfo',userAuthMiddleware,userController.getUserInfo)
+
+userRoute.patch('/updateUserName',userAuthMiddleware,userController.updateUserName)
+userRoute.patch('/updateUserPhone',userAuthMiddleware,userController.updateUserPhone)
+userRoute.patch('/updateUserPic',userAuthMiddleware,userController.updateUserPfp)
 export default userRoute

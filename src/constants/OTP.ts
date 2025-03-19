@@ -1,3 +1,4 @@
+const driverLoginLink = "http://localhost:5173/driver/login" 
 export const html = (otp: string) => {
   return `<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #fafafa; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 8px; border: 1px solid #e0e0e0;">
   <div style="background-color: #2c3e50; padding: 15px; text-align: center; border-radius: 8px 8px 0 0;">
@@ -45,4 +46,63 @@ export const resetLinkBtn = (resetLink: string) => {
 </div>
 
   `;
+};
+
+export const driverApprovalEmail = (driverName: string) => {
+  return `<div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 8px; border: 1px solid #ddd;">
+    <div style="background-color: #2c3e50; padding: 15px; text-align: center; border-radius: 8px 8px 0 0;">
+      <h2 style="color: #ffffff; margin: 0; font-size: 22px;">Driver Approval Confirmation</h2>
+    </div>
+    <div style="padding: 30px; background-color: #ffffff; border-radius: 0 0 8px 8px; text-align: center;">
+      <p style="font-size: 16px; color: #333333; margin-bottom: 15px;">Hello ${driverName},</p>
+      <p style="font-size: 16px; color: #333333; margin-bottom: 20px;">Congratulations! Your driver information has been successfully approved.</p>
+      <p style="font-size: 14px; color: #555555;">You can now start accepting  requests and providing services on NexaRide.</p>
+     <p style="font-size: 9px; color: rgb(74, 73, 73);">If your vehicle information is not verified yet, please wait for the approval process to complete.</p>
+      <p style="font-size: 14px; color: #555555; margin-bottom: 20px;">To get started, log in to your account and explore the available features.</p>
+      <a href=${driverLoginLink} style="background-color: #2c3e50; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 5px; display: inline-block; font-size: 16px;">Login to Your Account</a>
+      <p style="font-size: 14px; color: #999999; margin-top: 20px;">If you have any questions, feel free to contact our support team.</p>
+    </div>
+    <div style="background-color: #f8f8f8; text-align: center; padding: 10px; border-radius: 0 0 8px 8px;">
+      <p style="font-size: 12px; color: #888888;">© ${new Date().getFullYear()} NexaRide. All Rights Reserved.</p>
+    </div>
+  </div>`;
+};
+
+export const vehicleApprovalEmail = (driverName: string) => {
+  return `<div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 8px; border: 1px solid #ddd;">
+    <div style="background-color: #2c3e50; padding: 15px; text-align: center; border-radius: 8px 8px 0 0;">
+      <h2 style="color: #ffffff; margin: 0; font-size: 22px;">Vehicle Approved</h2>
+    </div>
+    <div style="padding: 30px; background-color: #ffffff; border-radius: 0 0 8px 8px; text-align: center;">
+      <p style="font-size: 16px; color: #333333; margin-bottom: 15px;">Hello ${driverName},</p>
+      <p style="font-size: 16px; color: #333333; margin-bottom: 20px;">Your vehicle has been successfully approved! You are now ready to start accepting ride requests and earning with NexaRide.</p>
+     <p style="font-size: 9px; color: rgb(74, 73, 73);">If your User information is not verified yet, please wait for the approval process to complete.</p>
+      <p style="font-size: 14px; color: #555555;">Log in to your account and go online to begin receiving ride requests.</p>
+      <a href=${driverLoginLink} style="background-color: #28a745; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 5px; display: inline-block; font-size: 16px;">Start Driving</a>
+      <p style="font-size: 14px; color: #999999; margin-top: 20px;">Drive safe and happy earning!</p>
+    </div>
+    <div style="background-color: #f8f8f8; text-align: center; padding: 10px; border-radius: 0 0 8px 8px;">
+      <p style="font-size: 12px; color: #888888;">© ${new Date().getFullYear()} NexaRide. All Rights Reserved.</p>
+    </div>
+  </div>`;
+};
+
+
+export const rejectionEmail = (driverName: string, reason: string,type:string) => {
+  return `<div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 8px; border: 1px solid #ddd;">
+    <div style="background-color: #d9534f; padding: 15px; text-align: center; border-radius: 8px 8px 0 0;">
+      <h2 style="color: #ffffff; margin: 0; font-size: 22px;">Submission Rejected</h2>
+    </div>
+    <div style="padding: 30px; background-color: #ffffff; border-radius: 0 0 8px 8px; text-align: center;">
+      <p style="font-size: 16px; color: #333333; margin-bottom: 15px;">Hello ${driverName},</p>
+      <p style="font-size: 16px; color: #333333; margin-bottom: 20px;">We regret to inform you that your recent submission of ${type} info has been rejected due to the following reason:</p>
+      <p style="font-size: 16px; font-weight: 600; color: #d9534f; margin-bottom: 20px;">"${reason}"</p>
+      <p style="font-size: 14px; color: #555555; margin-bottom: 20px;">Please review the issue and resubmit your details with the necessary corrections.</p>
+      <a href=${driverLoginLink} style="background-color: #2c3e50; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 5px; display: inline-block; font-size: 16px;">Login to reapply</a>
+      <p style="font-size: 14px; color: #999999; margin-top: 20px;">If you need further assistance, please contact our support team.</p>
+    </div>
+    <div style="background-color: #f8f8f8; text-align: center; padding: 10px; border-radius: 0 0 8px 8px;">
+      <p style="font-size: 12px; color: #888888;">© ${new Date().getFullYear()} NexaRide. All Rights Reserved.</p>
+    </div>
+  </div>`;
 };

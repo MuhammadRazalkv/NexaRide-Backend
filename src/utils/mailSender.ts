@@ -17,7 +17,7 @@ export default async function sendEmail(to : string, subject : string, html : st
     await transporter.sendMail({
       from: process.env.APP_GMAIL, // Optional: add the sender's email
       to: to,
-      subject: subject, // Subject line
+      subject: subject, 
       text: "This is a plain text message", // fallback if html doesn't work
       html: html
     });

@@ -1,38 +1,49 @@
 import mongoose, { Schema, Document, ObjectId } from 'mongoose';
 
 export interface IDrivers extends Document {
-  Name: String;
-  Email: String;
-  Password: String;
-  Phone: Number;
-  License_number: String;
-  Availability?: Boolean;
-  Vehicle_id?: ObjectId;
-  Street_address: String;
-  City: String;
-  State: String;
-  Zip_code: String;
-  Dob: Date;
-  License_exp: Date;
-  Verified: Boolean;
+  googleId?:string;
+  name: string;
+  email: string;
+  password: string;
+  phone: string; 
+  license_number: string;
+  availability?: boolean;
+  vehicle_id?: ObjectId;
+  street: string;
+  city: string;
+  state: string;
+  pin_code: string; 
+  dob: Date;
+  license_exp: Date;
+  verified: boolean;
+  isBlocked: boolean;
+  rejectionReason?:string;
+  status?:string;
+  profilePic?:string;
 }
 
 const DriversSchema: Schema = new Schema({
-  Name: { type: String, required: true },
-  Email: { type: String, required: true, unique: true },
-  Password: { type: String, required: true },
-  Phone: { type: Number, required: true, unique: true },
-  License_number: { type: String, required: true, unique: true },
-  Availability: { type: Boolean,  },
-  Vehicle_id: { type: Schema.Types.ObjectId},
-  Street_address: { type: String, required: true },
-  City: { type: String, required: true },
-  State: { type: String, required: true },
-  Zip_code: { type: String, required: true },
-  Dob: { type: Date, required: true },
-  License_exp: { type: Date, required: true },
-  Verified: { type: Boolean, default:false },
-});
+  googleId:{type:String},
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  phone: { type: Number, required: true, unique: true },
+  license_number: { type: String, required: true, unique: true },
+  availability: { type: Boolean, },
+  vehicle_id: { type: Schema.Types.ObjectId , ref:'Vehicle' },
+  street: { type: String, required: true },
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  pin_code: { type: Number, required: true },
+  dob: { type: Date, required: true },
+  license_exp: { type: Date, required: true },
+  verified: { type: Boolean, default: false },
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+  rejectionReason:{type:String },
+  isBlocked:{type:Boolean , default : false},
+  profilePic: { type: String},
+}, { timestamps: true }
+)
 
 const Driver = mongoose.model<IDrivers>('Drivers', DriversSchema);
 

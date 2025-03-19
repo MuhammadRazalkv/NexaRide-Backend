@@ -7,15 +7,15 @@ const ACCESS_SECRET = process.env.ACCESS_SECRET || "access_secret";
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "refresh_secret";
 
 export const generateAccessToken = (userId: string) => {
-    return jwt.sign({ userId }, ACCESS_SECRET, { expiresIn: "15m" });
+    return jwt.sign({  id:userId }, ACCESS_SECRET, { expiresIn: "15m" });
 };
 
 export const generateRefreshToken = (userId: string) => {
-    return jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: "7d" });
+    return jwt.sign({id: userId }, REFRESH_SECRET, { expiresIn: "7d" });
 };
 
-export const forgotPasswordToken = async (userId: string , email:string) => {
-    return jwt.sign({ userId , email }, REFRESH_SECRET , { expiresIn: "1h" });
+export const forgotPasswordToken = async (userId: string, email: string) => {
+    return jwt.sign({ userId, email }, REFRESH_SECRET, { expiresIn: "1h" });
 };
 
 
@@ -24,19 +24,45 @@ export const verifyAccessToken = (token: string) => {
 };
 
 export const verifyRefreshToken = (token: string) => {
-    return jwt.verify(token, REFRESH_SECRET);
+    return jwt.verify(token, REFRESH_SECRET as string )as {id:string} 
 };
 
 export const verifyForgotPasswordToken = (token: string) => {
     try {
-      const decoded = jwt.verify(token, REFRESH_SECRET);
-      return decoded; // Return the decoded payload if the token is valid
+        const decoded = jwt.verify(token, REFRESH_SECRET);
+        return decoded; // Return the decoded payload if the token is valid
     } catch (error) {
-        if (error instanceof Error) {    
+        if (error instanceof Error) {
             console.error('Token verification failed:', error.message);
         }
-      return null;
+        return null;
     }
-  };
+};
+
+export const extractUserIdFromToken =  (token: string) => {
+    try {
+        const decoded = jwt.verify(token, ACCESS_SECRET) as { id: string };
+        return decoded.id;
+    } catch (error:any) {
+        console.error("Error verifying token:", error);
+        throw error
+        
+    }
+};
+
+
+
+export const generateAdminAccessToken = (role: string) => {
+    return jwt.sign({  role:role }, ACCESS_SECRET, { expiresIn: "15m" });
+};
+
+export const generateAdminRefreshToken = (role: string) => {
+    return jwt.sign({role: role }, REFRESH_SECRET, { expiresIn: "7d" });
+};
+
+export const verifyAdminAccessToken = (token: string) => {
+    return  jwt.verify(token, ACCESS_SECRET as string) as { role: string };
+};
+
 
 

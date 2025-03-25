@@ -1,14 +1,13 @@
-import { IVehicle } from "../models/VehicleModel"
+import { IVehicle } from "../models/VehicleModel";
 import vehicleRepo from "../repositories/vehicleRepo";
-import { z } from 'zod'
-import cloudinary from '../utils/cloudinary'
+import { z } from "zod";
+import cloudinary from "../utils/cloudinary";
 import mongoose from "mongoose";
 import driverRepo from "../repositories/driverRepo";
 
-
 function validateLicensePlate(value: string): boolean {
-
-  const licensePlateRegex = /^[A-Z]{2}[ -]?[0-9]{1,2}[ -]?[A-Z]{1,2}[ -]?[0-9]{1,4}$/;
+  const licensePlateRegex =
+    /^[A-Z]{2}[ -]?[0-9]{1,2}[ -]?[A-Z]{1,2}[ -]?[0-9]{1,4}$/;
   return licensePlateRegex.test(value);
 }
 
@@ -28,7 +27,8 @@ const vehicleSchema = z.object({
 
   color: z.string().min(1, "Vehicle color is required").trim(),
 
-  numberPlate: z.string()
+  numberPlate: z
+    .string()
     .min(1, "Number plate is required")
     .refine(validateLicensePlate, "Invalid Number Plate Format"),
   regDate: z.preprocess(
@@ -40,10 +40,12 @@ const vehicleSchema = z.object({
       }
       return arg; // Assume it's already a Date or invalid
     },
-    z.date().refine(
-      (date) => date <= new Date(),
-      "Registration date cannot be in the future"
-    )
+    z
+      .date()
+      .refine(
+        (date) => date <= new Date(),
+        "Registration date cannot be in the future"
+      )
   ),
 
   expDate: z.preprocess(
@@ -55,15 +57,18 @@ const vehicleSchema = z.object({
       }
       return arg; // Assume it's already a Date or invalid
     },
-    z.date().refine(
-      (date) => date >= new Date(),
-      "Expiration date must not be in the past"
-    )
+    z
+      .date()
+      .refine(
+        (date) => date >= new Date(),
+        "Expiration date must not be in the past"
+      )
   ),
 
   insuranceProvider: z.string().min(1, "Insurance provider is required").trim(),
 
-  policyNumber: z.string()
+  policyNumber: z
+    .string()
     .regex(/^\d{10}$/, "Policy number must be exactly 10 digits"),
 
   vehicleImages: z.object({
@@ -73,11 +78,7 @@ const vehicleSchema = z.object({
   }),
 });
 
-
-
 class VehicleService {
-
-
   async addVehicle(data: IVehicle) {
     if (!data) {
       throw new Error("Data is missing");
@@ -93,7 +94,9 @@ class VehicleService {
     if (!parsedData.success) {
       console.error("Zod validation error:", parsedData.error.format());
 
-      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors)
+      const errorMessages = Object.values(
+        parsedData.error.flatten().fieldErrors
+      )
         .flat()
         .join(", ");
 
@@ -120,7 +123,9 @@ class VehicleService {
         vehicleImages[key] = res.secure_url;
       } catch (error) {
         console.error(`Failed to upload image ${vehicleImages[key]}:`, error);
-        throw new Error(error instanceof Error ? error.message : "Image upload failed");
+        throw new Error(
+          error instanceof Error ? error.message : "Image upload failed"
+        );
       }
     }
 
@@ -130,19 +135,17 @@ class VehicleService {
     const vehicleData = { ...parsedData.data, vehicleImages };
     const vehicle = await vehicleRepo.registerNewVehicle(vehicleData);
 
-    driver.vehicle_id = vehicle._id as mongoose.Schema.Types.ObjectId;
+    driver.vehicleId = vehicle._id as mongoose.Schema.Types.ObjectId;
     await driver.save();
-
 
     console.log("Vehicle registered successfully:", vehicle);
     return {
       driver: {
         name: driver.name,
         email: driver.email,
-        status: 'Pending'
-      }
-
-    }
+        status: "Pending",
+      },
+    };
   }
 
   async reApplyVehicle(id: string, data: IVehicle) {
@@ -160,7 +163,9 @@ class VehicleService {
     if (!parsedData.success) {
       console.error("Zod validation error:", parsedData.error.format());
 
-      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors)
+      const errorMessages = Object.values(
+        parsedData.error.flatten().fieldErrors
+      )
         .flat()
         .join(", ");
 
@@ -175,10 +180,10 @@ class VehicleService {
     if (!driver) {
       throw new Error("Driver not found, please retry after signup");
     }
-    if (!driver.vehicle_id) {
+    if (!driver.vehicleId) {
       throw new Error("Vehicle not found");
     }
-    const vehicleDetails = await vehicleRepo.findVehicleById(driver.vehicle_id)
+    const vehicleDetails = await vehicleRepo.findVehicleById(driver.vehicleId);
     if (!vehicleDetails) {
       throw new Error("Vehicle not found");
     }
@@ -193,7 +198,9 @@ class VehicleService {
         vehicleImages[key] = res.secure_url;
       } catch (error) {
         console.error(`Failed to upload image ${vehicleImages[key]}:`, error);
-        throw new Error(error instanceof Error ? error.message : "Image upload failed");
+        throw new Error(
+          error instanceof Error ? error.message : "Image upload failed"
+        );
       }
     }
 
@@ -203,17 +210,14 @@ class VehicleService {
     const vehicleData = { ...parsedData.data, vehicleImages };
     const vehicle = await vehicleRepo.updatedVehicleData(id, vehicleData);
 
-
-
     console.log("Vehicle registered successfully:", vehicle);
     return {
       driver: {
         name: driver.name,
         email: driver.email,
-        status: 'Pending'
-      }
-
-    }
+        status: "Pending",
+      },
+    };
   }
 
   async rejectReason(driverId: string) {
@@ -222,37 +226,35 @@ class VehicleService {
       const driver = await driverRepo.findDriverById(id);
 
       if (!driver) {
-        throw new Error('Driver not found. Please ensure you have registered.');
+        throw new Error("Driver not found. Please ensure you have registered.");
       }
-      if (!driver.vehicle_id) {
-        throw new Error('Vehicle not found')
+      if (!driver.vehicleId) {
+        throw new Error("Vehicle not found");
       }
 
-      const vehicle = await vehicleRepo.findVehicleById(driver.vehicle_id)
+      const vehicle = await vehicleRepo.findVehicleById(driver.vehicleId);
       if (!vehicle) {
-        throw new Error('Vehicle not found')
-
+        throw new Error("Vehicle not found");
       }
-      if (vehicle.status !== 'rejected') {
-        throw new Error('There seems to be an issue with your application status. Please log in again to check your current status.');
+      if (vehicle.status !== "rejected") {
+        throw new Error(
+          "There seems to be an issue with your application status. Please log in again to check your current status."
+        );
       }
 
-      console.log('Vehicle data ', vehicle);
-
+      console.log("Vehicle data ", vehicle);
 
       const reason = vehicle.rejectionReason;
 
       return {
-        reason
+        reason,
       };
-
     } catch (error) {
       console.error("Error in DriverService -> rejectReason:", error);
       if (error instanceof Error) throw error;
-      throw new Error('Internal server error');
+      throw new Error("Internal server error");
     }
   }
-
 }
 
-export default new VehicleService()
+export default new VehicleService();

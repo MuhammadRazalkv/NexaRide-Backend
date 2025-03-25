@@ -1,6 +1,7 @@
 import { Router } from "express";
 import driverController from "../controllers/driverController";
 import authMiddleware from "../middlewares/driverAuth";
+import rideController from "../controllers/rideController";
 
 const driverRoutes = Router()
 
@@ -22,6 +23,12 @@ driverRoutes.patch('/reApplyDriver',authMiddleware,driverController.reApplyDrive
 driverRoutes.get('/vehicleRejectReason',authMiddleware,driverController.vehicleRejectReason)
 driverRoutes.patch('/reApplyVehicle',authMiddleware,driverController.reApplyVehicle)
 
+driverRoutes.get('/getDriverInfo',authMiddleware,driverController.getDriverInfo)
+driverRoutes.patch('/updateDriverInfo',authMiddleware,driverController.updateDriverInfo)
+driverRoutes.patch('/updateAvailability',authMiddleware,driverController.updateAvailability)
+
 driverRoutes.post('/upload',driverController.upload)
+
+driverRoutes.post('/useRandomLocation',authMiddleware,rideController.assignRandomLocation)
 
 export default driverRoutes

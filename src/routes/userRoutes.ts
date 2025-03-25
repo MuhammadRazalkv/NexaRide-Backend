@@ -1,6 +1,7 @@
 import { Router } from "express";
 import userController from "../controllers/userController";
 import userAuthMiddleware from "../middlewares/userAuth";
+import rideController from "../controllers/rideController";
 
 const userRoute = Router()
 
@@ -19,4 +20,10 @@ userRoute.get('/getUserInfo',userAuthMiddleware,userController.getUserInfo)
 userRoute.patch('/updateUserName',userAuthMiddleware,userController.updateUserName)
 userRoute.patch('/updateUserPhone',userAuthMiddleware,userController.updateUserPhone)
 userRoute.patch('/updateUserPic',userAuthMiddleware,userController.updateUserPfp)
+
+
+//! Ride routes 
+
+userRoute.post('/checkCabs',userAuthMiddleware,rideController.checkCabs)
+
 export default userRoute

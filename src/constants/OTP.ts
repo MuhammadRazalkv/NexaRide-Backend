@@ -1,4 +1,4 @@
-const driverLoginLink = "http://localhost:5173/driver/login" 
+const driverLoginLink = "http://localhost:5173/driver/login";
 export const html = (otp: string) => {
   return `<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #fafafa; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 8px; border: 1px solid #e0e0e0;">
   <div style="background-color: #2c3e50; padding: 15px; text-align: center; border-radius: 8px 8px 0 0;">
@@ -15,8 +15,8 @@ export const html = (otp: string) => {
     <p style="font-size: 12px; color: #888888;">© ${new Date().getFullYear()} NexaRide. All Rights Reserved.</p>
   </div>
 </div>
-`
-}
+`;
+};
 
 export const resetLinkBtn = (resetLink: string) => {
   return `
@@ -87,8 +87,11 @@ export const vehicleApprovalEmail = (driverName: string) => {
   </div>`;
 };
 
-
-export const rejectionEmail = (driverName: string, reason: string,type:string) => {
+export const rejectionEmail = (
+  driverName: string,
+  reason: string,
+  type: string
+) => {
   return `<div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 8px; border: 1px solid #ddd;">
     <div style="background-color: #d9534f; padding: 15px; text-align: center; border-radius: 8px 8px 0 0;">
       <h2 style="color: #ffffff; margin: 0; font-size: 22px;">Submission Rejected</h2>

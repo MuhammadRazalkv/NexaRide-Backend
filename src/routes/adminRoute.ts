@@ -23,4 +23,4 @@ adminRoute.patch('/approve-vehicle',adminAuthMiddleware, adminController.approve
 adminRoute.patch('/reject-vehicle',adminAuthMiddleware, adminController.rejectVehicle);
 
 
-export default adminRoute
+export default adminRoute 

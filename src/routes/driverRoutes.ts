@@ -30,5 +30,8 @@ driverRoutes.patch('/updateAvailability',authMiddleware,driverController.updateA
 driverRoutes.post('/upload',driverController.upload)
 
 driverRoutes.post('/useRandomLocation',authMiddleware,rideController.assignRandomLocation)
+driverRoutes.post('/verifyRideOTP',authMiddleware,rideController.verifyRideOTP)
+//! This only need in dev stage
+driverRoutes.get('/getCurrentLoc',authMiddleware,driverController.getCurrentLocation)
 
 export default driverRoutes

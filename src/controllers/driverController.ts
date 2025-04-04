@@ -122,14 +122,10 @@ class DriverController implements IDriverController {
 
   async getStatus(req: ExtendedRequest, res: Response): Promise<void> {
     try {
-      console.log("Get status reached ");
-
       if (!req.id) {
         throw new Error("Id not found");
       }
       const response = await driverService.getStatus(req.id);
-
-      console.log("Get status ", response);
 
       res.status(201).json({
         driverStatus: response.driverStatus,
@@ -332,6 +328,22 @@ class DriverController implements IDriverController {
       res.status(200).json({ success: true, availability: response });
     } catch (error: any) {
       console.log("Error in driverC -> getStatus ", error.message);
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getCurrentLocation(req: ExtendedRequest, res: Response): Promise<void> {
+    try {
+      const driverId = req.id;
+      if (!driverId) {
+        throw new Error("Driver id not found ");
+      }
+
+      const location = await driverService.getCurrentLocation(driverId);
+      res.status(200).json({ success: true, location });
+    } catch (error: any) {
+      console.log(error);
+
       res.status(400).json({ message: error.message });
     }
   }

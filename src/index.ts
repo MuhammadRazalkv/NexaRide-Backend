@@ -55,9 +55,9 @@ app.use("/user", userRoutes);
 app.use("/driver", driverRoutes);
 app.use("/admin", adminRoutes);
 
-// Create HTTP server and initialize socket
+
 const server = http.createServer(app);
-initializeSocket(server); // Initialize socket logic
+initializeSocket(server);
 
 // Start the server
 connectDB().then(() => {

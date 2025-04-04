@@ -534,11 +534,28 @@ class DriverService {
     if (!driver) {
       throw new Error("Driver not found");
     }
+    const type = driver.isAvailable == 'online' ? 'offline' : 'online'
     const updatedDriver = await driverRepo.toggleAvailability(
       id,
-      driver.isAvailable
+      type
     );
     return updatedDriver?.isAvailable;
+  }
+
+  async statusOnRide(id: string) {
+    const driver = await driverRepo.findDriverById(id);
+    if (!driver) {
+      throw new Error("Driver not found");
+    }
+    await driverRepo.goOnRide(id)
+  }
+
+  async getCurrentLocation(id:string){
+    const driver = await driverRepo.findDriverById(id)
+    if (!driver) {
+      throw new Error('Driver not found')
+    }
+    return driver.location.coordinates
   }
 }
 

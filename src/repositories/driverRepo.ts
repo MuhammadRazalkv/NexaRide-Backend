@@ -3,6 +3,8 @@ import Driver from "../models/DriverModel";
 import { IDrivers } from "../models/DriverModel";
 import { CheckCabs } from "../interface/Iride";
 import Pricing from "../models/PricingModel";
+import { ObjectId } from "mongodb";  // Correct import for ObjectId values
+
 class DriverRepo {
   async findDriverById(id: mongoose.Types.ObjectId | string) {
     return await Driver.findById(id);
@@ -122,8 +124,6 @@ class DriverRepo {
         },
       },
     ]);
-
-    
   }
 
   async rejectDriver(id: string, reason: string) {
@@ -176,82 +176,111 @@ class DriverRepo {
     );
   }
 
-  async getAvailableDriversNearby(pickupCoords:[number,number]) {
+  async getAvailableDriversNearby(pickupCoords: [number, number]) {
     return await Driver.aggregate([
       {
         $geoNear: {
           near: {
             type: "Point",
-            coordinates: pickupCoords
+            coordinates: pickupCoords,
           },
           distanceField: "distance",
           maxDistance: 5000,
-          spherical: true
-        }
+          spherical: true,
+        },
       },
       {
         $lookup: {
-          from: "vehicles",            
-          localField: "vehicleId",    
-          foreignField: "_id",        
-          as: "vehicleDetails"        
-        }
+          from: "vehicles",
+          localField: "vehicleId",
+          foreignField: "_id",
+          as: "vehicleDetails",
+        },
       },
       {
-        $unwind: "$vehicleDetails"    
+        $unwind: "$vehicleDetails",
       },
       {
         $match: {
-          isAvailable: true,  
-          // "vehicleDetails.status": "approved",  
+          isAvailable: "online",
+          // "vehicleDetails.status": "approved",
           // status: 'approved'
-        }
+        },
       },
       {
-        $project:{
+        $project: {
           name: 1,
-          location:1,
+          location: 1,
           vehicleDetails: {
             brand: 1,
             vehicleModel: 1,
             color: 1,
             category: 1,
           },
-        }
-      }
+        },
+      },
     ]);
   }
 
-  async toggleAvailability(id: string, availability: boolean) {
+  async getDriverWithVehicleInfo(id: string) {
+    return await Driver.aggregate([
+      {
+        $match: { _id: new ObjectId(id) }, 
+      },
+      {
+        $lookup: {
+          from: "vehicles",
+          localField: "vehicleId",
+          foreignField: "_id",
+          as: "vehicleDetails",
+        },
+      },
+      {
+        $unwind: "$vehicleDetails",
+      },
+      {
+        $project: {
+          name: 1,
+          location: 1,
+          vehicleDetails: {
+            brand: 1,
+            vehicleModel: 1,
+            color: 1,
+            category: 1,
+          },
+        },
+      },
+    ]);
+  }
+
+  async toggleAvailability(id: string, availability: string) {
     return await Driver.findByIdAndUpdate(
       id,
       {
-        $set: { isAvailable: !availability },
+        $set: { isAvailable: availability },
       },
       { new: true }
     );
   }
 
-
-
-
-
-
-
-  //! only for development 
-  async assignRandomLocation(id:string,coordinates:number[]){
-    return await Driver.findByIdAndUpdate(id,
-      {
-        location: {
-          type: 'Point',  
-          coordinates: coordinates
+  //! only for development
+  async assignRandomLocation(id: string, coordinates: number[]) {
+    return await Driver.findByIdAndUpdate(id, {
+      location: {
+        type: "Point",
+        coordinates: coordinates,
       },
-      }
-    )
+    });
   }
 
-  async findPrices(){
-    return Pricing.find().select('vehicleClass farePerKm')
+  async findPrices() {
+    return Pricing.find().select("vehicleClass farePerKm");
+  }
+
+  async goOnRide(id: string) {
+    return Driver.findByIdAndUpdate(id, {
+      $set: { isAvailable: "onRide" },
+    });
   }
 }
 

@@ -1,11 +1,11 @@
-import { IDrivers } from "../models/DriverModel";
-import { IVehicle } from "../models/VehicleModel";
-import driverRepo from "../repositories/driverRepo";
-import OTPRepo from "../repositories/OTPRepo";
-import vehicleRepo from "../repositories/vehicleRepo";
+import { IDrivers } from "../models/driver.model";
+import { IVehicle } from "../models/vehicle.model";
+import driverRepo from "../repositories/driver.repo";
+import OTPRepo from "../repositories/otp.repo";
+import vehicleRepo from "../repositories/vehicle.repo";
 import { html } from "../constants/OTP";
 import crypto from "crypto";
-import { z } from "zod";
+import { string, z } from "zod";
 import { hashPassword } from "../utils/passwordManager";
 import {
   generateAccessToken,
@@ -18,6 +18,7 @@ import sendEmail from "../utils/mailSender";
 import { resetLinkBtn } from "../constants/OTP";
 
 import mongoose from "mongoose";
+import walletRepo from "../repositories/wallet.repo";
 
 const driverSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -556,6 +557,21 @@ class DriverService {
       throw new Error('Driver not found')
     }
     return driver.location.coordinates
+  }
+  async goBackToOnline(id:string){
+    if (!id) {
+      throw new Error('Id is required')
+    }
+    await driverRepo.goBackToOnline(id)
+  }
+
+  async getWalletInfo(driverId:string){
+    const driver = await driverRepo.findDriverById(driverId)
+    if (!driver) {
+      throw new Error('Driver not found')
+    }
+    const wallet = await walletRepo.getDriverWalletInfo(driverId)
+    return wallet
   }
 }
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
-import driverController from "../controllers/driverController";
-import authMiddleware from "../middlewares/driverAuth";
-import rideController from "../controllers/rideController";
+import driverController from "../controllers/driver.controller";
+import authMiddleware from "../middlewares/driver.auth.middleware";
+import rideController from "../controllers/ride.controller";
 
 const driverRoutes = Router()
 
@@ -31,6 +31,10 @@ driverRoutes.post('/upload',driverController.upload)
 
 driverRoutes.post('/useRandomLocation',authMiddleware,rideController.assignRandomLocation)
 driverRoutes.post('/verifyRideOTP',authMiddleware,rideController.verifyRideOTP)
+
+driverRoutes.get('/getWalletInfo',authMiddleware,driverController.getWalletInfo)
+driverRoutes.get('/getRideHistory',authMiddleware,rideController.getRideHistoryDriver)
+
 //! This only need in dev stage
 driverRoutes.get('/getCurrentLoc',authMiddleware,driverController.getCurrentLocation)
 

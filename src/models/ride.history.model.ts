@@ -6,17 +6,20 @@ export interface IRideHistory extends Document {
   pickupLocation: string;
   dropOffLocation: string;
   totalFare: number;
+  commission?: number, // Platform fee 
+  driverEarnings?: number,
   distance: number; // In km
   estTime: number;
   timeTaken?: number; // In minutes
   status: string;
-  startedAt?: Date;
-  endedAt?: Date;
-  canceledAt?: Date;
+  startedAt?: Number;
+  endedAt?: number;
+  canceledAt?:number;
   paymentStatus: string;
   pickupCoords: [number, number];
   dropOffCoords: [number, number];
   OTP:string
+  cancelledBy?:string
 }
 
 const RideHistorySchema: Schema = new Schema<IRideHistory>({
@@ -31,6 +34,8 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>({
   pickupLocation: { type: String, required: true },
   dropOffLocation: { type: String, required: true },
   totalFare: { type: Number, required: true },
+  commission: { type: Number },
+  driverEarnings: { type: Number },
   distance: { type: Number, required: true },
   estTime: { type: Number, required: true },
   timeTaken: { type: Number, required: false },
@@ -39,15 +44,16 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>({
     enum: ["completed", "canceled", "ongoing"],
     required: true,
   },
-  startedAt: { type: Date },
-  endedAt: { type: Date },
-  canceledAt: { type: Date },
+  startedAt: { type: Number },
+  endedAt: { type: Number },
+  canceledAt: { type: Number },
   paymentStatus: {
     type: String,
     enum: ["pending", "completed", "failed"],
     default: "pending",
   },
-  OTP:{type:String,required:true}
+  OTP:{type:String,required:true},
+  cancelledBy:{type:String,enum:['driver',"user"]}
 });
 
 export default mongoose.model<IRideHistory>("RideHistory", RideHistorySchema);

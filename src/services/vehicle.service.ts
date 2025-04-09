@@ -1,9 +1,9 @@
-import { IVehicle } from "../models/VehicleModel";
-import vehicleRepo from "../repositories/vehicleRepo";
+import { IVehicle } from "../models/vehicle.model";
+import vehicleRepo from "../repositories/vehicle.repo";
 import { z } from "zod";
 import cloudinary from "../utils/cloudinary";
 import mongoose from "mongoose";
-import driverRepo from "../repositories/driverRepo";
+import driverRepo from "../repositories/driver.repo";
 
 function validateLicensePlate(value: string): boolean {
   const licensePlateRegex =

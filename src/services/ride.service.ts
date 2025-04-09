@@ -1,9 +1,9 @@
-import { CheckCabs } from "../interface/Iride";
-import Pricing from "../models/PricingModel";
-import driverRepo from "../repositories/driverRepo";
-import userRepo from "../repositories/userRepo";
-import { IRideHistory } from "../models/RideHistory";
-import rideRepo from "../repositories/rideRepo";
+import { CheckCabs } from "../interface/ride.interface";
+import Pricing from "../models/pricing.model";
+import driverRepo from "../repositories/driver.repo";
+import userRepo from "../repositories/user.repo";
+import { IRideHistory } from "../models/ride.history.model";
+import rideRepo from "../repositories/ride.repo";
 
 class RideService {
   async checkCabs(id: string, data: CheckCabs) {
@@ -72,6 +72,13 @@ class RideService {
     const ride = await rideRepo.getUserIdByDriverId(driverId);
     return ride?.userId;
   }
+  async getDriverByUserId(userId:string) {
+    console.log('User id ',userId);
+    
+    const ride = await rideRepo.getDriverByUserId(userId);
+    
+    return ride?.driverId;
+  }
 
   async verifyRideOTP(driverId:string,OTP:string){
     console.log('DRIVER ID ',driverId,'otp',OTP);
@@ -86,7 +93,26 @@ class RideService {
     if (ride.OTP !== OTP) {
       throw new Error('Invalid OTP')
     }
-    return 
+    await rideRepo.updateRideStartedAt(ride.id)
+    return Date.now()
+  }
+
+  async cancelRide(driverId:string,userId:string,cancelledBy:'User'|"Driver"){
+    const response = await rideRepo.cancelRide(driverId,userId,cancelledBy)
+  }
+  async getRideIdByUserAndDriver(driverId:string,userId:string){
+    const ride = await rideRepo.getRideIdByUserAndDriver(driverId,userId)
+    return {rideId:ride?.id,fare:ride?.totalFare}
+  }
+
+
+  async getRideHistory(id:string){
+    const history = await rideRepo.findRideByUserId(id)
+    return history
+  }
+  async getRideHistoryDriver(id:string){
+    const history = await rideRepo.findRideByDriver(id)
+    return history
   }
 }
 

@@ -1,4 +1,4 @@
-import Pricing from "../models/PricingModel";
+import Pricing from "../models/pricing.model";
 interface IUpdateFare {
   vehicleClass: "Basic" | "Premium" | "Luxury";
   farePerKm: number;

@@ -1,4 +1,5 @@
-import User, { IUser } from "../models/UserModel";
+import User, { IUser } from "../models/user.model";
+import UserWallet from "../models/user.wallet.model";
 
 class UserRepository {
   // async emailVerification(userData: IUser): Promise<IUser> {
@@ -87,6 +88,8 @@ class UserRepository {
       { new: true }
     );
   }
+
+ 
 }
 
 export default new UserRepository();

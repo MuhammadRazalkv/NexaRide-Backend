@@ -1,7 +1,7 @@
-import userRepo from "../repositories/userRepo";
-import driverRepo from "../repositories/driverRepo";
-import vehicleRepo from "../repositories/vehicleRepo";
-import adminRepo from "../repositories/adminRepo";
+import userRepo from "../repositories/user.repo";
+import driverRepo from "../repositories/driver.repo";
+import vehicleRepo from "../repositories/vehicle.repo";
+import adminRepo from "../repositories/admin.repo";
 import {
   generateAdminAccessToken,
   generateAdminRefreshToken,

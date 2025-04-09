@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { ObjectId } from "mongoose";
-import { IVehicle } from "../models/VehicleModel";
-import Vehicle from "../models/VehicleModel";
+import { IVehicle } from "../models/vehicle.model";
+import Vehicle from "../models/vehicle.model";
 
 class VehicleRepo {
   async findVehicleById(vehicleId: string | ObjectId) {

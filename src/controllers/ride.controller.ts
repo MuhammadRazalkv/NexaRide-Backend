@@ -1,6 +1,8 @@
-import rideService from "../services/rideService";
-import { ExtendedRequest } from "../middlewares/userAuth";
+import rideService from "../services/ride.service";
+import { ExtendedRequest } from "../middlewares/user.auth.middleware";
 import { Response } from "express";
+
+
 
 class RideController {
   async checkCabs(req: ExtendedRequest, res: Response): Promise<void> {
@@ -44,8 +46,40 @@ class RideController {
       const OTP = req.body.otp;
 
       const response = await rideService.verifyRideOTP(driverId, OTP);
-      res.status(200).json({ success: true});
+      res.status(200).json({ success: true,startedAt:response});
     } catch (error: any) {
+      console.log(error);
+
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getRideHistory(req:ExtendedRequest,res:Response):Promise<void>{
+    try {
+      const id = req.id
+      if (!id) {
+        throw new Error('Id not found')
+      }
+      const history = await rideService.getRideHistory(id)
+      res.status(200).json({ success: true,history});
+      
+    } catch (error:any) {
+      console.log(error);
+
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getRideHistoryDriver(req:ExtendedRequest,res:Response):Promise<void>{
+    try {
+      const id = req.id
+      if (!id) {
+        throw new Error('Id not found')
+      }
+      const history = await rideService.getRideHistoryDriver(id)
+      res.status(200).json({ success: true,history});
+      
+    } catch (error:any) {
       console.log(error);
 
       res.status(400).json({ message: error.message });

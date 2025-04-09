@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import { IUserController } from "../interface/user/IUserController";
-import userService from "../services/userService";
-import { ExtendedRequest } from "../middlewares/userAuth";
+import { IUserController } from "../interface/user/user.controller.interface";
+import userService from "../services/user.service";
+import { ExtendedRequest } from "../middlewares/user.auth.middleware";
+
 
 class UserController implements IUserController {
   async emailVerification(req: Request, res: Response): Promise<void> {
@@ -113,11 +114,9 @@ class UserController implements IUserController {
   async requestPasswordReset(req: Request, res: Response): Promise<void> {
     try {
       await userService.requestPasswordReset(req.body.email);
-      res
-        .status(200)
-        .json({
-          message: "Password reset link has been sent your email address",
-        });
+      res.status(200).json({
+        message: "Password reset link has been sent your email address",
+      });
     } catch (error: any) {
       console.log(
         "Error in UserController -> request passwordRest ",
@@ -241,6 +240,99 @@ class UserController implements IUserController {
       res.status(200).json({ success: true, image: newImg });
     } catch (error: any) {
       console.log("Error in UserController -> update pfp  ", error.message);
+      res.status(401).json({ message: error.message });
+    }
+  }
+
+  async addMoneyToWallet(req: ExtendedRequest, res: Response): Promise<void> {
+    try {
+      const id = req.id;
+      const amount = req.body.amount;
+      if (!id) {
+        throw new Error("Id is missing ");
+      }
+      const url = await userService.addMoneyToWallet(id, amount);
+
+      res.status(200).json({ success: true, url });
+    } catch (error: any) {
+      console.log("Error in UserController -> update pfp  ", error.message);
+      res.status(401).json({ message: error.message });
+    }
+  }
+
+  async getWalletInfo(req: ExtendedRequest, res: Response): Promise<void> {
+    try {
+      const id = req.id;
+      if (!id) {
+        throw new Error("Id is missing ");
+      }
+      const wallet = await userService.getWalletInfo(id);
+      res.status(200).json({ success: true, wallet });
+    } catch (error: any) {
+      console.log("Error in UserController -> get wallet  ", error.message);
+      res.status(401).json({ message: error.message });
+    }
+  }
+
+  async webhook(req: ExtendedRequest, res: Response): Promise<void> {
+    const sig = req.headers["stripe-signature"] as string;
+    try {
+      console.log('Inside the webhook');
+      
+      await userService.webHook(req.body,sig)
+      res.status(200).json({success:true})
+    } catch (err: any) {
+      res.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
+  }
+
+  async payUsingWallet(req: ExtendedRequest, res: Response): Promise<void> {
+    try {
+      const id = req.id
+      if (!id) {
+        throw new Error('Id is missing')
+      }
+      const rideId = req.body.rideId
+      console.log('Ride id is  ',rideId);
+
+      await userService.payUsingWallet(id,rideId)
+      res.status(200).json({success:true})
+    } catch (err: any) {
+      res.status(400).send({message:err.message});
+      return;
+    }
+  }
+
+  
+  async payUsingStripe(req: ExtendedRequest, res: Response): Promise<void> {
+    try {
+      const id = req.id;
+      const rideId = req.body.rideId;
+      if (!id) {
+        throw new Error("Id is missing ");
+      }
+      const url = await userService.payUsingStripe(id, rideId);
+
+      res.status(200).json({ success: true, url });
+    } catch (error: any) {
+      console.log("Error in UserController -> pay using stripe  ", error.message);
+      res.status(401).json({ message: error.message });
+    }
+  }
+
+  async checkPaymentStatus(req:ExtendedRequest,res:Response):Promise<void>{
+    try {
+      const id = req.id
+      if (!id) {
+        throw new Error('Id not found')
+      }
+      const rideId = req.params.rideId
+      const paymentStatus = await userService.checkPaymentStatus(rideId)
+      res.status(200).json({ success: true, paymentStatus });
+
+    } catch (error:any) {
+      console.log(error);
       res.status(401).json({ message: error.message });
     }
   }

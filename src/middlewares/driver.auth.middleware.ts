@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
-import userRepo from "../repositories/userRepo";
+import driverRepo from "../repositories/driver.repo";
 import { extractUserIdFromToken } from "../utils/jwt";
 
 export interface ExtendedRequest extends Request {
@@ -12,14 +12,14 @@ if (!JWT_ACCESS_SECRET) {
   throw new Error("Missing JWT_ACCESS_SECRET in environment variables");
 }
 
-const userAuthMiddleware = async (
+const authMiddleware = async (
   req: ExtendedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const token = req.header("Authorization")?.split(" ")[1];
-    
+ 
 
     if (!token) {
       res.status(401).json({ message: "No token, authorization denied" });
@@ -35,14 +35,14 @@ const userAuthMiddleware = async (
     }
     req.id = decoded;
 
-    const user = await userRepo.findUserById(req.id);
+    const driver = await driverRepo.findDriverById(req.id);
 
-    if (!user) {
-      res.status(404).json({ message: "User not found" });
+    if (!driver) {
+      res.status(404).json({ message: "Driver not found" });
       return;
     }
 
-    if (user.isBlocked) {
+    if (driver.isBlocked) {
       res
         .status(403)
         .json({
@@ -51,24 +51,21 @@ const userAuthMiddleware = async (
         });
       return;
     }
- 
+    
 
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      console.log("Token expired error:", error.message);
       res.status(401).json({ message: "Token expired, please log in again" });
       return;
     }
-
     if (error instanceof jwt.JsonWebTokenError) {
       res.status(401).json({ message: "Invalid token" });
       return;
     }
-
-    console.log("Unexpected error:", error);
     res.status(500).json({ message: "Internal server error" });
+    return;
   }
 };
 
-export default userAuthMiddleware;
+export default authMiddleware;

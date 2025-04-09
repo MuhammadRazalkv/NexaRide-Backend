@@ -1,7 +1,8 @@
-import { IUser } from "../models/UserModel";
-import userRepo from "../repositories/userRepo";
-import OTPRepo from "../repositories/OTPRepo";
+import { IUser } from "../models/user.model";
+import userRepo from "../repositories/user.repo";
+import OTPRepo from "../repositories/otp.repo";
 import crypto from "crypto";
+import redis from "../config/redis";
 import { html, resetLinkBtn } from "../constants/OTP";
 import { hashPassword, comparePassword } from "../utils/passwordManager";
 import { z } from "zod";
@@ -14,6 +15,14 @@ import {
 } from "../utils/jwt";
 import sendEmail from "../utils/mailSender";
 import cloudinary from "../utils/cloudinary";
+import Stripe from "stripe";
+import walletRepo from "../repositories/wallet.repo";
+import rideRepo from "../repositories/ride.repo";
+import driverRepo from "../repositories/driver.repo";
+import { getIO } from "../utils/socket";
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+
+const YOUR_DOMAIN = "http://localhost:5173";
 
 const userSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -331,6 +340,241 @@ class UserService {
         error instanceof Error ? error.message : "Failed to update user pfp"
       );
     }
+  }
+
+  async addMoneyToWallet(id: string, amount: number) {
+    if (!id || !amount) {
+      throw new Error("Credentials missing");
+    }
+    if (amount < 50) {
+      throw new Error("Minimum amount to add is ₹50.");
+    } else if (amount > 3000) {
+      throw new Error("Maximum allowed amount is ₹3000.");
+    }
+
+    const user = await userRepo.findUserById(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "inr",
+            product_data: {
+              name: "Add to Wallet",
+            },
+            unit_amount: amount * 100, // Stripe expects amount in paisa
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${YOUR_DOMAIN}/user/wallet`,
+      cancel_url: `${YOUR_DOMAIN}/user/wallet`,
+      metadata: {
+        userId: id,
+        action: "wallet_topUp",
+      },
+    });
+
+    return session.url;
+  }
+
+  async getWalletInfo(id: string) {
+    const user = await userRepo.findUserById(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    const wallet = await walletRepo.getWalletInfo(id);
+    return wallet;
+  }
+
+  async webHook(body: any, sig: string) {
+    try {
+      let event;
+      event = stripe.webhooks.constructEvent(
+        body,
+        sig,
+        process.env.WEBHOOK_SECRET_KEY as string
+      );
+
+      if (event.type === "checkout.session.completed") {
+        const session = event.data.object as Stripe.Checkout.Session;
+
+        if (session.metadata && session.metadata.action === "wallet_topUp") {
+          console.log("Wallet topUp");
+
+          const userId = session.metadata.userId;
+          const amount = session.amount_total! / 100;
+
+          //  update the wallet
+          await walletRepo.addMoneyToUserWallet(userId, amount);
+        } else if (
+          session.metadata &&
+          session.metadata.action == "ride_payment"
+        ) {
+          const rideId = session.metadata.rideId;
+          const ride = await rideRepo.findRideById(rideId);
+          if (!ride) {
+            throw new Error("Ride not found");
+          }
+          const totalFare = ride.totalFare;
+          const driverId = ride.driverId;
+          const commission = Math.ceil(totalFare * 0.2);
+          const driverEarnings = Math.ceil(totalFare - commission);
+          const applicationFeesDetails = {
+            rideId: ride.id,
+            driverId,
+            totalFare,
+            commission,
+            driverEarnings,
+            paymentMethod: "stripe",
+          };
+          await walletRepo.addToCommission(applicationFeesDetails);
+          await walletRepo.addMoneyToDriver(
+            driverId as string,
+            ride.id,
+            driverEarnings
+          );
+          await rideRepo.markCompletedWithData(
+            ride.id,
+            commission,
+            driverEarnings
+          );
+          await driverRepo.goBackToOnline(driverId as string);
+          const driverSocketId = await redis.get(`OD:${driverId}`);
+          const userSocketId = await redis.get(`RU:${ride.userId}`)
+          const io = getIO();
+          if (driverSocketId) {
+            io.to(driverSocketId).emit("payment-received");
+          }
+          if(userSocketId){
+            console.log('send ride payment success to user ');
+            
+            io.to(userSocketId).emit("payment-success")
+          }
+        }
+      }
+    } catch (error) {
+      console.log("Webhook construction error:", error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error("Internal server error");
+    }
+  }
+
+  async payUsingWallet(userId: string, rideId: string) {
+    try {
+      const ride = await rideRepo.findRideById(rideId);
+      console.log("Ride ", ride);
+
+      if (!ride) throw new Error("Ride not found");
+
+      const userWallet = await walletRepo.getUserWalletBalanceById(userId);
+      console.log("userWallet ", userWallet);
+
+      if (
+        !userWallet ||
+        userWallet.balance === undefined ||
+        userWallet.balance == 0
+      ) {
+        throw new Error("Wallet is empty");
+      }
+
+      const userWalletBalance = userWallet.balance;
+      const totalFare = ride.totalFare;
+      const driverId = ride.driverId;
+
+      if (userWalletBalance < totalFare) {
+        throw new Error(
+          "Insufficient wallet balance. Please add funds or choose another payment method."
+        );
+      }
+
+      const commission = Math.ceil(totalFare * 0.2);
+      const driverEarnings = Math.ceil(totalFare - commission);
+      const applicationFeesDetails = {
+        rideId: ride.id,
+        driverId,
+        totalFare,
+        commission,
+        driverEarnings,
+        paymentMethod: "wallet",
+      };
+      await walletRepo.addToCommission(applicationFeesDetails);
+      await walletRepo.deductMoneyFromUser(userId, totalFare);
+      await walletRepo.addMoneyToDriver(
+        driverId as string,
+        ride.id,
+        driverEarnings
+      );
+      await rideRepo.markCompletedWithData(ride.id, commission, driverEarnings);
+      await driverRepo.goBackToOnline(driverId as string);
+      const driverSocketId = await redis.get(`OD:${driverId}`);
+      const userSocketId = await redis.get(`RU:${ride.userId}`)
+
+      const io = getIO();
+      if (driverSocketId) {
+        io.to(driverSocketId).emit("payment-received");
+      }
+      if(userSocketId){
+        io.to(userSocketId).emit("payment-success")
+      }
+    } catch (error) {
+      console.log("Pay using wallet error:", error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error("Internal server error");
+    }
+  }
+
+  async payUsingStripe(userId: string, rideId: string) {
+    if (!userId || !rideId) {
+      throw new Error("Credentials missing");
+    }
+    const ride = await rideRepo.findRideById(rideId);
+    if (!ride) {
+      throw new Error("Ride not found");
+    }
+
+    const totalFare = ride.totalFare;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: "inr",
+            product_data: {
+              name: "Ride payment",
+            },
+            unit_amount: totalFare * 100, // Stripe expects amount in paisa
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      success_url: `${YOUR_DOMAIN}/user/ride`,
+      cancel_url: `${YOUR_DOMAIN}/user/ride`,
+      metadata: {
+        userId: userId,
+        rideId: ride.id,
+        action: "ride_payment",
+      },
+    });
+    return session.url;
+  }
+
+  async checkPaymentStatus(rideId: string) {
+    if (!rideId) {
+      throw new Error("Ride id not found");
+    }
+    const ride = await rideRepo.findRideById(rideId);
+    return ride?.paymentStatus;
   }
 }
 

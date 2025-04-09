@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import Driver from "../models/DriverModel";
-import { IDrivers } from "../models/DriverModel";
-import { CheckCabs } from "../interface/Iride";
-import Pricing from "../models/PricingModel";
+import Driver from "../models/driver.model";
+import { IDrivers } from "../models/driver.model";
+import { CheckCabs } from "../interface/ride.interface";
+import Pricing from "../models/pricing.model";
 import { ObjectId } from "mongodb";  // Correct import for ObjectId values
 
 class DriverRepo {
@@ -170,7 +170,7 @@ class DriverRepo {
     return await Driver.findByIdAndUpdate(
       id,
       {
-        $set: { [field]: value },
+        $set: { [field]: value , status:'pending' },
       },
       { new: true, runValidators: true }
     );
@@ -280,6 +280,12 @@ class DriverRepo {
   async goOnRide(id: string) {
     return Driver.findByIdAndUpdate(id, {
       $set: { isAvailable: "onRide" },
+    });
+  }
+
+  async goBackToOnline(id:string){
+    return Driver.findByIdAndUpdate(id, {
+      $set: { isAvailable: "online" },
     });
   }
 }

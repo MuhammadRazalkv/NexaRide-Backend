@@ -6,12 +6,13 @@ import connectDB from "./config/db";
 import morgan from "morgan";
 import logger from "./utils/logger";
 import redis from "./config/redis";
-import userRoutes from "./routes/userRoutes";
-import driverRoutes from "./routes/driverRoutes";
-import adminRoutes from "./routes/adminRoute";
+import userRoutes from "./routes/user.routes";
+import driverRoutes from "./routes/driver.routes";
+import adminRoutes from "./routes/admin.route";
 import http from "http";
 import { initializeSocket } from "./utils/socket"; 
 dotenv.config();
+import userController from "./controllers/user.controller";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +23,12 @@ app.use(
     origin: "http://localhost:5173",
     credentials: true,
   })
+);
+
+app.post(
+  '/user/webhook',
+  express.raw({ type: 'application/json' }),
+  userController.webhook
 );
 
 app.use(express.json({ limit: "10mb" }));

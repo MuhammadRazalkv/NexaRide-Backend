@@ -1,5 +1,5 @@
 import redis from "../config/redis";
-import { IOTPRepo } from "../interface/IOTPRepo";
+import { IOTPRepo } from "../interface/otp.repo.interface";
 import sendEmail from "../utils/mailSender";
 
 class OTPRepo implements IOTPRepo {

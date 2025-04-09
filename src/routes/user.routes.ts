@@ -1,8 +1,8 @@
 import { Router } from "express";
-import userController from "../controllers/userController";
-import userAuthMiddleware from "../middlewares/userAuth";
-import rideController from "../controllers/rideController";
-
+import userController from "../controllers/user.controller";
+import userAuthMiddleware from "../middlewares/user.auth.middleware";
+import rideController from "../controllers/ride.controller";
+import express from 'express'
 const userRoute = Router()
 
 userRoute.post("/verify-email",userController.emailVerification)
@@ -21,9 +21,19 @@ userRoute.patch('/updateUserName',userAuthMiddleware,userController.updateUserNa
 userRoute.patch('/updateUserPhone',userAuthMiddleware,userController.updateUserPhone)
 userRoute.patch('/updateUserPic',userAuthMiddleware,userController.updateUserPfp)
 
-
+userRoute.get('/getWalletInfo',userAuthMiddleware,userController.getWalletInfo)
+userRoute.post('/addMoneyToWallet',userAuthMiddleware,userController.addMoneyToWallet)
+userRoute.post('/payUsingWallet',userAuthMiddleware,userController.payUsingWallet)
+userRoute.post('/payUsingStripe',userAuthMiddleware,userController.payUsingStripe)
+userRoute.get("/checkPaymentStatus/:rideId",userAuthMiddleware,userController.checkPaymentStatus)
+userRoute.get('/getRideHistory',userAuthMiddleware,rideController.getRideHistory)
 //! Ride routes 
 
 userRoute.post('/checkCabs',userAuthMiddleware,rideController.checkCabs)
+
+
+//* Web hook 
+
+// userRoute.post('/webhook',express.raw({ type: 'application/json' }),userController.webhook)
 
 export default userRoute

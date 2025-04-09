@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
-import IDriverController from "../interface/driver/IDriverController";
-import driverService from "../services/driverService";
-import { ExtendedRequest } from "../middlewares/driverAuth";
+import IDriverController from "../interface/driver/driver.controller.interface";
+import driverService from "../services/driver.service";
+import { ExtendedRequest } from "../middlewares/driver.auth.middleware";
 import cloudinary from "../utils/cloudinary";
-import vehicleService from "../services/vehicleService";
+import vehicleService from "../services/vehicle.service";
 
 class DriverController implements IDriverController {
   async emailVerification(req: Request, res: Response): Promise<void> {
@@ -299,7 +299,7 @@ class DriverController implements IDriverController {
       if (!req.id) {
         throw new Error("Id not found");
       }
-      console.log("body ", req.body);
+     
       const { field, value } = req.body;
 
       const response = await driverService.updateDriverInfo(
@@ -345,6 +345,21 @@ class DriverController implements IDriverController {
       console.log(error);
 
       res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getWalletInfo(req:ExtendedRequest,res:Response):Promise<void>{
+    try {
+      const driverId = req.id
+      if (!driverId) {
+        throw new Error('Id is required')
+      }
+      const wallet = await driverService.getWalletInfo(driverId)
+      res.status(200).json({success:true,wallet})
+    } catch (error:any) {
+      console.log(error);
+      res.status(400).json({ message: error.message });
+      
     }
   }
 }

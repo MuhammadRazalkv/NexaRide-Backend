@@ -10,9 +10,18 @@ import userRoutes from "./routes/user.routes";
 import driverRoutes from "./routes/driver.routes";
 import adminRoutes from "./routes/admin.route";
 import http from "http";
-import { initializeSocket } from "./utils/socket"; 
+import { initializeSocket } from "./utils/socket";
+
+import { UserService } from "./services/user.service";
+import { UserRepository } from "./repositories/user.repo";
+import { DriverRepo } from "./repositories/driver.repo";
+import { DriverService } from "./services/driver.service";
+import paymentController from "./bindings/payment.binding";
+import { RideService } from "./services/ride.service";
+import { RideRepo } from "./repositories/ride.repo";
+import { VehicleRepo } from "./repositories/vehicle.repo";
+import errorHandler from "./middlewares/error.middleware";
 dotenv.config();
-import userController from "./controllers/user.controller";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,15 +29,15 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONT_END_URL,
     credentials: true,
   })
 );
 
 app.post(
-  '/user/webhook',
-  express.raw({ type: 'application/json' }),
-  userController.webhook
+  "/user/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.webhook
 );
 
 app.use(express.json({ limit: "10mb" }));
@@ -60,12 +69,18 @@ redis.on("error", (err) => console.error("Redis Error:", err));
 // Routes
 app.use("/user", userRoutes);
 app.use("/driver", driverRoutes);
-app.use("/admin", adminRoutes);
-
-
+app.use("/admin", adminRoutes); 
+const userRepo = new UserRepository();
+const userService = new UserService(userRepo);
+const driverRepo = new DriverRepo();
+const vehicleRepo = new VehicleRepo()
+const driverService = new DriverService(driverRepo,vehicleRepo);
+const rideRepo = new RideRepo()
+const rideService = new RideService(driverRepo,rideRepo)
 const server = http.createServer(app);
-initializeSocket(server);
+initializeSocket(server, userService, driverService,rideService);
 
+app.use(errorHandler)
 // Start the server
 connectDB().then(() => {
   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

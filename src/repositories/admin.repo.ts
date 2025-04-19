@@ -1,10 +1,11 @@
 import Pricing from "../models/pricing.model";
+import { IAdminRepo } from "./interfaces/admin.repo";
 interface IUpdateFare {
   vehicleClass: "Basic" | "Premium" | "Luxury";
   farePerKm: number;
 }
 
-class AdminRepo {
+export class AdminRepo implements IAdminRepo {
   async updateFare(updates: IUpdateFare[]) {
     for (const update of updates) {
       await Pricing.findOneAndUpdate(
@@ -20,5 +21,3 @@ class AdminRepo {
     return await Pricing.find().select("vehicleClass farePerKm");
   }
 }
-
-export default new AdminRepo();

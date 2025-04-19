@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Schema, model, Document } from "mongoose";
+import { Schema, Document } from "mongoose";
 export interface IDriverWallet extends Document {
   driverId: mongoose.Types.ObjectId | string;
   balance: number;

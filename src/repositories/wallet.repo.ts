@@ -1,17 +1,20 @@
-import mongoose from "mongoose";
-import { ObjectId } from "mongoose";
-import UserWallet from "../models/user.wallet.model";
-import { IWallet } from "../models/user.wallet.model";
-import DriverWallet from "../models/driver.walllet.model";
+import UserWallet, { IWallet } from "../models/user.wallet.model";
+import DriverWallet from "../models/driver.wallet.model";
 import CommissionModel, { ICommission } from "../models/commission.model";
-import { date } from "zod";
-class WalletRepo {
+import { IWalletRepo } from "./interfaces/wallet.repo.interface";
+import { BaseRepository } from "./base.repo";
+export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
+  constructor() {
+    super(UserWallet);
+  }
+
   //! For user
   async getWalletInfo(userId: string) {
-    return await UserWallet.findOne({ userId });
+    return this.findOne({ userId });
   }
+
   async addMoneyToUserWallet(userId: string, amount: number) {
-    await UserWallet.findOneAndUpdate(
+    await this.model.findOneAndUpdate(
       { userId },
       {
         $inc: { balance: amount },
@@ -26,12 +29,13 @@ class WalletRepo {
       { new: true, upsert: true }
     );
   }
+
   async getUserWalletBalanceById(userId: string) {
-    return await UserWallet.findOne({ userId });
+    return this.findOne({ userId });
   }
 
   async deductMoneyFromUser(userId: string, totalFare: number) {
-    return await UserWallet.findOneAndUpdate(
+    return this.model.findOneAndUpdate(
       { userId },
       {
         $inc: { balance: -totalFare },
@@ -48,11 +52,11 @@ class WalletRepo {
 
   //! For driver
   async getDriverWalletInfo(driverId: string) {
-    return await DriverWallet.findOne({ driverId });
+    return DriverWallet.findOne({ driverId });
   }
 
   async addMoneyToDriver(driverId: string, rideId: string, amount: number) {
-    return await DriverWallet.findOneAndUpdate(
+    return DriverWallet.findOneAndUpdate(
       { driverId },
       {
         $inc: { balance: amount },
@@ -64,14 +68,13 @@ class WalletRepo {
             date: Date.now(),
           },
         },
-      },{new:true,upsert:true}
+      },
+      { new: true, upsert: true }
     );
   }
 
   //! Admin Commission
   async addToCommission(data: Partial<ICommission>) {
-    return await CommissionModel.insertOne(data);
+    return CommissionModel.insertOne(data);
   }
 }
-
-export default new WalletRepo();

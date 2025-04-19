@@ -1,226 +1,332 @@
-import { Request, Response } from "express";
-import adminService from "../services/admin.service";
+import { Request, Response, NextFunction } from "express";
+import { HttpStatus } from "../constants/httpStatusCodes";
+import { messages } from "../constants/httpMessages";
+import { IAdminService } from "../services/interfaces/admin.service.interface";
+import { IAdminController } from "./interfaces/admin.controller.interface";
+const maxAge = parseInt(process.env.REFRESH_MAX_AGE as string)
+const accessMaxAge = parseInt(process.env.ACCESS_MAX_AGE as string)
+export class AdminController implements IAdminController {
+  constructor(private adminService:IAdminService){}
 
-class AdminController {
-  async login(req: Request, res: Response): Promise<void> {
+  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+   
     try {
-      const data = await adminService.login(req.body.email, req.body.password);
+      const data = await this.adminService.login(req.body.email, req.body.password);
       res.cookie("adminRefreshToken", data.refreshToken, {
         httpOnly: true,
         secure: false,
         sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: maxAge,
         path: "/",
       });
 
-      res.cookie("adminAccessToken", data.accessToken, {
-        httpOnly: true,
-        secure: false,
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: "/",
-      });
+      // res.cookie("adminAccessToken", data.accessToken, {
+      //   httpOnly: true,
+      //   secure: false,
+      //   sameSite: "lax",
+      //   maxAge: accessMaxAge,
+      //   path: "/",
+      // });
 
-      res.status(200).json({
-        message: "Login successful",
+      res.status(HttpStatus.OK).json({
+        message: messages.LOGIN_SUCCESS,
+        accessToken:data.accessToken
       });
-    } catch (error: any) {
-      console.log("Error in admin -> login ", error.message);
-      res.status(401).json({ message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async getUsers(req: Request, res: Response): Promise<void> {
+  async getUsers( 
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const data = await adminService.getUsers();
-      console.log(data.users);
+      const page = parseInt(req.query.page as string)|| 1
+      const search = req.query.search || ''
+      const sort = req.query.sort || ''
+      const data = await this.adminService.getUsers(page,search as string,sort as string);
+     
 
-      res.status(200).json({
-        message: "Data fetched successfully",
+      res.status(HttpStatus.OK).json({
+        message: messages.DATA_FETCH_SUCCESS,
         users: data.users,
+        total:data.total
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> get users ", error.message);
-      res.status(401).json({ message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async changeUserStatus(req: Request, res: Response): Promise<void> {
+  async getPendingDriverCount( 
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const result = await adminService.changeUserStatus(req.body.id);
+      const data = await this.adminService.getPendingDriverCount();
+     
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
+        message: messages.DATA_FETCH_SUCCESS,
+        count: data.count,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async changeUserStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const result = await this.adminService.changeUserStatus(req.body.id);
+
+      res.status(HttpStatus.OK).json({
         success: true,
         message: result.message,
         user: result.user,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> change user status ", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async getDrivers(req: Request, res: Response): Promise<void> {
+  async getDrivers(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const data = await adminService.getDrivers();
-      console.log(data.drivers);
+      const page = parseInt(req.query.page as string)|| 1
+      const search = req.query.search || ''
+      const sort = req.query.sort || ''
+      const data = await this.adminService.getDrivers(page,search as string,sort as string);
 
-      res.status(200).json({
-        message: "Data fetch successful",
+      res.status(HttpStatus.OK).json({
+        message: messages.DATA_FETCH_SUCCESS,
         drivers: data.drivers,
+        total:data.total,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> get users ", error.message);
-      res.status(401).json({ message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async toggleBlockUnblockDriver(req: Request, res: Response): Promise<void> {
+  async toggleBlockUnblockDriver(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const result = await adminService.toggleBlockUnblockDriver(req.body.id);
+      const result = await this.adminService.toggleBlockUnblockDriver(req.body.id);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         message: result.message,
         driver: result.driver,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> change user status ", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
   async getPendingDriversWithVehicle(
     req: Request,
-    res: Response
+    res: Response,
+    next: NextFunction
   ): Promise<void> {
     try {
-      const data = await adminService.getPendingDriversWithVehicle();
+      const data = await this.adminService.getPendingDriversWithVehicle();
       console.log(data.drivers);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
-        message: "Data fetch successful",
+        message: messages.DATA_FETCH_SUCCESS,
         drivers: data.drivers,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> get users ", error.message);
-      res.status(401).json({ message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async rejectDriver(req: Request, res: Response): Promise<void> {
+  async rejectDriver(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const result = await adminService.rejectDriver(
+      const result = await this.adminService.rejectDriver(
         req.body.driverId,
         req.body.reason
       );
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         message: result.message,
         driver: result.driver,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> change user status ", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+     next(error)
     }
   }
 
-  async approveDriver(req: Request, res: Response): Promise<void> {
+  async approveDriver(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const result = await adminService.approveDriver(req.body.driverId);
+      const result = await this.adminService.approveDriver(req.body.driverId);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         message: result.message,
         driver: result.driver,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> change user status ", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+      next(error)
     }
   }
 
-  async getVehicleInfo(req: Request, res: Response): Promise<void> {
+  async getVehicleInfo(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      console.log("Req reached getVehicle");
+    
 
-      const vehicle = await adminService.getVehicleInfo(req.params.id);
+      const vehicle = await this.adminService.getVehicleInfo(req.params.id);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
-        message: "Data fetch successful",
+        message:messages.DATA_FETCH_SUCCESS,
         vehicle,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> get users ", error.message);
-      res.status(401).json({ message: error.message });
+    } catch (error) {
+     next(error)
     }
   }
 
-  async approveVehicle(req: Request, res: Response): Promise<void> {
+  async approveVehicle(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { vehicleId, category } = req.body;
-      const result = await adminService.approveVehicle(vehicleId, category);
+      const result = await this.adminService.approveVehicle(vehicleId, category);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         message: result.message,
         vehicle: result.vehicle,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> approve vehicle:", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+     next(error)
     }
   }
 
-  async rejectVehicle(req: Request, res: Response): Promise<void> {
+  async rejectVehicle(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const result = await adminService.rejectVehicle(
+      const result = await this.adminService.rejectVehicle(
         req.body.vehicleId,
         req.body.reason
       );
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         message: result.message,
         vehicle: result.vehicle,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> reject vehicle:", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+     next(error)
     }
   }
 
-  async updateFare(req: Request, res: Response): Promise<void> {
+  async updateFare(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const result = await adminService.updateFare(req.body.fare);
+      const result = await this.adminService.updateFare(req.body.fare);
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         success: true,
         fares: result,
-        message: "Fare updated successfully ",
+        message: messages.FARE_UPDATED,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> update Fare:", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+     next(error)
     }
   }
 
-  async getFares(req: Request, res: Response): Promise<void> {
+  async getFares(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const result = await adminService.getFares();
+      const result = await this.adminService.getFares();
 
-      res.status(200).json({
+      res.status(HttpStatus.OK).json({
         fares: result,
         success: true,
       });
-    } catch (error: any) {
-      console.log("Error in Admin -> get Fare:", error.message);
-      res.status(401).json({ success: false, message: error.message });
+    } catch (error) {
+      next(error)
     }
   }
+
+   async refreshToken(
+      req: Request,
+      res: Response,
+      next: NextFunction
+    ): Promise<void> {
+      try {
+        const refreshToken = req.cookies?.adminRefreshToken;
+  
+        if (!refreshToken) {
+          res
+            .status(HttpStatus.UNAUTHORIZED)
+            .json({ message: messages.TOKEN_NOT_PROVIDED });
+          return;
+        }
+  
+        const response = await this.adminService.refreshToken(refreshToken);
+  
+        res.cookie("adminRefreshToken", response.newRefreshToken, {
+          httpOnly: true,
+          secure: false,
+          sameSite: "lax",
+          maxAge: maxAge,
+          path: "/",
+        });
+  
+        // res.cookie("adminAccessToken", response.newAccessToken, {
+        //   httpOnly: true,
+        //   secure: false,
+        //   sameSite: "lax",
+        //   maxAge: accessMaxAge,
+        //   path: "/",
+        // });
+  
+        res.status(HttpStatus.CREATED).json({
+          message: messages.TOKEN_CREATED,
+          accessToken: response.newAccessToken,
+        });
+      } catch (error) {
+        next(error);
+      }
+    }
 }
 
-export default new AdminController();

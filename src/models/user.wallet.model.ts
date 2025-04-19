@@ -1,17 +1,17 @@
 import mongoose from "mongoose";
 import { Schema, model, Document } from "mongoose";
 
-  export interface IWallet extends Document {
-    userId: mongoose.Types.ObjectId | string;
-    balance: number;
-    transactions?: [
-      {
-        type: string;
-        date: number;
-        amount: number;
-      }
-    ];
-  }
+export interface IWallet extends Document {
+  userId: mongoose.Types.ObjectId | string;
+  balance: number;
+  transactions?: [
+    {
+      type: string;
+      date: number;
+      amount: number;
+    }
+  ];
+}
 
 const userWallet = new Schema<IWallet>(
   {
@@ -26,10 +26,10 @@ const userWallet = new Schema<IWallet>(
         type: {
           type: String,
           enum: ["credit", "debit"],
-        //   required: true,
+          //   required: true,
         },
         date: { type: Number },
-        amount:{type:Number}
+        amount: { type: Number },
       },
     ],
   },

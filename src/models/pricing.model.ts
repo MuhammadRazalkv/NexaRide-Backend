@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-interface IPricing extends Document {
+export interface IPricing extends Document {
   vehicleClass: "Basic" | "Premium" | "Luxury";
   farePerKm: number;
 }

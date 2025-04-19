@@ -1,84 +1,102 @@
 import mongoose from "mongoose";
 import Driver from "../models/driver.model";
 import { IDrivers } from "../models/driver.model";
-import { CheckCabs } from "../interface/ride.interface";
 import Pricing from "../models/pricing.model";
-import { ObjectId } from "mongodb";  // Correct import for ObjectId values
+import { ObjectId } from "mongodb";
+import { IDriverRepo } from "./interfaces/driver.repo.interface";
 
-class DriverRepo {
-  async findDriverById(id: mongoose.Types.ObjectId | string) {
-    return await Driver.findById(id);
+import { BaseRepository } from "./base.repo";
+import { AppError } from "../utils/appError";
+import { HttpStatus } from "../constants/httpStatusCodes";
+import { messages } from "../constants/httpMessages";
+
+export class DriverRepo
+  extends BaseRepository<IDrivers>
+  implements IDriverRepo
+{
+  constructor() {
+    super(Driver);
   }
-  async findDriverByVehicleId(id: mongoose.Types.ObjectId | string) {
-    return await Driver.findOne({ vehicleId: id });
+  async findDriverById(id: mongoose.Types.ObjectId | string) {
+    return await this.findById(id as string);
+  }
+  async findDriverByVehicleId(id: string | mongoose.Types.ObjectId) {
+    return this.model.findOne({ vehicleId: id });
   }
 
   async findDriverByEmail(email: string) {
-    return await Driver.findOne({ email: email });
+    return this.model.findOne({ email });
   }
 
   async createDriver(data: Partial<IDrivers>) {
     try {
-      return await Driver.create(data);
+      return await this.create(data);
     } catch (error: any) {
       console.error("Database error:", error);
 
-      // Handle duplicate key errors (MongoDB error code 11000)
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
-        // const info = field === "phone" ? "number" : "address";
-        throw new Error(
-          `${field.charAt(0).toUpperCase() + field.slice(1)} \ already exists`
+        throw new AppError(
+          HttpStatus.CONFLICT,
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
         );
       }
 
-      throw new Error("Database operation failed. Please try again.");
+      throw new AppError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        messages.DATABASE_OPERATION_FAILED
+      );
     }
   }
 
-  async findByIdAndUpdate(
-    id: string | mongoose.Types.ObjectId,
-    data: Partial<IDrivers>
-  ) {
+  async findByIdAndUpdate(id: string, data: Partial<IDrivers>) {
     try {
-      return await Driver.findByIdAndUpdate(
-        id,
-        { $set: { ...data, status: "pending" } },
-        { new: true }
-      );
+      return await this.updateById(id, {
+        $set: { ...data, status: "pending" },
+      });
     } catch (error: any) {
       if (error instanceof mongoose.Error.CastError) {
-        throw new Error("Invalid ID format");
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
       }
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
-        const info = field === "phone" ? "number" : "address";
-        throw new Error(
-          `${
-            field.charAt(0).toUpperCase() + field.slice(1)
-          } ${info} already exists`
+        throw new AppError(
+          HttpStatus.CONFLICT,
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
         );
       }
-      throw new Error("Database operation failed. Please try again.");
+      throw new AppError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        messages.DATABASE_OPERATION_FAILED
+      );
     }
   }
 
-  async getAllDrivers(): Promise<IDrivers[]> {
-    return await Driver.find({ status: "approved" })
+  async getAllDrivers(
+    skip: number,
+    limit: number,
+    search: string,
+    sort: string
+  ) {
+    return this.model
+      .find({ status: "approved", name: { $regex: search, $options: "i" } })
+      .sort({ name: sort === "A-Z" ? 1 : -1 })
+      .skip(skip)
+      .limit(limit)
       .select("_id name email isBlocked")
       .lean();
   }
 
-  async blockUnblockDriver(id: string, status: boolean) {
-    return await Driver.findByIdAndUpdate(
-      id,
-      { $set: { isBlocked: !status } },
-      { new: true }
-    );
+  async getApprovedDriversCount(search:string) {
+    return this.model.find({ status: "approved", name: { $regex: search, $options: "i" }}).countDocuments();
   }
 
-  async getPendingDriversWithVehicle(): Promise<Partial<IDrivers>[]> {
-    return await Driver.aggregate([
+  async blockUnblockDriver(id: string, status: boolean) {
+    return this.updateById(id, { $set: { isBlocked: !status } }); // from BaseRepository
+  }
+
+  async getPendingDriverCount() {
+    const result = await this.model.aggregate([
       {
         $lookup: {
           from: "vehicles",
@@ -87,9 +105,29 @@ class DriverRepo {
           as: "vehicleDetails",
         },
       },
+      { $unwind: "$vehicleDetails" },
       {
-        $unwind: "$vehicleDetails",
+        $match: {
+          $or: [{ status: "pending" }, { "vehicleDetails.status": "pending" }],
+        },
       },
+      { $count: "count" },
+    ]);
+
+    return result[0]?.count || 0;
+  }
+
+  async getPendingDriversWithVehicle() {
+    return this.model.aggregate([
+      {
+        $lookup: {
+          from: "vehicles",
+          localField: "vehicleId",
+          foreignField: "_id",
+          as: "vehicleDetails",
+        },
+      },
+      { $unwind: "$vehicleDetails" },
       {
         $match: {
           $or: [{ status: "pending" }, { "vehicleDetails.status": "pending" }],
@@ -127,63 +165,36 @@ class DriverRepo {
   }
 
   async rejectDriver(id: string, reason: string) {
-    return await Driver.findByIdAndUpdate(
-      id,
-      { $set: { rejectionReason: reason, status: "rejected" } },
-      { new: true }
-    );
+    return this.updateById(id, {
+      $set: { rejectionReason: reason, status: "rejected" },
+    });
   }
 
   async approveDriver(id: string) {
-    return await Driver.findByIdAndUpdate(
-      id,
-      { $set: { status: "approved" } },
-      { new: true }
-    );
+    return this.updateById(id, { $set: { status: "approved" } });
   }
 
-  async setGoogleId(id: string, email: string) {
-    return await Driver.findOneAndUpdate(
-      { email },
-      { $set: { googleId: id } },
-      { new: true }
-    );
+  async setGoogleId(email: string, googleId: string) {
+    return this.update({ email }, { $set: { googleId } }); // from BaseRepository
   }
 
   async setPFP(id: string, profilePic: string) {
-    return await Driver.findByIdAndUpdate(
-      id,
-      { $set: { profilePic: profilePic } },
-      { new: true }
-    );
+    return this.updateById(id, { $set: { profilePic } });
   }
 
   async changePassword(id: string, password: string) {
-    return await Driver.findByIdAndUpdate(
-      id,
-      { $set: { password } },
-      { new: true }
-    );
+    return this.updateById(id, { $set: { password } });
   }
 
   async findAndUpdate(id: string, field: string, value: string) {
-    return await Driver.findByIdAndUpdate(
-      id,
-      {
-        $set: { [field]: value , status:'pending' },
-      },
-      { new: true, runValidators: true }
-    );
+    return this.updateById(id, { $set: { [field]: value, status: "pending" } });
   }
 
   async getAvailableDriversNearby(pickupCoords: [number, number]) {
-    return await Driver.aggregate([
+    return this.model.aggregate([
       {
         $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: pickupCoords,
-          },
+          near: { type: "Point", coordinates: pickupCoords },
           distanceField: "distance",
           maxDistance: 5000,
           spherical: true,
@@ -197,14 +208,10 @@ class DriverRepo {
           as: "vehicleDetails",
         },
       },
-      {
-        $unwind: "$vehicleDetails",
-      },
+      { $unwind: "$vehicleDetails" },
       {
         $match: {
           isAvailable: "online",
-          // "vehicleDetails.status": "approved",
-          // status: 'approved'
         },
       },
       {
@@ -223,10 +230,8 @@ class DriverRepo {
   }
 
   async getDriverWithVehicleInfo(id: string) {
-    return await Driver.aggregate([
-      {
-        $match: { _id: new ObjectId(id) }, 
-      },
+    return this.model.aggregate([
+      { $match: { _id: new ObjectId(id) } },
       {
         $lookup: {
           from: "vehicles",
@@ -235,9 +240,7 @@ class DriverRepo {
           as: "vehicleDetails",
         },
       },
-      {
-        $unwind: "$vehicleDetails",
-      },
+      { $unwind: "$vehicleDetails" },
       {
         $project: {
           name: 1,
@@ -254,40 +257,32 @@ class DriverRepo {
   }
 
   async toggleAvailability(id: string, availability: string) {
-    return await Driver.findByIdAndUpdate(
-      id,
-      {
-        $set: { isAvailable: availability },
-      },
-      { new: true }
-    );
+    return this.updateById(id, { $set: { isAvailable: availability } });
   }
 
-  //! only for development
   async assignRandomLocation(id: string, coordinates: number[]) {
-    return await Driver.findByIdAndUpdate(id, {
-      location: {
-        type: "Point",
-        coordinates: coordinates,
+    return this.updateById(id, {
+      $set: {
+        location: {
+          type: "Point",
+          coordinates,
+        },
       },
     });
   }
-
   async findPrices() {
     return Pricing.find().select("vehicleClass farePerKm");
   }
 
   async goOnRide(id: string) {
-    return Driver.findByIdAndUpdate(id, {
-      $set: { isAvailable: "onRide" },
-    });
+    return this.updateById(id, { $set: { isAvailable: "onRide" } });
   }
 
-  async goBackToOnline(id:string){
-    return Driver.findByIdAndUpdate(id, {
-      $set: { isAvailable: "online" },
-    });
+  async goBackToOnline(id: string) {
+    return this.updateById(id, { $set: { isAvailable: "online" } });
+  }
+
+  async updateProfilePic(id:string,url:string){
+    return this.updateById(id,{$set:{profilePic:url}})
   }
 }
-
-export default new DriverRepo();

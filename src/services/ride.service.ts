@@ -1,24 +1,28 @@
 import { CheckCabs } from "../interface/ride.interface";
-import Pricing from "../models/pricing.model";
-import driverRepo from "../repositories/driver.repo";
-import userRepo from "../repositories/user.repo";
 import { IRideHistory } from "../models/ride.history.model";
-import rideRepo from "../repositories/ride.repo";
+import { IRideService, IRideWithDriver } from "./interfaces/ride.service.interface";
+import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
+import { IRideRepo } from "../repositories/interfaces/ride.repo.interface";
+import { AppError } from "../utils/appError";
+import { HttpStatus } from "../constants/httpStatusCodes";
+import { messages } from "../constants/httpMessages";
+export class RideService implements IRideService {
+  constructor(private driverRepo: IDriverRepo, private rideRepo: IRideRepo) {}
 
-class RideService {
   async checkCabs(id: string, data: CheckCabs) {
     const pickupCoords: [number, number] = [
       data.pickUpPoint.lat,
       data.pickUpPoint.lng,
     ];
-    console.log("Pickup coords ", pickupCoords);
 
-    const drivers = await driverRepo.getAvailableDriversNearby(pickupCoords);
-    const fares = await driverRepo.findPrices();
+    const drivers = await this.driverRepo.getAvailableDriversNearby(
+      pickupCoords
+    );
+    const fares = await this.driverRepo.findPrices();
 
     const updatedDrivers = drivers.map((driver) => {
       const matchingFare = fares.find(
-        (fare) =>
+        (fare: { vehicleClass: string; farePerKm: number }) =>
           fare.vehicleClass.toLowerCase() ===
           driver.vehicleDetails.category.toLowerCase()
       );
@@ -28,8 +32,6 @@ class RideService {
         totalFare: matchingFare ? Math.round(matchingFare.farePerKm * km) : 0,
       };
     });
-
-    console.log(updatedDrivers);
 
     return updatedDrivers;
   }
@@ -50,70 +52,104 @@ class RideService {
 
     const randomCoordinate =
       randomLocations[Math.floor(Math.random() * randomLocations.length)];
-    await driverRepo.assignRandomLocation(id, randomCoordinate);
+    await this.driverRepo.assignRandomLocation(id, randomCoordinate);
     return randomCoordinate;
   }
 
   async getDriverWithVehicle(id: string) {
     if (!id) {
-      throw new Error("Please provide an id");
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const driver = await driverRepo.getDriverWithVehicleInfo(id);
-    console.log("Driver  data ", driver);
-
+    const driver = await this.driverRepo.getDriverWithVehicleInfo(id);
     return driver;
   }
 
   async createNewRide(data: Partial<IRideHistory>) {
-    const ride = await rideRepo.createNewRide(data);
+    const ride = await this.rideRepo.createNewRide(data);
     return ride;
   }
-  async getUserIdByDriverId(driverId:string) {
-    const ride = await rideRepo.getUserIdByDriverId(driverId);
-    return ride?.userId;
-  }
-  async getDriverByUserId(userId:string) {
-    console.log('User id ',userId);
-    
-    const ride = await rideRepo.getDriverByUserId(userId);
-    
-    return ride?.driverId;
+  async getUserIdByDriverId(driverId: string) {
+    const ride = await this.rideRepo.getUserIdByDriverId(driverId);
+    return ride?.userId as string;
   }
 
-  async verifyRideOTP(driverId:string,OTP:string){
-    console.log('DRIVER ID ',driverId,'otp',OTP);
-    
+  async getDriverByUserId(userId: string) {
+    const ride = await this.rideRepo.getDriverByUserId(userId);
+
+    return ride?.driverId as string;
+  }
+
+  async verifyRideOTP(driverId: string, OTP: string) {
     if (!driverId || !OTP) {
-      throw new Error('Credential missing')
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await rideRepo.findOngoingRideByDriverId(driverId)
+    const ride = await this.rideRepo.findOngoingRideByDriverId(driverId);
     if (!ride) {
-      throw new Error('Ride not found')
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
     if (ride.OTP !== OTP) {
-      throw new Error('Invalid OTP')
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_OTP);
     }
-    await rideRepo.updateRideStartedAt(ride.id)
-    return Date.now()
+    await this.rideRepo.updateRideStartedAt(ride.id);
+    return Date.now();
   }
 
-  async cancelRide(driverId:string,userId:string,cancelledBy:'User'|"Driver"){
-    const response = await rideRepo.cancelRide(driverId,userId,cancelledBy)
+  async cancelRide(
+    driverId: string,
+    userId: string,
+    cancelledBy: "User" | "Driver"
+  ) {
+    const response = await this.rideRepo.cancelRide(
+      driverId,
+      userId,
+      cancelledBy
+    );
   }
-  async getRideIdByUserAndDriver(driverId:string,userId:string){
-    const ride = await rideRepo.getRideIdByUserAndDriver(driverId,userId)
-    return {rideId:ride?.id,fare:ride?.totalFare}
+  async getRideIdByUserAndDriver(driverId: string, userId: string) {
+    const ride = await this.rideRepo.getRideIdByUserAndDriver(driverId, userId);
+    return { rideId: ride?.id, fare: ride?.totalFare };
   }
 
+  async getRideHistory(id: string, page: number) {
+    const limit = 8;
+    const skip = (page - 1) * limit;
+    const history = await this.rideRepo.findRideByUserId(id, skip, limit);
+    const total = await this.rideRepo.getUserRideCount(id);
+    return { history, total };
+  }
+  async getRideHistoryDriver(id: string, page: number) {
+    const limit = 8;
+    const skip = (page - 1) * limit;
+    const history = await this.rideRepo.findRideByDriver(id, skip, limit);
+    const total = await this.rideRepo.getDriverRideCount(id);
+    return { history, total };
+  }
+  async checkPaymentStatus(rideId: string) {
+    if (!rideId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const ride = await this.rideRepo.findRideById(rideId);
+    return ride?.paymentStatus;
+  }
 
-  async getRideHistory(id:string){
-    const history = await rideRepo.findRideByUserId(id)
-    return history
+  async findRideById(rideId:string){
+    if (!rideId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const ride = await this.rideRepo.findRideById(rideId);
+    return ride
   }
-  async getRideHistoryDriver(id:string){
-    const history = await rideRepo.findRideByDriver(id)
-    return history
+
+  async findUserRideInfo(rideId: string): Promise<IRideWithDriver | null> {
+    if (!rideId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const ride = await this.rideRepo.getRideInfoWithDriver(rideId)
+    if (!ride) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+      
+    }
+    return ride
   }
+
 }
-
-export default new RideService();

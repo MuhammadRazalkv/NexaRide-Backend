@@ -1,27 +1,39 @@
 import RideHistory, { IRideHistory } from "../models/ride.history.model";
-class RideRepo {
+import { IRideWithDriver } from "../services/interfaces/ride.service.interface";
+import { BaseRepository } from "./base.repo";
+import { IRideRepo } from "./interfaces/ride.repo.interface";
+import Driver from "../models/driver.model";
+
+export class RideRepo
+  extends BaseRepository<IRideHistory>
+  implements IRideRepo
+{
+  constructor() {
+    super(RideHistory);
+  }
+
   async createNewRide(data: Partial<IRideHistory>) {
     return await RideHistory.insertOne(data);
   }
 
   async getUserIdByDriverId(id: string) {
-    return await RideHistory.findOne({
-      driverId: id,
-      status: "ongoing",
-    }).select("userId");
+    return await this.model
+      .findOne({ driverId: id, status: "ongoing" })
+      .select("userId");
   }
 
   async getDriverByUserId(id: string) {
-    return await RideHistory.findOne({ userId: id, status: "ongoing" }).select(
-      "driverId"
-    );
+    return await this.model
+      .findOne({ userId: id, status: "ongoing" })
+      .select("driverId");
   }
+
   async findOngoingRideByDriverId(id: string) {
-    return await RideHistory.findOne({ driverId: id, status: "ongoing" });
+    return await this.model.findOne({ driverId: id, status: "ongoing" });
   }
 
   async cancelRide(driverId: string, userId: string, cancelledBy: string) {
-    return await RideHistory.updateOne(
+    return await this.model.updateOne(
       { driverId, userId, status: "ongoing" },
       {
         $set: {
@@ -32,18 +44,23 @@ class RideRepo {
       }
     );
   }
+
   async updateRideStartedAt(rideId: string) {
-    return await RideHistory.findByIdAndUpdate(rideId, {
+    return await this.model.findByIdAndUpdate(rideId, {
       startedAt: Date.now(),
     });
   }
 
   async getRideIdByUserAndDriver(driverId: string, userId: string) {
-    return await RideHistory.findOne({ driverId, userId, status: "ongoing" });
+    return await this.model.findOne({
+      driverId,
+      userId,
+      status: "ongoing",
+    });
   }
 
   async findRideById(id: string) {
-    return await RideHistory.findOne({ _id: id });
+    return await this.model.findOne({ _id: id });
   }
 
   async markCompletedWithData(
@@ -51,7 +68,7 @@ class RideRepo {
     commission: number,
     driverEarnings: number
   ) {
-    return await RideHistory.findByIdAndUpdate(id, {
+    return await this.model.findByIdAndUpdate(id, {
       $set: {
         paymentStatus: "completed",
         status: "completed",
@@ -62,16 +79,38 @@ class RideRepo {
     });
   }
 
-  async findRideByUserId(userId: string) {
-    return await RideHistory.find({ userId }).select(
-      "driverId pickupLocation dropOffLocation totalFare distance estTime timeTaken status startedAt endedAt canceledAt paymentStatus driverId"
-    );
+  async findRideByUserId(userId: string, skip: number, limit: number) {
+    return await this.model
+      .find({ userId })
+      .skip(skip)
+      .limit(limit)
+      .sort({ startedAt: -1 })
+      .select(
+        "driverId pickupLocation dropOffLocation totalFare distance estTime timeTaken status startedAt endedAt canceledAt paymentStatus driverId"
+      );
   }
-  async findRideByDriver(driverId: string) {
-    return await RideHistory.find({ driverId }).select(
-      "driverId pickupLocation dropOffLocation totalFare commission driverEarnings distance estTime timeTaken status startedAt endedAt canceledAt paymentStatus driverId"
-    );
+  async getUserRideCount(userId: string) {
+    return await this.model.find({ userId }).countDocuments();
+  }
+  async getDriverRideCount(driverId: string) {
+    return await this.model.find({ driverId }).countDocuments();
+  }
+
+  async findRideByDriver(driverId: string, skip: number, limit: number) {
+    return await this.model
+      .find({ driverId })
+      .skip(skip)
+      .limit(limit)
+      .sort({ startedAt: -1 })
+      .select(
+        "driverId pickupLocation dropOffLocation totalFare commission driverEarnings distance estTime timeTaken status startedAt endedAt canceledAt paymentStatus driverId"
+      );
+  }
+
+  async getRideInfoWithDriver(rideId: string): Promise<IRideWithDriver | null> {
+    return await this.model.findById(rideId).select('-commission -driverEarnings -OTP').populate({
+      path: "driverId",
+      select: "name",
+    }).lean().exec() as IRideWithDriver | null;
   }
 }
-
-export default new RideRepo();

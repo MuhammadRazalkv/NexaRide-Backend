@@ -26,7 +26,7 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   driverId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Driver",
+    ref: "Drivers",
     required: true,
   },
   pickupCoords: { type: [Number], required: true },

@@ -2,56 +2,57 @@ import mongoose from "mongoose";
 import { ObjectId } from "mongoose";
 import { IVehicle } from "../models/vehicle.model";
 import Vehicle from "../models/vehicle.model";
+import { IVehicleRepo } from "./interfaces/vehicle.repo.interface";
+import { BaseRepository } from "./base.repo"; 
+import { HttpStatus } from "../constants/httpStatusCodes";
+import { AppError } from "../utils/appError";
+import { messages } from "../constants/httpMessages";
+export class VehicleRepo extends BaseRepository<IVehicle> implements IVehicleRepo {
+  constructor() {
+    super(Vehicle);
+  }
 
-class VehicleRepo {
   async findVehicleById(vehicleId: string | ObjectId) {
-    return await Vehicle.findById(vehicleId);
+    return this.findById(vehicleId.toString()); 
   }
 
   async registerNewVehicle(data: Partial<IVehicle>) {
     try {
-      return await Vehicle.create(data);
+      return await this.create(data); 
     } catch (error: any) {
-      console.error("Database error:", error);
-
-      // Handle duplicate key errors (MongoDB error code 11000)
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
-        throw new Error(
-          `${field.charAt(0).toUpperCase() + field.slice(1)}  already exists`
-        );
+        throw new AppError(HttpStatus.CONFLICT,`${field.charAt(0).toUpperCase() + field.slice(1)} already exists`);
       }
 
-      throw new Error("Database operation failed. Please try again.");
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR,messages.DATABASE_OPERATION_FAILED);
     }
   }
 
   async updatedVehicleData(id: string | ObjectId, data: Partial<IVehicle>) {
     try {
-      return await Vehicle.findByIdAndUpdate(
-        id,
-        { $set: { ...data, status: "pending" } },
-        { new: true }
-      );
+      return await this.updateById(id.toString(), {
+        $set: { ...data, status: "pending" },
+      }); 
     } catch (error: any) {
       if (error instanceof mongoose.Error.CastError) {
-        throw new Error("Invalid ID format");
+        throw new AppError(HttpStatus.BAD_REQUEST,messages.INVALID_ID);
       }
+
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
-        const info = field === "phone" ? "number" : "address";
-        throw new Error(
-          `${
-            field.charAt(0).toUpperCase() + field.slice(1)
-          } ${info} already exists`
-        );
+        
+        throw new AppError(HttpStatus.CONFLICT,`${field.charAt(0).toUpperCase() + field.slice(1)} already exists`);
       }
-      throw new Error("Database operation failed. Please try again.");
+
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR,messages.DATABASE_OPERATION_FAILED);
+
     }
   }
 
   async getVehicleInfo(vehicleId: string) {
-    return await Vehicle.findById(vehicleId)
+    return this.model
+      .findById(vehicleId)
       .select(
         "_id nameOfOwner addressOfOwner brand vehicleModel color numberPlate regDate expDate insuranceProvider policyNumber vehicleImages status rejectionReason verified"
       )
@@ -59,20 +60,16 @@ class VehicleRepo {
   }
 
   async approveVehicle(id: string, category: string) {
-    return await Vehicle.findByIdAndUpdate(
-      id,
-      { $set: { status: "approved", category } },
-      { new: true }
-    );
+    return this.updateById(id.toString(), {
+      $set: { status: "approved", category },
+    });
   }
 
   async rejectVehicle(id: string, reason: string) {
-    return await Vehicle.findByIdAndUpdate(
-      id,
-      { $set: { rejectionReason: reason, status: "rejected" } },
-      { new: true }
-    );
+    return this.updateById(id.toString(), {
+      $set: { rejectionReason: reason, status: "rejected" },
+    }); 
   }
 }
 
-export default new VehicleRepo();
+

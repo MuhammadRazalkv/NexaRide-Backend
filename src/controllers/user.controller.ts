@@ -1,341 +1,272 @@
-import { Request, Response } from "express";
-import { IUserController } from "../interface/user/user.controller.interface";
-import userService from "../services/user.service";
-import { ExtendedRequest } from "../middlewares/user.auth.middleware";
+import { Request, Response, NextFunction } from "express";
+import { IUserController } from "./interfaces/user.controller.interface";
 
+import { ExtendedRequest } from "../middlewares/auth.middleware";
+import IUserService from "../services/interfaces/user.service.interface";
+import { HttpStatus } from "../constants/httpStatusCodes";
+import { messages } from "../constants/httpMessages";
+import { AppError } from "../utils/appError";
+export class UserController implements IUserController {
+  constructor(private userService: IUserService) {}
 
-class UserController implements IUserController {
-  async emailVerification(req: Request, res: Response): Promise<void> {
+  async emailVerification(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      await userService.emailVerification(req.body);
+      const email = req.body.email;
+      await this.userService.emailVerification(email);
       res
-        .status(201)
-        .json({ message: "OTP has been sent to the e-mail address" });
-    } catch (error: any) {
-      console.log(
-        "Error in UserController -> emailVerification ",
-        error.message
-      );
-      res.status(400).json({ message: error.message });
+        .status(HttpStatus.CREATED)
+        .json({ message: messages.OTP_SENT_SUCCESS });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async verifyOTP(req: Request, res: Response): Promise<void> {
+  async verifyOTP(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { email, otp } = req.body;
-      await userService.verifyOTP(email, otp);
-      res.status(201).json({ message: "Email has been verified" });
-    } catch (error: any) {
-      console.log("Error in UserController -> verifyOTP ", error.message);
-      res.status(400).json({ message: error.message });
+      await this.userService.verifyOTP(email, otp);
+      res
+        .status(HttpStatus.OK)
+        .json({ message: messages.EMAIL_VERIFICATION_SUCCESS });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async addInfo(req: Request, res: Response): Promise<void> {
+  async addInfo(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const data = await userService.addInfo(req.body);
+      const data = await this.userService.addInfo(req.body);
 
       // Securely store the refresh token in an HTTP-only cookie
-      // ! NOT WORKING
+
       res.cookie("userRefreshToken", data.refreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge:parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
-      res.status(201).json({
-        message: "User created successfully",
+      res.status(HttpStatus.CREATED).json({
+        message: messages.USER_CREATION_SUCCESS,
         accessToken: data.accessToken,
         user: data.user,
       });
-    } catch (error: any) {
-      console.error("Error in UserController -> addInfo:", error);
-      res.status(400).json({ message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async reSendOTP(req: Request, res: Response): Promise<void> {
+  async reSendOTP(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { email } = req.body;
-      await userService.reSendOTP(email);
-      res.status(201).json({ message: "OTP re-sended to your e-mail address" });
-    } catch (error: any) {
-      console.log("Error in UserController -> reSendOTP ", error.message);
-      res.status(400).json({ message: error.message });
+      await this.userService.reSendOTP(email);
+      res
+        .status(HttpStatus.CREATED)
+        .json({ message: messages.OTP_SENT_SUCCESS });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async login(req: Request, res: Response): Promise<void> {
+  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await userService.login(req.body);
-      console.log(data.refreshToken);
+      const { email, password } = req.body;
+      const data = await this.userService.login(email, password);
+      res.cookie("userRefreshToken", data.refreshToken, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
+      });
+
+      res.status(HttpStatus.OK).json({
+        message: messages.LOGIN_SUCCESS,
+        accessToken: data.accessToken,
+        user: data.user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async googleLogin(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { email, googleId, name } = req.body;
+      const data = await this.userService.googleLogin(email, googleId, name);
 
       res.cookie("userRefreshToken", data.refreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
-      res.status(200).json({
-        message: "Login successful",
+      res.status(HttpStatus.OK).json({
+        message: messages.LOGIN_SUCCESS,
         accessToken: data.accessToken,
         user: data.user,
       });
-    } catch (error: any) {
-      console.log("Error in UserController -> login ", error.message);
-      res.status(401).json({ message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async googleLogin(req: Request, res: Response): Promise<void> {
+  async requestPasswordReset(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const data = await userService.googleLogin(req.body);
-
-      res.cookie("userRefreshToken", data.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+      await this.userService.requestPasswordReset(req.body.email);
+      res.status(HttpStatus.OK).json({
+        message: messages.PASSWORD_RESET_LINK_SENT,
       });
-
-      res.status(200).json({
-        message: "Login successful",
-        accessToken: data.accessToken,
-        user: data.user,
-      });
-    } catch (error: any) {
-      console.log("Error in UserController -> googleLogin ", error.message);
-      res.status(401).json({ message: error.message });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async requestPasswordReset(req: Request, res: Response): Promise<void> {
-    try {
-      await userService.requestPasswordReset(req.body.email);
-      res.status(200).json({
-        message: "Password reset link has been sent your email address",
-      });
-    } catch (error: any) {
-      console.log(
-        "Error in UserController -> request passwordRest ",
-        error.message
-      );
-      res.status(401).json({ message: error.message });
-    }
-  }
-
-  async resetPassword(req: Request, res: Response): Promise<void> {
+  async resetPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { id, token, password } = req.body;
-      await userService.resetPassword(id, token, password);
-      res.status(200).json({ message: "Password has been reset" });
-    } catch (error: any) {
-      console.log("Error in UserController -> reset password ", error.message);
-      res.status(401).json({ message: error.message });
+      await this.userService.resetPassword(id, token, password);
+      res
+        .status(HttpStatus.OK)
+        .json({ message: messages.PASSWORD_RESET_SUCCESS });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async getUserInfo(req: ExtendedRequest, res: Response): Promise<void> {
+  async getUserInfo(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const id = req.id;
       if (!id) {
-        throw new Error("Id is missing ");
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const user = await userService.getUserInfo(id);
-      console.log("User ", user);
+      const user = await this.userService.getUserInfo(id);
 
-      res.status(200).json({ user: user });
-    } catch (error: any) {
-      console.log("Error in UserController -> get user info  ", error.message);
-      res.status(401).json({ message: error.message });
+      res.status(HttpStatus.OK).json({ user: user });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async refreshToken(req: Request, res: Response): Promise<void> {
+  async refreshToken(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const refreshToken = req.cookies?.userRefreshToken;
-      console.log("Refresh token route");
 
       if (!refreshToken) {
-        console.log("NO refresh token block ");
-
         res
-          .status(401)
-          .json({ message: "Unauthorized - No refresh token provided" });
+          .status(HttpStatus.UNAUTHORIZED)
+          .json({ message: messages.TOKEN_NOT_PROVIDED });
         return;
       }
 
-      const response = await userService.refreshToken(refreshToken);
-      console.log("New tokens ", response);
+      const response = await this.userService.refreshToken(refreshToken);
 
       res.cookie("refreshToken", response.newRefreshToken, {
         httpOnly: true,
         secure: process.env.PRODUCTION === "production",
         sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        maxAge:parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
-      res.status(200).json({
-        message: "Token refreshed successfully",
+      res.status(HttpStatus.CREATED).json({
+        message: messages.TOKEN_CREATED,
         accessToken: response.newAccessToken,
       });
-    } catch (error: any) {
-      console.error("Token Refresh Error:", error.message);
-
-      if (error.message === "Invalid refresh token") {
-        res.status(403).json({ message: "Invalid refresh token" });
-        return;
-      }
-
-      res.status(401).json({ message: error.message || "Unauthorized" });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async updateUserName(req: ExtendedRequest, res: Response): Promise<void> {
+  async updateUserName(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const id = req.id;
       const name = req.body.name;
       if (!id) {
-        throw new Error("Id is missing ");
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const user = await userService.updateUserName(id, name);
-      console.log("User ", user);
+      const user = await this.userService.updateUserName(id, name);
 
-      res.status(200).json({ success: true, name: user });
-    } catch (error: any) {
-      console.log("Error in UserController -> update name  ", error.message);
-      res.status(401).json({ message: error.message });
+      res.status(HttpStatus.OK).json({ success: true, name: user });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async updateUserPhone(req: ExtendedRequest, res: Response): Promise<void> {
+  async updateUserPhone(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const id = req.id;
       const phone = req.body.phone;
       if (!id) {
-        throw new Error("Id is missing ");
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const newPhone = await userService.updateUserPhone(id, phone);
-      console.log("new Phone ", newPhone);
+      const newPhone = await this.userService.updateUserPhone(id, phone);
 
-      res.status(200).json({ success: true, phone: newPhone });
-    } catch (error: any) {
-      console.log("Error in UserController -> update phone  ", error.message);
-      res.status(401).json({ message: error.message });
+      res.status(HttpStatus.OK).json({ success: true, phone: newPhone });
+    } catch (error) {
+      next(error);
     }
   }
 
-  async updateUserPfp(req: ExtendedRequest, res: Response): Promise<void> {
+  async updateUserPfp(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const id = req.id;
       const image = req.body.image;
       if (!id) {
-        throw new Error("Id is missing ");
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const newImg = await userService.updateUserPfp(id, image);
-      console.log("new img ", newImg);
+      const newImg = await this.userService.updateUserPfp(id, image);
 
-      res.status(200).json({ success: true, image: newImg });
-    } catch (error: any) {
-      console.log("Error in UserController -> update pfp  ", error.message);
-      res.status(401).json({ message: error.message });
-    }
-  }
-
-  async addMoneyToWallet(req: ExtendedRequest, res: Response): Promise<void> {
-    try {
-      const id = req.id;
-      const amount = req.body.amount;
-      if (!id) {
-        throw new Error("Id is missing ");
-      }
-      const url = await userService.addMoneyToWallet(id, amount);
-
-      res.status(200).json({ success: true, url });
-    } catch (error: any) {
-      console.log("Error in UserController -> update pfp  ", error.message);
-      res.status(401).json({ message: error.message });
-    }
-  }
-
-  async getWalletInfo(req: ExtendedRequest, res: Response): Promise<void> {
-    try {
-      const id = req.id;
-      if (!id) {
-        throw new Error("Id is missing ");
-      }
-      const wallet = await userService.getWalletInfo(id);
-      res.status(200).json({ success: true, wallet });
-    } catch (error: any) {
-      console.log("Error in UserController -> get wallet  ", error.message);
-      res.status(401).json({ message: error.message });
-    }
-  }
-
-  async webhook(req: ExtendedRequest, res: Response): Promise<void> {
-    const sig = req.headers["stripe-signature"] as string;
-    try {
-      console.log('Inside the webhook');
-      
-      await userService.webHook(req.body,sig)
-      res.status(200).json({success:true})
-    } catch (err: any) {
-      res.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
-  }
-
-  async payUsingWallet(req: ExtendedRequest, res: Response): Promise<void> {
-    try {
-      const id = req.id
-      if (!id) {
-        throw new Error('Id is missing')
-      }
-      const rideId = req.body.rideId
-      console.log('Ride id is  ',rideId);
-
-      await userService.payUsingWallet(id,rideId)
-      res.status(200).json({success:true})
-    } catch (err: any) {
-      res.status(400).send({message:err.message});
-      return;
-    }
-  }
-
-  
-  async payUsingStripe(req: ExtendedRequest, res: Response): Promise<void> {
-    try {
-      const id = req.id;
-      const rideId = req.body.rideId;
-      if (!id) {
-        throw new Error("Id is missing ");
-      }
-      const url = await userService.payUsingStripe(id, rideId);
-
-      res.status(200).json({ success: true, url });
-    } catch (error: any) {
-      console.log("Error in UserController -> pay using stripe  ", error.message);
-      res.status(401).json({ message: error.message });
-    }
-  }
-
-  async checkPaymentStatus(req:ExtendedRequest,res:Response):Promise<void>{
-    try {
-      const id = req.id
-      if (!id) {
-        throw new Error('Id not found')
-      }
-      const rideId = req.params.rideId
-      const paymentStatus = await userService.checkPaymentStatus(rideId)
-      res.status(200).json({ success: true, paymentStatus });
-
-    } catch (error:any) {
-      console.log(error);
-      res.status(401).json({ message: error.message });
+      res.status(HttpStatus.OK).json({ success: true, image: newImg });
+    } catch (error) {
+      next(error);
     }
   }
 }
-
-export default new UserController();

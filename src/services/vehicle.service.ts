@@ -1,10 +1,14 @@
 import { IVehicle } from "../models/vehicle.model";
-import vehicleRepo from "../repositories/vehicle.repo";
-import { z } from "zod";
+import { INVALID, z } from "zod";
 import cloudinary from "../utils/cloudinary";
 import mongoose from "mongoose";
-import driverRepo from "../repositories/driver.repo";
 
+import { IVehicleService } from "./interfaces/vehicle.interface";
+import { IVehicleRepo } from "../repositories/interfaces/vehicle.repo.interface";
+import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
+import { AppError } from "../utils/appError";
+import { HttpStatus } from "../constants/httpStatusCodes";
+import { messages } from "../constants/httpMessages";
 function validateLicensePlate(value: string): boolean {
   const licensePlateRegex =
     /^[A-Z]{2}[ -]?[0-9]{1,2}[ -]?[A-Z]{1,2}[ -]?[0-9]{1,4}$/;
@@ -78,38 +82,43 @@ const vehicleSchema = z.object({
   }),
 });
 
-class VehicleService {
+export class VehicleService implements IVehicleService {
+  constructor(
+    private vehicleRepo: IVehicleRepo,
+    private driverRepo: IDriverRepo
+  ) {}
   async addVehicle(data: IVehicle) {
     if (!data) {
-      throw new Error("Data is missing");
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
     // Validate driverId before using it
     if (!mongoose.Types.ObjectId.isValid(data.driverId)) {
-      throw new Error("Invalid driver id");
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
     }
 
     // Validate input using Zod
     const parsedData = vehicleSchema.safeParse(data);
     if (!parsedData.success) {
-      console.error("Zod validation error:", parsedData.error.format());
-
       const errorMessages = Object.values(
         parsedData.error.flatten().fieldErrors
       )
         .flat()
         .join(", ");
 
-      throw new Error("Invalid input: " + errorMessages);
+      throw new AppError(
+        HttpStatus.BAD_REQUEST,
+        messages.VALIDATION_ERROR + errorMessages
+      );
     }
 
     // Convert driverId to ObjectId
     const driverId = new mongoose.Types.ObjectId(data.driverId);
 
     // Check if driver exists
-    const driver = await driverRepo.findDriverById(driverId);
+    const driver = await this.driverRepo.findDriverById(driverId);
     if (!driver) {
-      throw new Error("Driver not found, please retry after signup");
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
     // Upload vehicle images
@@ -123,22 +132,20 @@ class VehicleService {
         vehicleImages[key] = res.secure_url;
       } catch (error) {
         console.error(`Failed to upload image ${vehicleImages[key]}:`, error);
-        throw new Error(
-          error instanceof Error ? error.message : "Image upload failed"
+        throw new AppError(
+          HttpStatus.BAD_GATEWAY,
+          error instanceof AppError ? error.message : "Image upload failed"
         );
       }
     }
 
-    console.log("Updated vehicle details after image upload:", vehicleImages);
-
     // Register the vehicle with updated images
     const vehicleData = { ...parsedData.data, vehicleImages };
-    const vehicle = await vehicleRepo.registerNewVehicle(vehicleData);
+    const vehicle = await this.vehicleRepo.registerNewVehicle(vehicleData);
 
     driver.vehicleId = vehicle._id as mongoose.Schema.Types.ObjectId;
     await driver.save();
 
-    console.log("Vehicle registered successfully:", vehicle);
     return {
       driver: {
         name: driver.name,
@@ -150,42 +157,45 @@ class VehicleService {
 
   async reApplyVehicle(id: string, data: IVehicle) {
     if (!data) {
-      throw new Error("Data is missing");
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
     // Validate driverId before using it
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new Error("Invalid driver id");
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
     }
 
     // Validate input using Zod
     const parsedData = vehicleSchema.safeParse(data);
     if (!parsedData.success) {
-      console.error("Zod validation error:", parsedData.error.format());
-
       const errorMessages = Object.values(
         parsedData.error.flatten().fieldErrors
       )
         .flat()
         .join(", ");
 
-      throw new Error("Invalid input: " + errorMessages);
+      throw new AppError(
+        HttpStatus.BAD_REQUEST,
+        messages.VALIDATION_ERROR + errorMessages
+      );
     }
 
     // Convert driverId to ObjectId
     const driverId = new mongoose.Types.ObjectId(id);
 
     // Check if driver exists
-    const driver = await driverRepo.findDriverById(driverId);
+    const driver = await this.driverRepo.findDriverById(driverId);
     if (!driver) {
-      throw new Error("Driver not found, please retry after signup");
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
     if (!driver.vehicleId) {
-      throw new Error("Vehicle not found");
+      throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
-    const vehicleDetails = await vehicleRepo.findVehicleById(driver.vehicleId);
+    const vehicleDetails = await this.vehicleRepo.findVehicleById(
+      driver.vehicleId
+    );
     if (!vehicleDetails) {
-      throw new Error("Vehicle not found");
+      throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
     // Upload vehicle images
     const vehicleImages = { ...parsedData.data.vehicleImages };
@@ -197,18 +207,16 @@ class VehicleService {
         });
         vehicleImages[key] = res.secure_url;
       } catch (error) {
-        console.error(`Failed to upload image ${vehicleImages[key]}:`, error);
-        throw new Error(
-          error instanceof Error ? error.message : "Image upload failed"
+        throw new AppError(
+          HttpStatus.BAD_GATEWAY,
+          error instanceof AppError ? error.message : "Image upload failed"
         );
       }
     }
 
-    console.log("Updated vehicle details after image upload:", vehicleImages);
-
     // Register the vehicle with updated images
     const vehicleData = { ...parsedData.data, vehicleImages };
-    const vehicle = await vehicleRepo.updatedVehicleData(id, vehicleData);
+    const vehicle = await this.vehicleRepo.updatedVehicleData(id, vehicleData);
 
     console.log("Vehicle registered successfully:", vehicle);
     return {
@@ -221,40 +229,28 @@ class VehicleService {
   }
 
   async rejectReason(driverId: string) {
-    try {
-      const id = new mongoose.Types.ObjectId(driverId);
-      const driver = await driverRepo.findDriverById(id);
+    const id = new mongoose.Types.ObjectId(driverId);
+    const driver = await this.driverRepo.findDriverById(id);
 
-      if (!driver) {
-        throw new Error("Driver not found. Please ensure you have registered.");
-      }
-      if (!driver.vehicleId) {
-        throw new Error("Vehicle not found");
-      }
-
-      const vehicle = await vehicleRepo.findVehicleById(driver.vehicleId);
-      if (!vehicle) {
-        throw new Error("Vehicle not found");
-      }
-      if (vehicle.status !== "rejected") {
-        throw new Error(
-          "There seems to be an issue with your application status. Please log in again to check your current status."
-        );
-      }
-
-      console.log("Vehicle data ", vehicle);
-
-      const reason = vehicle.rejectionReason;
-
-      return {
-        reason,
-      };
-    } catch (error) {
-      console.error("Error in DriverService -> rejectReason:", error);
-      if (error instanceof Error) throw error;
-      throw new Error("Internal server error");
+    if (!driver) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
+    if (!driver.vehicleId) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
+    }
+
+    const vehicle = await this.vehicleRepo.findVehicleById(driver.vehicleId);
+    if (!vehicle) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
+    }
+    if (vehicle.status !== "rejected") {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.DRIVER_NOT_REJECTED);
+    }
+
+    const reason = vehicle.rejectionReason;
+
+    return {
+      reason,
+    };
   }
 }
-
-export default new VehicleService();

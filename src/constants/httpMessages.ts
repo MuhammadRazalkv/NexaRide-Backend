@@ -39,6 +39,7 @@ export const messages = {
   TOKEN_CREATED: "New session token generated successfully.",
   TOKEN_NOT_PROVIDED: "No token was provided in the request.",
   INVALID_ID: "The provided ID is invalid.",
+  ID_NOT_PROVIDED: "ID not provided.",
 
   // Driver-specific
   DRIVER_NOT_FOUND: "Driver not found.",
@@ -56,11 +57,14 @@ export const messages = {
   INVALID_TRANSACTION: "Invalid transaction details. Please check and try again.",
   WALLET_MINIMUM_AMOUNT: "You must add at least ₹50 to your wallet.",
   WALLET_MAX_AMOUNT: "You can only add up to ₹3000 at a time to your wallet.",
+  
 
   // Ride Booking
   NO_AVAILABLE_RIDES: "No rides are currently available. Please try again later.",
   OTP_VERIFICATION_FAILED: "OTP verification was unsuccessful. Please check the code and try again.",
   RIDE_ALREADY_COMPLETED: "This ride has already been completed.",
   DATA_FETCH_SUCCESS: "Data retrieved successfully.",
-  FARE_UPDATED: "The fare has been updated successfully."
+  FARE_UPDATED: "The fare has been updated successfully.",
+
+  RATING_ERROR:"Rating should be between 1 to 5"
 };

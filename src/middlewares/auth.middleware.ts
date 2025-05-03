@@ -95,7 +95,7 @@ export const authenticateWithRoles = (
 
     try {
       const decoded = jwt.verify(token, ACCESS_SECRET) as JwtPayload;
-      console.log('decoded ',decoded);
+    
       
       if (decoded.role !== role) {
         console.log('No matching role ');

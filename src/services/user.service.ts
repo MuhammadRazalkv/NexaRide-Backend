@@ -12,7 +12,7 @@ import {
   verifyForgotPasswordToken,
 } from "../utils/jwt";
 import sendEmail from "../utils/mailSender";
-import cloudinary from "../utils/cloudinary";
+import cloudinary, { generateSignedCloudinaryUrl } from "../utils/cloudinary";
 
 import IUserService from "./interfaces/user.service.interface";
 import { IUserRepo } from "../repositories/interfaces/user.repo.interface";
@@ -288,8 +288,11 @@ export class UserService implements IUserService {
 
     const res = await cloudinary.uploader.upload(image, {
       folder: "/UserProfilePic",
+      // type: "authenticated", 
     });
     const user = await this.userRepo.updatePfp(id, res.secure_url);
+    // const user = await this.userRepo.updatePfp(id, res.public_id);
+    // const profilePicUrl = generateSignedCloudinaryUrl(user?.profilePic)
     return user?.profilePic;
   }
 }

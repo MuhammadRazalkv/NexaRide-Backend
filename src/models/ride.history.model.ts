@@ -14,7 +14,7 @@ export interface IRideHistory extends Document {
   status: string;
   startedAt?: Number;
   endedAt?: number;
-  canceledAt?:number;
+  cancelledAt?:number;
   paymentStatus: string;
   pickupCoords: [number, number];
   dropOffCoords: [number, number];
@@ -46,14 +46,16 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>({
   },
   startedAt: { type: Number },
   endedAt: { type: Number },
-  canceledAt: { type: Number },
+  cancelledAt: { type: Number },
   paymentStatus: {
     type: String,
-    enum: ["pending", "completed", "failed"],
+    enum: ["pending", "completed", "failed" , 'Not required'],
     default: "pending",
   },
   OTP:{type:String,required:true},
   cancelledBy:{type:String,enum:['driver',"user"]}
 });
 
+RideHistorySchema.index({userId:1})
+RideHistorySchema.index({driverId:1})
 export default mongoose.model<IRideHistory>("RideHistory", RideHistorySchema);

@@ -1,5 +1,5 @@
 import { IDrivers } from "../models/driver.model";
-import { IDriverService } from "./interfaces/driver.service.interface";
+import { IDriverService, IDriverWithVehicle } from "./interfaces/driver.service.interface";
 import OTPRepo from "../repositories/otp.repo";
 
 import { html } from "../constants/OTP";
@@ -26,7 +26,7 @@ import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
 import cloudinary from "../utils/cloudinary";
- 
+
 const driverSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   email: z.string().email("Invalid email format"),
@@ -160,8 +160,8 @@ const driverReApplySchema = z.object({
 });
 
 const generateTokens = (driverId: string) => ({
-  accessToken: generateAccessToken(driverId,'driver'),
-  refreshToken: generateRefreshToken(driverId,'driver'),
+  accessToken: generateAccessToken(driverId, "driver"),
+  refreshToken: generateRefreshToken(driverId, "driver"),
 });
 
 export class DriverService implements IDriverService {
@@ -481,7 +481,7 @@ export class DriverService implements IDriverService {
   async getDriverInfo(id: string) {
     const driver = await this.driverRepo.findDriverById(id);
     if (!driver) {
-      throw new AppError(HttpStatus.BAD_REQUEST,messages.DRIVER_NOT_FOUND);
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.DRIVER_NOT_FOUND);
     }
     return {
       name: driver.name,
@@ -493,6 +493,7 @@ export class DriverService implements IDriverService {
       profilePic: driver.profilePic,
       status: driver.status,
       licenseNumber: driver.license_number,
+      
     };
   }
 
@@ -502,7 +503,7 @@ export class DriverService implements IDriverService {
     value: string
   ) {
     if (!id || !field || !value) {
-      throw new AppError(HttpStatus.BAD_REQUEST,messages.MISSING_FIELDS);
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
     // Handle nested address fields
@@ -513,7 +514,7 @@ export class DriverService implements IDriverService {
 
     const response = await this.driverRepo.findAndUpdate(id, field, value);
     if (!response) {
-      throw new AppError(HttpStatus.NOT_FOUND,messages.DRIVER_NOT_FOUND);
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
     // Safely get the nested value
@@ -521,15 +522,13 @@ export class DriverService implements IDriverService {
       .split(".")
       .reduce((acc: any, key) => acc?.[key], response);
 
-  
-
     return updatedValue;
   }
 
   async toggleAvailability(id: string) {
     const driver = await this.driverRepo.findDriverById(id);
     if (!driver) {
-      throw new AppError(HttpStatus.NOT_FOUND,messages.DRIVER_NOT_FOUND);
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
     const type = driver.isAvailable == "online" ? "offline" : "online";
     const updatedDriver = await this.driverRepo.toggleAvailability(id, type);
@@ -539,8 +538,7 @@ export class DriverService implements IDriverService {
   async statusOnRide(id: string) {
     const driver = await this.driverRepo.findDriverById(id);
     if (!driver) {
-      throw new AppError(HttpStatus.NOT_FOUND,messages.DRIVER_NOT_FOUND);
-
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
     await this.driverRepo.goOnRide(id);
   }
@@ -548,43 +546,46 @@ export class DriverService implements IDriverService {
   async getCurrentLocation(id: string) {
     const driver = await this.driverRepo.findDriverById(id);
     if (!driver) {
-      throw new AppError(HttpStatus.NOT_FOUND,messages.DRIVER_NOT_FOUND);
-
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
     return driver.location.coordinates;
   }
   async goBackToOnline(id: string) {
     if (!id) {
-      throw new AppError(HttpStatus.BAD_REQUEST,messages.MISSING_FIELDS);
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
     await this.driverRepo.goBackToOnline(id);
   }
 
-    async refreshToken(token: string) {
-      if (!token) {
-        throw new AppError(HttpStatus.UNAUTHORIZED, messages.TOKEN_NOT_PROVIDED);
-      }
-  
-      const refresh = verifyRefreshToken(token);
-      if (!refresh) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_INVALID);
-      }
-  
-      const newAccessToken = generateAccessToken(refresh.id,'driver');
-      const newRefreshToken = generateRefreshToken(refresh.id,'driver');
-  
-      return { newAccessToken, newRefreshToken };
+  async refreshToken(token: string) {
+    if (!token) {
+      throw new AppError(HttpStatus.UNAUTHORIZED, messages.TOKEN_NOT_PROVIDED);
     }
 
-    async updateProfilePic(id: string, image: string) {
-        if (!id || !image) {
-          throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-        }
-    
-        const res = await cloudinary.uploader.upload(image, {
-          folder: "/DriverProfilePic",
-        });
-        const driver = await this.driverRepo.updateProfilePic(id, res.secure_url);
-        return driver?.profilePic;
-      }
+    const refresh = verifyRefreshToken(token);
+    if (!refresh) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_INVALID);
+    }
+
+    const newAccessToken = generateAccessToken(refresh.id, "driver");
+    const newRefreshToken = generateRefreshToken(refresh.id, "driver");
+
+    return { newAccessToken, newRefreshToken };
+  }
+
+  async updateProfilePic(id: string, image: string) {
+    if (!id || !image) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+
+    const res = await cloudinary.uploader.upload(image, {
+      folder: "/DriverProfilePic",
+    });
+    const driver = await this.driverRepo.updateProfilePic(id, res.secure_url);
+    return driver?.profilePic;
+  }
+
+
+
+
 }

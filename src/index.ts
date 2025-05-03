@@ -70,6 +70,7 @@ redis.on("error", (err) => console.error("Redis Error:", err));
 app.use("/user", userRoutes);
 app.use("/driver", driverRoutes);
 app.use("/admin", adminRoutes); 
+
 const userRepo = new UserRepository();
 const userService = new UserService(userRepo);
 const driverRepo = new DriverRepo();

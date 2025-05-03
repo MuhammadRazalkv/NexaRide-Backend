@@ -74,7 +74,8 @@ userRoute.get(
 
 userRoute.post("/checkCabs", userAuthMiddleware, rideController.checkCabs);
 userRoute.get('/getRideInfo',userAuthMiddleware,rideController.getRIdeInfoForUser)
-
+userRoute.post('/submitComplaint',userAuthMiddleware,rideController.fileComplaint)
+userRoute.post('/giveFeedBack',userAuthMiddleware,rideController.giveFeedBack)
 //* Web hook
 
 // userRoute.post('/webhook',express.raw({ type: 'application/json' }),userController.webhook)

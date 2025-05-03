@@ -90,11 +90,16 @@ driverRoutes.get(
   rideController.getRideHistoryDriver
 );
 
+driverRoutes.get('/getRideInfo',authMiddleware,rideController.getRIdeInfoForDriver)
+
+driverRoutes.post('/submitComplaint',authMiddleware,rideController.fileComplaint)
+
 //! This only need in dev stage
 driverRoutes.get(
   "/getCurrentLoc",
   authMiddleware,
   driverController.getCurrentLocation
 );
+driverRoutes.post('/giveFeedBack',authMiddleware,rideController.giveFeedBack)
 
 export default driverRoutes;

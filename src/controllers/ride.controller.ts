@@ -56,7 +56,7 @@ export class RideController implements IRideController {
       const OTP = req.body.otp;
 
       const response = await this.rideService.verifyRideOTP(driverId, OTP);
-      res.status(200).json({ success: true, startedAt: response });
+      res.status(200).json({ success: true, startedAt: response.date , rideId:response.rideId });
     } catch (error) {
       next(error);
     }
@@ -74,13 +74,11 @@ export class RideController implements IRideController {
       }
       const page = parseInt(req.query.page as string);
       const response = await this.rideService.getRideHistory(id, page);
-      res
-        .status(HttpStatus.OK)
-        .json({
-          success: true,
-          history: response.history,
-          total: response.total,
-        });
+      res.status(HttpStatus.OK).json({
+        success: true,
+        history: response.history,
+        total: response.total,
+      });
     } catch (error) {
       next(error);
     }
@@ -98,13 +96,11 @@ export class RideController implements IRideController {
       }
       const page = parseInt(req.query.page as string);
       const response = await this.rideService.getRideHistoryDriver(id, page);
-      res
-        .status(HttpStatus.OK)
-        .json({
-          success: true,
-          history: response.history,
-          total: response.total,
-        });
+      res.status(HttpStatus.OK).json({
+        success: true,
+        history: response.history,
+        total: response.total,
+      });
     } catch (error) {
       next(error);
     }
@@ -128,23 +124,108 @@ export class RideController implements IRideController {
     }
   }
 
-  async getRIdeInfoForUser(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getRIdeInfoForUser(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const id = req.id
-      const rideId = req.query.rideId
-      console.log('Inside the getRide info user ');
-      
-      if(!id) {
+      const id = req.id;
+      const rideId = req.query.rideId;
+      if (!id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
-      if(!rideId) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      if (!rideId || rideId === "null" || String(rideId).trim() === "") {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
-      const ride = await this.rideService.findUserRideInfo(rideId as string)
-      res.status(HttpStatus.OK).json({ride})
+
+      const { ride, complaintInfo } = await this.rideService.findUserRideInfo(
+        rideId as string,
+        id
+      );
+      res.status(HttpStatus.OK).json({ ride, complaintInfo });
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
-  
-} 
+
+  async fileComplaint(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const id = req.id;
+      const { rideId, reason, by, description } = req.body;
+      if (!id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      }
+      if (!rideId || rideId === "null" || String(rideId).trim() === "") {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
+      }
+      if (!reason) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+      }
+      const complaint = await this.rideService.fileComplaint(
+        id,
+        rideId,
+        reason,
+        by,
+        description
+      );
+      res.status(HttpStatus.CREATED).json({ success: true, complaint });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getRIdeInfoForDriver(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const id = req.id;
+      const rideId = req.query.rideId;
+      if (!id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      }
+      if (!rideId || rideId === "null" || String(rideId).trim() === "") {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
+      }
+
+      const { ride, complaintInfo } = await this.rideService.findDriverRideInfo(
+        rideId as string,
+        id
+      );
+      console.log("complaint info  ", complaintInfo);
+
+      res.status(HttpStatus.OK).json({ success: true, ride, complaintInfo });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async giveFeedBack(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const { rideId, submittedBy, rating, feedback } = req.body;
+      if (!rideId || !submittedBy || !rating) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+      }
+      await this.rideService.giveFeedBack(
+        rideId,
+        submittedBy,
+        Number(rating),
+        feedback
+      );
+
+      res.status(HttpStatus.CREATED).json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+}

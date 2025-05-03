@@ -1,6 +1,7 @@
 import { IDrivers } from "../../models/driver.model";
 import mongoose from "mongoose";
 import { IPricing } from "../../models/pricing.model";
+import { IDriverWithVehicle } from "../../services/interfaces/driver.service.interface";
 
 export interface IDriverRepo {
     findDriverById(id: mongoose.Types.ObjectId| string):Promise<IDrivers | null>
@@ -18,7 +19,7 @@ export interface IDriverRepo {
     changePassword(id: string, password: string):Promise<IDrivers | null>
     findAndUpdate(id: string, field: string, value: string):Promise<IDrivers | null>
     getAvailableDriversNearby(pickupCoords: [number, number]): Promise<any[]>
-    getDriverWithVehicleInfo(id: string): Promise<any[]>
+    getDriverWithVehicleInfo(id: string): Promise<IDriverWithVehicle>
     toggleAvailability(id: string, availability: string):Promise<IDrivers | null>
     assignRandomLocation(id: string, coordinates: number[]):Promise<IDrivers | null>
     findPrices():Promise<IPricing[]>

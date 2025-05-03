@@ -5,7 +5,7 @@ export interface IAdminController {
     getPendingDriverCount(req: Request, res: Response, next: NextFunction): Promise<void>
     changeUserStatus(req: Request, res: Response, next: NextFunction): Promise<void>
     getDrivers(req: Request, res: Response, next: NextFunction): Promise<void>
-    toggleBlockUnblockDriver(req: Request, res: Response, next: NextFunction): Promise<void>
+    changeDriverStatus(req: Request, res: Response, next: NextFunction): Promise<void>
     getPendingDriversWithVehicle(req: Request, res: Response, next: NextFunction): Promise<void>
     rejectDriver(req: Request, res: Response, next: NextFunction): Promise<void>
     approveDriver(req: Request, res: Response, next: NextFunction): Promise<void>
@@ -15,5 +15,8 @@ export interface IAdminController {
     updateFare(req: Request, res: Response, next: NextFunction): Promise<void>
     getFares(req: Request, res: Response, next: NextFunction): Promise<void>
     refreshToken(req: Request, res: Response, next: NextFunction): Promise<void>
-    
+    getAllComplaints(req: Request, res: Response, next: NextFunction): Promise<void>
+    getComplaintInDetail(req: Request, res: Response, next: NextFunction): Promise<void>
+    changeComplaintStatus(req: Request, res: Response, next: NextFunction): Promise<void>
+    sendWarningMail(req: Request, res: Response, next: NextFunction): Promise<void>
 }

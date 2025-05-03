@@ -4,7 +4,7 @@ import { IWalletRepo } from "../repositories/interfaces/wallet.repo.interface";
 import { IPaymentService } from "./interfaces/payment.service.interface";
 import Stripe from "stripe";
 import { getIO } from "../utils/socket";
-import {getFromRedis,setToRedis} from "../config/redis";
+import { getFromRedis, removeFromRedis } from "../config/redis";
 import { IRideRepo } from "../repositories/interfaces/ride.repo.interface";
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
@@ -19,6 +19,7 @@ export class PaymentService implements IPaymentService {
     private walletRepo: IWalletRepo,
     private rideRepo: IRideRepo
   ) {}
+  
 
   async addMoneyToWallet(id: string, amount: number) {
     if (!id || !amount) {
@@ -72,7 +73,7 @@ export class PaymentService implements IPaymentService {
     return wallet;
   }
 
-  // ! This is the payment related section in this there is the direct payment is not cleared
+  // ! This is the payment related section
   async webHook(body: any, sig: string) {
     let event = stripe.webhooks.constructEvent(
       body,
@@ -126,23 +127,24 @@ export class PaymentService implements IPaymentService {
         await this.driverRepo.goBackToOnline(driverId as string);
         // const driverSocketId = await redis.get(`OD:${driverId}`);
         // const userSocketId = await redis.get(`RU:${ride.userId}`);
-        
+
         const driverSocketId = await getFromRedis(`OD:${driverId}`);
         const userSocketId = await getFromRedis(`RU:${ride.userId}`);
+
         const io = getIO();
         if (driverSocketId) {
           io.to(driverSocketId).emit("payment-received");
         }
         if (userSocketId) {
-          console.log("send ride payment success to user ");
-
           io.to(userSocketId).emit("payment-success");
         }
+        await removeFromRedis(`URID:${ride.userId}`);
+        await removeFromRedis(`DRID:${driverId}`);
       }
     }
   }
 
-  //! This is where the user pay with wallet You should update the driver payment update section
+  //! This is where the user pay with wallet
   async payUsingWallet(userId: string, rideId: string) {
     const ride = await this.rideRepo.findRideById(rideId);
     console.log("Ride ", ride);
@@ -203,6 +205,8 @@ export class PaymentService implements IPaymentService {
     if (userSocketId) {
       io.to(userSocketId).emit("payment-success");
     }
+    await removeFromRedis(`URID:${ride.userId}`);
+    await removeFromRedis(`DRID:${driverId}`);
   }
 
   async payUsingStripe(userId: string, rideId: string) {

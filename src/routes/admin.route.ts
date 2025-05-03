@@ -18,7 +18,7 @@ adminRoute.patch('/user/changeStatus',adminAuthMiddleware,adminController.change
 adminRoute.get('/getDrivers',adminAuthMiddleware,adminController.getDrivers)
 adminRoute.get('/getPendingCount',adminAuthMiddleware,adminController.getPendingDriverCount)
 adminRoute.get('/pending-drivers',adminAuthMiddleware,adminController.getPendingDriversWithVehicle)
-adminRoute.patch('/driver/toggleBlockUnblock',adminAuthMiddleware,adminController.toggleBlockUnblockDriver)
+adminRoute.patch('/driver/toggleBlockUnblock',adminAuthMiddleware,adminController.changeDriverStatus)
 adminRoute.patch('/reject-driver',adminAuthMiddleware,adminController.rejectDriver)
 adminRoute.patch('/approve-driver',adminAuthMiddleware,adminController.approveDriver)
  
@@ -26,5 +26,8 @@ adminRoute.get('/getVehicleInfo/:id',adminAuthMiddleware,adminController.getVehi
 adminRoute.patch('/approve-vehicle',adminAuthMiddleware, adminController.approveVehicle);
 adminRoute.patch('/reject-vehicle',adminAuthMiddleware, adminController.rejectVehicle);
 
-
+adminRoute.get('/getComplaints',adminAuthMiddleware,adminController.getAllComplaints)
+adminRoute.get('/getComplaintInDetail',adminAuthMiddleware,adminController.getComplaintInDetail)
+adminRoute.patch('/changeComplaintStatus',adminAuthMiddleware,adminController.changeComplaintStatus)
+adminRoute.post('/sendWarningMail',adminAuthMiddleware,adminController.sendWarningMail)
 export default adminRoute 

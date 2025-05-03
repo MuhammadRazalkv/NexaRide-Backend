@@ -1,7 +1,7 @@
 import { IUser } from "../../models/user.model";
 import { UpdateResult } from 'mongodb';
 
-export interface IUserRepo {
+export interface IUserRepo  {
     findUserByEmail(email: string): Promise<IUser | null>
     findUserById(id: string): Promise<IUser | null>
     registerNewUser(userData: Partial<IUser>): Promise< IUser>

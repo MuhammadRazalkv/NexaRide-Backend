@@ -1,6 +1,28 @@
 import { IRideHistory } from "../../models/ride.history.model";
 import { UpdateResult } from 'mongodb';
-import { IRideWithDriver } from "../../services/interfaces/ride.service.interface";
+import { IRideWithDriver, IRideWithUser } from "../../services/interfaces/ride.service.interface";
+import { IComplaints } from "../../models/complaints.modal";
+import mongoose, { Types } from "mongoose";
+import { IUser } from "../../models/user.model";
+import { IDrivers } from "../../models/driver.model";
+import { IFeedback } from "../../models/feedbacks.model";
+export interface IComplaintsWithUserDriver {
+    _id: Types.ObjectId;
+    rideId: Types.ObjectId;
+    filedById: Types.ObjectId;
+    filedByRole: string;
+    complaintReason: string;
+    description?: string;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+    user: string;   
+    driver: string; 
+}
+export interface PopulatedRideHistory extends Omit<IRideHistory, 'userId' | 'driverId'> {
+    userId: IUser;
+    driverId: IDrivers;
+}
 
 export interface IRideRepo {
     createNewRide(data: Partial<IRideHistory>):Promise<IRideHistory>
@@ -17,4 +39,15 @@ export interface IRideRepo {
     getUserRideCount(userId:string):Promise<number>
     getDriverRideCount(driverId:string):Promise<number>
     getRideInfoWithDriver(rideId:string):Promise<IRideWithDriver | null >
+    createComplaint(rideId:string,filedById:string,filedByRole:string,reason:string,description?:string):Promise<IComplaints | null>
+    getComplaintInfo(rideId:string,filedById:string):Promise<IComplaints | null>
+    getAllComplaints(skip:number,limit:number,filterBy:string):Promise<IComplaintsWithUserDriver[] | null>
+    getRideInfoWithUser(rideId:string):Promise<IRideWithUser | null >
+    getComplainsLength():Promise<number>
+    getComplaintById(id:string):Promise<IComplaints | null>
+    getPopulatedRideInfo(id:string):Promise<PopulatedRideHistory | null>
+    updateComplaintStatus(id:string,type:string):Promise<IComplaints | null>
+    setWarningMailSentTrue(id:string):Promise<void>
+    createFeedBack(rideId:mongoose.Types.ObjectId,ratedById:mongoose.Types.ObjectId,ratedAgainstId:mongoose.Types.ObjectId,ratedByRole:'user'|'driver',ratedAgainstRole:'user'|'driver',rating:number,feedback?:string):Promise<IFeedback | null>
+    getAvgRating(ratedAgainstId:mongoose.Types.ObjectId,ratedAgainstRole:'user'|'driver'):Promise<{totalRatings:number,avgRating:number}>
 }

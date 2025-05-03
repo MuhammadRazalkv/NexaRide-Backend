@@ -1,12 +1,13 @@
+import { AppError } from "./appError";
 
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
-  secure: true, // true for 465, false for other ports
+  secure: true,
   auth: {
-    user: process.env.APP_GMAIL, // Ensure this is set properly
+    user: process.env.APP_GMAIL, 
     pass:  process.env.APP_PASSWORD_GMAIL, 
   },
 });
@@ -15,10 +16,10 @@ export default async function sendEmail(to : string, subject : string, html : st
   try {
     // Send mail with defined transport object
     await transporter.sendMail({
-      from: process.env.APP_GMAIL, // Optional: add the sender's email
+      from: 'NexaRide'+  process.env.APP_GMAIL, 
       to: to,
       subject: subject, 
-      text: "This is a plain text message", // fallback if html doesn't work
+      text: "This is a plain text message", 
       html: html
     });
 

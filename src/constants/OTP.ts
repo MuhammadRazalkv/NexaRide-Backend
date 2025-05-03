@@ -1,4 +1,4 @@
-const driverLoginLink = "http://localhost:5173/driver/login";
+const driverLoginLink = `${process.env.FRONT_END_URL}/driver/login`;
 export const html = (otp: string) => {
   return `<div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #fafafa; padding: 30px; max-width: 600px; margin: 0 auto; border-radius: 8px; border: 1px solid #e0e0e0;">
   <div style="background-color: #2c3e50; padding: 15px; text-align: center; border-radius: 8px 8px 0 0;">
@@ -106,6 +106,85 @@ export const rejectionEmail = (
     </div>
     <div style="background-color: #f8f8f8; text-align: center; padding: 10px; border-radius: 0 0 8px 8px;">
       <p style="font-size: 12px; color: #888888;">© ${new Date().getFullYear()} NexaRide. All Rights Reserved.</p>
+    </div>
+  </div>`;
+};
+
+export const warningMail = (
+  name: string,
+  complaintId: string,
+  rideId: string,
+  reason: string,
+  date: string,
+  description?: string
+) => {
+  return `<div style="font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; color: #333333;">
+    <!-- Header -->
+    <div style="background-color: #FF5733; padding: 20px; text-align: center;">
+      <h2 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 500;">IMPORTANT: Account Notice</h2>
+    </div>
+    
+  
+    <div style="background-color: #ffffff; padding: 30px;">
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Dear <strong>${name}</strong>,</p>
+      
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">We need to inform you about a complaint we've received regarding your recent activity. This requires your immediate attention.</p>
+      
+      <div style="background-color: #f8fafc; border-left: 4px solid #ef4444; padding: 15px; margin: 25px 0;">
+        <p style="font-size: 16px; margin: 0 0 5px 0;"><strong>Notice Type:</strong> Formal Warning</p>
+      </div>
+      
+      <div style="border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 25px;">
+        <h3 style="font-size: 18px; margin-top: 0; margin-bottom: 15px; color:rgb(0, 0, 0);">Incident Details:</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.6;">
+          <tr>
+            <td style="padding: 8px 0; width: 140px;"><strong>Complaint ID:</strong></td>
+            <td style="padding: 8px 0;">${complaintId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong>Ride ID:</strong></td>
+            <td style="padding: 8px 0;">${rideId}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong>Reason:</strong></td>
+            <td style="padding: 8px 0;">${reason}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0;"><strong>Date:</strong></td>
+            <td style="padding: 8px 0;">${date}</td>
+          </tr>
+          ${
+            description
+              ? `
+          <tr>
+            <td style="padding: 8px 0;"><strong>Description:</strong></td>
+            <td style="padding: 8px 0;">${description}</td>
+          </tr>`
+              : ""
+          }
+        </table>
+      </div>
+      
+      <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Please be aware that multiple violations may result in:</p>
+      <ul style="font-size: 16px; line-height: 1.5; margin-bottom: 20px; padding-left: 20px;">
+        <li>Temporary account suspension</li>
+        <li>Restricted access to platform features</li>
+        <li>Permanent account deactivation</li>
+      </ul>
+      
+      <div style="background-color:rgb(221, 221, 221); border-radius: 6px; padding: 15px; margin: 25px 0;">
+        <p style="font-size: 15px; margin: 0; line-height: 1.5;">If you believe this complaint is incorrect or would like to discuss this matter further, please contact our Support Team within 7 days.</p>
+      </div>
+      
+      <div style="margin-top: 30px;">
+        <a href="mailto:support@nexaride.com" style="background-color:rgb(0, 0, 0); color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-size: 16px; display: inline-block;">Contact Support</a>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background-color:rgba(252, 252, 252, 0.71); padding: 20px; text-align: center; font-size: 14px; color: #64748b;">
+      <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} NexaRide, Inc. All rights reserved.</p>
+      <p style="margin: 0;">This is an automated notification. Please do not reply directly to this email.</p>
     </div>
   </div>`;
 };

@@ -9,6 +9,7 @@ import { BaseRepository } from "./base.repo";
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
+import { IDriverWithVehicle } from "../services/interfaces/driver.service.interface";
 
 export class DriverRepo
   extends BaseRepository<IDrivers>
@@ -87,12 +88,14 @@ export class DriverRepo
       .lean();
   }
 
-  async getApprovedDriversCount(search:string) {
-    return this.model.find({ status: "approved", name: { $regex: search, $options: "i" }}).countDocuments();
+  async getApprovedDriversCount(search: string) {
+    return this.model
+      .find({ status: "approved", name: { $regex: search, $options: "i" } })
+      .countDocuments();
   }
 
   async blockUnblockDriver(id: string, status: boolean) {
-    return this.updateById(id, { $set: { isBlocked: !status } }); // from BaseRepository
+    return this.updateById(id, { $set: { isBlocked: !status } });
   }
 
   async getPendingDriverCount() {
@@ -190,6 +193,45 @@ export class DriverRepo
     return this.updateById(id, { $set: { [field]: value, status: "pending" } });
   }
 
+  // async getAvailableDriversNearby(pickupCoords: [number, number]) {
+  //   return this.model.aggregate([
+  //     {
+  //       $geoNear: {
+  //         near: { type: "Point", coordinates: pickupCoords },
+  //         distanceField: "distance",
+  //         maxDistance: 5000,
+  //         spherical: true,
+  //       },
+  //     },
+  //     {
+  //       $lookup: {
+  //         from: "vehicles",
+  //         localField: "vehicleId",
+  //         foreignField: "_id",
+  //         as: "vehicleDetails",
+  //       },
+  //     },
+  //     { $unwind: "$vehicleDetails" },
+  //     {
+  //       $match: {
+  //         isAvailable: "online",
+  //       },
+  //     },
+  //     {
+  //       $project: {
+  //         name: 1,
+  //         location: 1,
+  //         vehicleDetails: {
+  //           brand: 1,
+  //           vehicleModel: 1,
+  //           color: 1,
+  //           category: 1,
+  //         },
+  //       },
+  //     },
+  //   ]);
+  // }
+
   async getAvailableDriversNearby(pickupCoords: [number, number]) {
     return this.model.aggregate([
       {
@@ -201,6 +243,11 @@ export class DriverRepo
         },
       },
       {
+        $match: {
+          isAvailable: "online",
+        },
+      },
+      {
         $lookup: {
           from: "vehicles",
           localField: "vehicleId",
@@ -208,16 +255,32 @@ export class DriverRepo
           as: "vehicleDetails",
         },
       },
-      { $unwind: "$vehicleDetails" },
       {
-        $match: {
-          isAvailable: "online",
+        $unwind: {
+          path: "$vehicleDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "feedbacks",
+          localField: "_id",
+          foreignField: "ratedAgainstId",
+          as: "ratings",
+        },
+      },
+      {
+        $addFields: {
+          avgRating: { $avg: "$ratings.rating" },
+          totalRatings: { $size: "$ratings" },
         },
       },
       {
         $project: {
           name: 1,
           location: 1,
+          avgRating: 1,
+          totalRatings: 1,
+          distance: 1,
           vehicleDetails: {
             brand: 1,
             vehicleModel: 1,
@@ -229,8 +292,8 @@ export class DriverRepo
     ]);
   }
 
-  async getDriverWithVehicleInfo(id: string) {
-    return this.model.aggregate([
+  async getDriverWithVehicleInfo(id: string):Promise<IDriverWithVehicle> {
+    const result = await this.model.aggregate([
       { $match: { _id: new ObjectId(id) } },
       {
         $lookup: {
@@ -254,6 +317,9 @@ export class DriverRepo
         },
       },
     ]);
+    return result[0] as IDriverWithVehicle;
+    
+    
   }
 
   async toggleAvailability(id: string, availability: string) {
@@ -282,7 +348,7 @@ export class DriverRepo
     return this.updateById(id, { $set: { isAvailable: "online" } });
   }
 
-  async updateProfilePic(id:string,url:string){
-    return this.updateById(id,{$set:{profilePic:url}})
+  async updateProfilePic(id: string, url: string) {
+    return this.updateById(id, { $set: { profilePic: url } });
   }
 }

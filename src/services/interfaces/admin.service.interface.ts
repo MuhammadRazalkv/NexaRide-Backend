@@ -1,6 +1,12 @@
+import { IComplaints } from "../../models/complaints.modal";
 import { IDrivers } from "../../models/driver.model";
+import { IRideHistory } from "../../models/ride.history.model";
 import { IUser } from "../../models/user.model";
 import { IVehicle } from "../../models/vehicle.model";
+import { IComplaintsWithUserDriver, PopulatedRideHistory } from "../../repositories/interfaces/ride.repo.interface";
+
+
+
 interface IFare {
   basic: number;
   premium: number;
@@ -14,9 +20,13 @@ export interface IAdminService {
     accessToken: string;
     refreshToken: string;
   }>;
-  getUsers(page:number,search:string,sort:string): Promise<{
+  getUsers(
+    page: number,
+    search: string,
+    sort: string
+  ): Promise<{
     users: IUser[] | null;
-    total:number
+    total: number;
   }>;
   getPendingDriverCount(): Promise<{
     count: number;
@@ -25,11 +35,15 @@ export interface IAdminService {
     message: string;
     user: IUser;
   }>;
-  getDrivers(page:number,search:string,sort:string): Promise<{
+  getDrivers(
+    page: number,
+    search: string,
+    sort: string
+  ): Promise<{
     drivers: IDrivers[];
-    total:number
+    total: number;
   }>;
-  toggleBlockUnblockDriver(id: string): Promise<{
+  changeDriverStatus(id: string): Promise<{
     message: string;
     driver: IDrivers;
   }>;
@@ -67,6 +81,10 @@ export interface IAdminService {
   refreshToken(token: string): Promise<{
     newAccessToken: string;
     newRefreshToken: string;
-}>
+  }>;
 
+  getAllComplaints(page: number,filter:string): Promise<{complaints:IComplaintsWithUserDriver[] | null,total:number}>;
+  getComplaintInDetail(complaintId: string): Promise<{complaint:IComplaints | null , rideInfo:PopulatedRideHistory | null}>;
+  changeComplaintStatus(complaintId:string,type:string):Promise<IComplaints | null >
+  sendWarningMail(id:string): Promise<void>
 }

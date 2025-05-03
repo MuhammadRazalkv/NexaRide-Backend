@@ -1,11 +1,18 @@
 import { CheckCabs } from "../interface/ride.interface";
 import { IRideHistory } from "../models/ride.history.model";
-import { IRideService, IRideWithDriver } from "./interfaces/ride.service.interface";
+import {
+  IRideService,
+  IRideWithDriver,
+  IRideWithUser,
+} from "./interfaces/ride.service.interface";
 import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
 import { IRideRepo } from "../repositories/interfaces/ride.repo.interface";
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
+import { IComplaints } from "../models/complaints.modal";
+import mongoose from "mongoose";
+
 export class RideService implements IRideService {
   constructor(private driverRepo: IDriverRepo, private rideRepo: IRideRepo) {}
 
@@ -91,7 +98,7 @@ export class RideService implements IRideService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_OTP);
     }
     await this.rideRepo.updateRideStartedAt(ride.id);
-    return Date.now();
+    return { rideId: ride.id, date: Date.now() };
   }
 
   async cancelRide(
@@ -132,24 +139,126 @@ export class RideService implements IRideService {
     return ride?.paymentStatus;
   }
 
-  async findRideById(rideId:string){
+  async findRideById(rideId: string) {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
     const ride = await this.rideRepo.findRideById(rideId);
-    return ride
+    return ride;
   }
 
-  async findUserRideInfo(rideId: string): Promise<IRideWithDriver | null> {
+  async findUserRideInfo(
+    rideId: string,
+    userId: string
+  ): Promise<{
+    ride: IRideWithDriver | null;
+    complaintInfo: IComplaints | null;
+  }> {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.getRideInfoWithDriver(rideId)
+    const ride = await this.rideRepo.getRideInfoWithDriver(rideId);
+    console.log("Ride Id In user  ", rideId);
+    console.log("user Id  ", userId);
+
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
-      
     }
-    return ride
+    const complaintInfo = await this.rideRepo.getComplaintInfo(rideId, userId);
+    console.log("Complaint info ", complaintInfo);
+
+    return { ride, complaintInfo };
   }
 
+  async fileComplaint(
+    id: string,
+    rideId: string,
+    reason: string,
+    by: string,
+    description?: string
+  ): Promise<IComplaints | null> {
+    if (!rideId || rideId === "null" || String(rideId).trim() === "") {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
+    }
+    if (!reason || (reason == "other" && !description)) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const ride = await this.rideRepo.findRideById(rideId);
+    if (!ride) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
+    console.log("Ride ", ride);
+
+    const complaint = await this.rideRepo.createComplaint(
+      rideId,
+      id,
+      by,
+      reason,
+      description
+    );
+    return complaint;
+  }
+
+  async findDriverRideInfo(
+    rideId: string,
+    driverId: string
+  ): Promise<{
+    ride: IRideWithUser | null;
+    complaintInfo: IComplaints | null;
+  }> {
+    if (!rideId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+
+    const ride = await this.rideRepo.getRideInfoWithUser(rideId);
+    if (!ride) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
+    console.log("rideId", rideId, "driverId", driverId);
+
+    const complaintInfo = await this.rideRepo.getComplaintInfo(
+      rideId,
+      driverId
+    );
+
+    return { ride, complaintInfo };
+  }
+
+  async giveFeedBack(
+    rideId: string,
+    submittedBy: "user" | "driver",
+    rating: number,
+    feedback?: string
+  ): Promise<void> {
+    const ride = await this.rideRepo.findRideById(rideId);
+    if (!ride) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
+    if (rating > 5 || rating < 0) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.RATING_ERROR);
+    }
+    let ratedById: mongoose.Types.ObjectId;
+    let ratedAgainstId: mongoose.Types.ObjectId;
+    let ratedAgainstRole: "user" | "driver";
+    if (submittedBy == "user") {
+      ratedById = new mongoose.Types.ObjectId(ride.userId);
+      ratedAgainstId = new mongoose.Types.ObjectId(ride.driverId);
+      ratedAgainstRole = "driver";
+    } else {
+      ratedById = new mongoose.Types.ObjectId(ride.driverId);
+      ratedAgainstId = new mongoose.Types.ObjectId(ride.userId);
+      ratedAgainstRole = "user";
+    }
+    await this.rideRepo.createFeedBack(
+      ride.id,
+      ratedById,
+      ratedAgainstId,
+      submittedBy,
+      ratedAgainstRole,
+      rating,
+      feedback
+    );
+  }
 }
+
+2;

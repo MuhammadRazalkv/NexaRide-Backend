@@ -8,6 +8,7 @@ import {
   driverApprovalEmail,
   vehicleApprovalEmail,
   rejectionEmail,
+  warningMail,
 } from "../constants/OTP";
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
@@ -17,6 +18,14 @@ import { IUserRepo } from "../repositories/interfaces/user.repo.interface";
 import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
 import { IVehicleRepo } from "../repositories/interfaces/vehicle.repo.interface";
 import { IAdminRepo } from "../repositories/interfaces/admin.repo";
+import {
+  IComplaintsWithUserDriver,
+  IRideRepo,
+  PopulatedRideHistory,
+} from "../repositories/interfaces/ride.repo.interface";
+import { IComplaints } from "../models/complaints.modal";
+import { IRideHistory } from "../models/ride.history.model";
+import { error } from "console";
 const generateTokens = () => ({
   accessToken: generateAccessToken(process.env.ADMIN_EMAIL as string, "admin"),
   refreshToken: generateRefreshToken(
@@ -40,7 +49,8 @@ export class AdminService implements IAdminService {
     private userRepo: IUserRepo,
     private driverRepo: IDriverRepo,
     private vehicleRepo: IVehicleRepo,
-    private adminRepo: IAdminRepo
+    private adminRepo: IAdminRepo,
+    private rideRepo: IRideRepo
   ) {}
   async login(email: string, password: string) {
     if (!email || !password) {
@@ -59,18 +69,17 @@ export class AdminService implements IAdminService {
     };
   }
 
-  async getUsers(page:number,search:string,sort:string) {
-    const limit = 5 
-    const skip = (page - 1 ) * 5 
-    
-    const users = await this.userRepo.getAllUsers(skip,limit,search,sort);
+  async getUsers(page: number, search: string, sort: string) {
+    const limit = 5;
+    const skip = (page - 1) * limit;
+
+    const users = await this.userRepo.getAllUsers(skip, limit, search, sort);
     const total = await this.userRepo.getAllUserCount(search);
     return {
       users,
-      total
-    }; 
+      total,
+    };
   }
- 
 
   async changeUserStatus(id: string) {
     const user = await this.userRepo.findUserById(id);
@@ -94,14 +103,19 @@ export class AdminService implements IAdminService {
     throw new AppError(HttpStatus.BAD_REQUEST, messages.SERVER_ERROR);
   }
 
-  async getDrivers(page:number,search:string,sort:string) {
-    const limit = 5
-    const skip = (page - 1 ) * 5 
-    const drivers = await this.driverRepo.getAllDrivers(skip,limit,search,sort);
-    const total = await this.driverRepo.getApprovedDriversCount(search)
+  async getDrivers(page: number, search: string, sort: string) {
+    const limit = 5;
+    const skip = (page - 1) * 5;
+    const drivers = await this.driverRepo.getAllDrivers(
+      skip,
+      limit,
+      search,
+      sort
+    );
+    const total = await this.driverRepo.getApprovedDriversCount(search);
     return {
       drivers,
-      total
+      total,
     };
   }
 
@@ -111,7 +125,7 @@ export class AdminService implements IAdminService {
       count,
     };
   }
-  async toggleBlockUnblockDriver(id: string) {
+  async changeDriverStatus(id: string) {
     const driver = await this.driverRepo.findDriverById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
@@ -301,16 +315,97 @@ export class AdminService implements IAdminService {
     }
 
     const refresh = verifyRefreshToken(token);
-    console.log('admin refresh verified ',refresh);
-    
+
     if (!refresh) {
-      console.log('Token verification failed ');
-      
       throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_INVALID);
     }
 
-    const {accessToken,refreshToken} = generateTokens()
+    const { accessToken, refreshToken } = generateTokens();
 
-    return { newAccessToken:accessToken, newRefreshToken:refreshToken };
+    return { newAccessToken: accessToken, newRefreshToken: refreshToken };
+  }
+
+  async getAllComplaints(
+    page: number,
+    filterBy:string
+  ): Promise<{
+    complaints: IComplaintsWithUserDriver[] | null;
+    total: number;
+  }> {
+    const limit = 5;
+    const skip = (page - 1) * 5;
+    const complaints = await this.rideRepo.getAllComplaints(skip, limit,filterBy);
+    const total = await this.rideRepo.getComplainsLength();
+    console.log(complaints);
+    
+    return { complaints, total };
+  }
+
+  async getComplaintInDetail(complaintId: string): Promise<{
+    complaint: IComplaints | null;
+    rideInfo: PopulatedRideHistory | null;
+  }> {
+    const complaint = await this.rideRepo.getComplaintById(complaintId);
+    if (!complaint) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.NOT_FOUND);
+    }
+    const ride = await this.rideRepo.getPopulatedRideInfo(complaint.rideId);
+    if (!ride) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
+    return { complaint, rideInfo: ride };
+  }
+
+  async changeComplaintStatus(
+    complaintId: string,
+    type: string
+  ): Promise<IComplaints | null> {
+    const complaint = await this.rideRepo.getComplaintById(complaintId);
+
+    if (!complaint) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.NOT_FOUND);
+    }
+    if (complaint.status !== "pending") {
+      throw new AppError(
+        HttpStatus.BAD_REQUEST,
+        "The complaint status has updated already "
+      );
+    }
+    const updatedComplaint = await this.rideRepo.updateComplaintStatus(
+      complaintId,
+      type
+    );
+
+    return updatedComplaint;
+  }
+
+  async sendWarningMail(id: string): Promise<void> {
+    if (!id) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
+    }
+    const complaint = await this.rideRepo.getComplaintById(id);
+    if (!complaint) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.NOT_FOUND);
+    }
+    const ride = await this.rideRepo.getPopulatedRideInfo(complaint.rideId);
+    if (!ride) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
+    let email: string;
+    let name : string;
+    if (complaint.filedByRole == "driver") {
+      name = ride.userId.name
+      email = ride.userId.email;
+    } else {
+      email = ride.driverId.email;
+      name = ride.driverId.name
+    }
+
+    await sendEmail(email,'NexaRide: Important Notice About Your Account Activity',warningMail(name,String(complaint.id).slice(-4),String(ride.id).slice(-4),complaint.complaintReason,new Date(complaint.createdAt).toDateString(),complaint?.description)).catch((error)=>{
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR,error.message)
+    })
+    
+    await this.rideRepo.setWarningMailSentTrue(id)
+
   }
 }

@@ -12,6 +12,8 @@ import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
 import { IComplaints } from "../models/complaints.modal";
 import mongoose from "mongoose";
+import { getByGeoIndexRedis, getAvailableDriversByGeo } from "../config/redis";
+type VehicleCategory = "luxury" | "premium" | "basic";
 
 export class RideService implements IRideService {
   constructor(private driverRepo: IDriverRepo, private rideRepo: IRideRepo) {}
@@ -22,25 +24,50 @@ export class RideService implements IRideService {
       data.pickUpPoint.lng,
     ];
 
-    const drivers = await this.driverRepo.getAvailableDriversNearby(
-      pickupCoords
-    );
     const fares = await this.driverRepo.findPrices();
+    const km = data.distance / 1000;
 
-    const updatedDrivers = drivers.map((driver) => {
-      const matchingFare = fares.find(
-        (fare: { vehicleClass: string; farePerKm: number }) =>
-          fare.vehicleClass.toLowerCase() ===
-          driver.vehicleDetails.category.toLowerCase()
-      );
-      const km = data.distance / 1000;
-      return {
-        ...driver,
-        totalFare: matchingFare ? Math.round(matchingFare.farePerKm * km) : 0,
-      };
-    });
+    const vehicleCategories: VehicleCategory[] = ["luxury", "premium", "basic"];
 
-    return updatedDrivers;
+    const driversByCategory: Record<
+      VehicleCategory,
+      { id: string; distance: number }[]
+    > = {
+      luxury: await getAvailableDriversByGeo(
+        "drivers:luxury",
+        pickupCoords[0],
+        pickupCoords[1]
+      ),
+      premium: await getAvailableDriversByGeo(
+        "drivers:premium",
+        pickupCoords[0],
+        pickupCoords[1]
+      ),
+      basic: await getAvailableDriversByGeo(
+        "drivers:basic",
+        pickupCoords[0],
+        pickupCoords[1]
+      ),
+    };
+
+    const updatedCabInfo = vehicleCategories.reduce((acc, category) => {
+      const driverList = driversByCategory[category];
+      if (driverList.length > 0) {
+        const matchingFare = fares.find(
+          (fare) => fare.vehicleClass.toLowerCase() === category
+        );
+        acc.push({
+          category,
+          count: driverList.length,
+          totalFare: matchingFare ? Math.round(matchingFare.farePerKm * km) : 0,
+        });
+      }
+      return acc;
+    }, [] as { category: string; count: number; totalFare: number }[]);
+
+    console.log(updatedCabInfo);
+
+    return updatedCabInfo;
   }
 
   async assignRandomLocation(id: string) {
@@ -68,6 +95,8 @@ export class RideService implements IRideService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
     const driver = await this.driverRepo.getDriverWithVehicleInfo(id);
+   
+    
     return driver;
   }
 

@@ -4,7 +4,11 @@ import { IWalletRepo } from "../repositories/interfaces/wallet.repo.interface";
 import { IPaymentService } from "./interfaces/payment.service.interface";
 import Stripe from "stripe";
 import { getIO } from "../utils/socket";
-import { getFromRedis, removeFromRedis } from "../config/redis";
+import {
+  getFromRedis,
+  removeFromRedis,
+  updateDriverFelids,
+} from "../config/redis";
 import { IRideRepo } from "../repositories/interfaces/ride.repo.interface";
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
@@ -19,7 +23,6 @@ export class PaymentService implements IPaymentService {
     private walletRepo: IWalletRepo,
     private rideRepo: IRideRepo
   ) {}
-  
 
   async addMoneyToWallet(id: string, amount: number) {
     if (!id || !amount) {
@@ -127,7 +130,11 @@ export class PaymentService implements IPaymentService {
         await this.driverRepo.goBackToOnline(driverId as string);
         // const driverSocketId = await redis.get(`OD:${driverId}`);
         // const userSocketId = await redis.get(`RU:${ride.userId}`);
-
+        await updateDriverFelids(
+          `driver:${driverId}`,
+          "status",
+          "online"
+        );
         const driverSocketId = await getFromRedis(`OD:${driverId}`);
         const userSocketId = await getFromRedis(`RU:${ride.userId}`);
 
@@ -197,7 +204,7 @@ export class PaymentService implements IPaymentService {
     // const userSocketId = await redis.get(`RU:${ride.userId}`);
     const driverSocketId = await getFromRedis(`OD:${driverId}`);
     const userSocketId = await getFromRedis(`RU:${ride.userId}`);
-
+    await updateDriverFelids(`driver:${driverId}`, "status", "online");
     const io = getIO();
     if (driverSocketId) {
       io.to(driverSocketId).emit("payment-received");

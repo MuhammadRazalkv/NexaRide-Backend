@@ -1,4 +1,13 @@
-// src/config/redisClient.ts
+type DriverCategory = "Basic" | "Premium" | "Luxury";
+
+interface DriverStatus {
+  socketId: string;
+  category: DriverCategory;
+  status: "online" | "onRide";
+  latitude: number;
+  longitude: number;
+  updatedAt: number;
+}
 
 import Redis from "ioredis";
 
@@ -7,10 +16,11 @@ const redis = new Redis({
   port: 6379,
 });
 
-
-
-
-const setToRedis  = async (key: string, value: string, expirySeconds?: number) => {
+const setToRedis = async (
+  key: string,
+  value: string,
+  expirySeconds?: number
+) => {
   if (expirySeconds) {
     await redis.set(key, value, "EX", expirySeconds);
   } else {
@@ -18,18 +28,86 @@ const setToRedis  = async (key: string, value: string, expirySeconds?: number) =
   }
 };
 
-const getFromRedis  = async (key: string): Promise<string | null> => {
+const getFromRedis = async (key: string): Promise<string | null> => {
   return await redis.get(key);
 };
 
-const removeFromRedis  = async (key: string): Promise<void> => {
+const removeFromRedis = async (key: string): Promise<void> => {
   await redis.del(key);
 };
 
-export default redis
+const saveDriverStatusToRedis = async (key: string, data: DriverStatus) => {
+  await redis.hset(key, data);
+};
+
+const updateDriverFelids = async (key:string,filed:string,value:string)=>{
+  await redis.hset(key,filed,value)
+}
+const addDriverToGeoIndex = async (
+  key: string,
+  longitude: number,
+  latitude: number,
+  member: string
+) => {
+  await redis.geoadd(key, longitude, latitude, member);
+};
+
+const getByGeoIndexRedis = async (
+  key: string,
+  longitude: number,
+  latitude: number
+) => {
+  return await redis.georadius(
+    key,
+    longitude,
+    latitude,
+    5,
+    "km",
+    "WITHDIST",
+    "ASC"
+  );
+};
+const getAvailableDriversByGeo = async (
+  key: string,
+  longitude: number,
+  latitude: number,
+  radius = 5
+): Promise<{ id: string; socketId:string,distance: number }[]> => {
+  const rawResults = (await redis.georadius(
+    key,
+    longitude,
+    latitude,
+    radius,
+    "km",
+    "WITHDIST",
+    "ASC"
+  )) as [string, string][];
+
+  const availableDrivers: { id: string; socketId:string; distance: number }[] = [];
+
+  for (const [driverId, distanceStr] of rawResults) {
+    const driverData = await redis.hgetall(`driver:${driverId}`);
+    if (driverData.status === "online") {
+      availableDrivers.push({
+        id: driverId,
+        socketId:driverData.socketId,
+        distance: parseFloat(distanceStr),
+      });
+    }
+  }
+
+  return availableDrivers;
+};
+
+
+export default redis;
 export {
-       
-  setToRedis ,
-  getFromRedis ,
-  removeFromRedis ,
+  setToRedis,
+  getFromRedis,
+  removeFromRedis,
+  saveDriverStatusToRedis,
+  addDriverToGeoIndex,
+  getByGeoIndexRedis,
+  getAvailableDriversByGeo,
+  updateDriverFelids
 };

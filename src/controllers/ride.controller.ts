@@ -21,7 +21,7 @@ export class RideController implements IRideController {
       const data = req.body.data;
 
       const response = await this.rideService.checkCabs(userId, data);
-      res.status(HttpStatus.OK).json({ success: true, drivers: response });
+      res.status(HttpStatus.OK).json({ success: true, availableCabs: response });
     } catch (error) {
       next(error);
     }
@@ -56,7 +56,13 @@ export class RideController implements IRideController {
       const OTP = req.body.otp;
 
       const response = await this.rideService.verifyRideOTP(driverId, OTP);
-      res.status(200).json({ success: true, startedAt: response.date , rideId:response.rideId });
+      res
+        .status(200)
+        .json({
+          success: true,
+          startedAt: response.date,
+          rideId: response.rideId,
+        });
     } catch (error) {
       next(error);
     }

@@ -538,6 +538,8 @@ export class DriverService implements IDriverService {
   async statusOnRide(id: string) {
     const driver = await this.driverRepo.findDriverById(id);
     if (!driver) {
+      console.log('This is causing the problem ');
+      
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
     await this.driverRepo.goOnRide(id);

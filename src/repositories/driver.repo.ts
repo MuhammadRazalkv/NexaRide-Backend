@@ -292,7 +292,7 @@ export class DriverRepo
     ]);
   }
 
-  async getDriverWithVehicleInfo(id: string):Promise<IDriverWithVehicle> {
+  async getDriverWithVehicleInfo(id: string): Promise<IDriverWithVehicle> {
     const result = await this.model.aggregate([
       { $match: { _id: new ObjectId(id) } },
       {
@@ -317,9 +317,13 @@ export class DriverRepo
         },
       },
     ]);
+    if (!result.length) {
+      throw new AppError(404, "Driver not found");
+    }
+
+    console.log("Result of the operation ", result[0]);
+
     return result[0] as IDriverWithVehicle;
-    
-    
   }
 
   async toggleAvailability(id: string, availability: string) {

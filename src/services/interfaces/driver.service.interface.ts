@@ -15,7 +15,7 @@ export interface IDriverWithVehicle extends Omit<Partial<IDrivers>, "vehicleId">
     brand: string;
     vehicleModel: string;
     color: string;
-    category: string;
+    category:  "Basic" | "Premium" | "Luxury";
   };
 }
 

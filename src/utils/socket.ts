@@ -1,5 +1,13 @@
 import { Server, Socket } from "socket.io";
-import { getFromRedis, removeFromRedis, setToRedis } from "../config/redis";
+import {
+  getFromRedis,
+  removeFromRedis,
+  saveDriverStatusToRedis,
+  addDriverToGeoIndex,
+  setToRedis,
+  getAvailableDriversByGeo,
+  updateDriverFelids,
+} from "../config/redis";
 
 import { DriverService } from "../services/driver.service";
 
@@ -10,6 +18,7 @@ import { RideService } from "../services/ride.service";
 import { AppError } from "./appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
+import { token } from "morgan";
 
 interface IDriver {
   name: string;
@@ -44,48 +53,77 @@ export const initializeSocket = (
 
     try {
       const decodedId = extractUserIdFromToken(token);
-      console.log(role, "id ", decodedId);
+      // console.log(role, "id ", decodedId);
 
       (socket as any).user = { decodedId, role };
       next();
     } catch (error) {
-      console.log("Invalid token");
-      next(new AppError(HttpStatus.UNAUTHORIZED,messages.INVALID_ID));
+      // console.log("Invalid token");
+      next(new AppError(HttpStatus.UNAUTHORIZED, messages.INVALID_ID));
     }
   });
 
   // Handling connections
   io.on("connection", async (socket) => {
     const { decodedId, role } = (socket as any).user;
-
     if (role === "driver") {
-
+      socket.data.driverId = decodedId;
       await setToRedis(`OD:${decodedId}`, socket.id);
       const rideId = await getFromRedis(`DRID:${decodedId}`);
-      if (rideId) socket.join(`ride:${rideId}`);
-      console.log(`Driver ${decodedId} connected with socket ID: ${socket.id}`);
+      if (rideId) {
+        socket.join(`ride:${rideId}`);
+      } else {
+        const driver = await rideService.getDriverWithVehicle(decodedId);
+        if (driver) {
+          await saveDriverStatusToRedis(`driver:${decodedId}`, {
+            socketId: socket.id,
+            category: driver.vehicleDetails.category,
+            status: "online",
+            latitude: driver.location?.coordinates[1] || 0,
+            longitude: driver.location?.coordinates[0] || 0,
+            updatedAt: Date.now(),
+          });
+
+          await addDriverToGeoIndex(
+            `drivers:${driver.vehicleDetails.category}`,
+            driver.location?.coordinates[0] || 0,
+            driver.location?.coordinates[1] || 0,
+            decodedId
+          );
+        }
+      }
     }
 
     if (role === "user") {
       setToRedis(`RU:${decodedId}`, socket.id);
       const rideId = await getFromRedis(`URID:${decodedId}`);
       if (rideId) socket.join(`ride:${rideId}`);
-      console.log(`User ${decodedId} connected with socket ID: ${socket.id}`);
+      // console.log(`User ${decodedId} connected with socket ID: ${socket.id}`);
     }
 
-    // Send ride request to a specific driver
+    // Send ride request to a specific group
     socket.on("request-ride", async (data) => {
-      const { driverId, pickupCoords, dropOffCoords, fare } = data;
+      const { category, pickupCoords, dropOffCoords, fare } = data;
 
-      const driverSocketId = await getFromRedis(`OD:${driverId}`);
       const user = await userService.getUserInfo(decodedId);
       if (!user) {
-        console.log("User not found ");
         return;
       }
-      // await redis.set(`RU:${user?.id}`, socket.id);
-      if (driverSocketId) {
-        io.to(driverSocketId).emit("new-ride-req", {
+      const nearestDrives = await getAvailableDriversByGeo(
+        `drivers:${category}`,
+        pickupCoords[1],
+        pickupCoords[0]
+      );
+      let rideAccepted = false;
+      for (let i = 0; i < nearestDrives.length; i++) {
+        const driverSocketId = nearestDrives[i].socketId;
+        const driverSocket = io.sockets.sockets.get(driverSocketId);
+        if (!driverSocket) {
+          console.log("Driver socket not found");
+          continue;
+        }
+
+        driverSocket.emit("new-ride-req", {
           user: {
             id: user.id,
             name: user.name,
@@ -94,94 +132,127 @@ export const initializeSocket = (
           dropOffCoords,
           fare,
         });
-        console.log(`Ride request sent to Driver ${driverId}`);
-      } else {
-        console.log(`Driver ${driverId} is not online or available.`);
-        socket.emit("ride-error", { message: "Driver is not available." });
-      }
-    });
+        console.log(`Ride request sent to Driver ${nearestDrives[i].id}`);
 
-    socket.on("reject-ride", async (userId) => {
-      const userSocketId = await getFromRedis(`RU:${userId}`);
-      if (userSocketId) {
-        io.to(userSocketId).emit("ride-rejected", decodedId);
-        console.log(`Ride request rejected by driver `);
-      } else {
-        console.log(`User not found in reject ride `);
-        socket.emit("ride-error", { message: "User not found" });
-      }
-    });
-
-    socket.on("no-response", async (userId) => {
-      const userSocketId = await getFromRedis(`RU:${userId}`);
-      if (userSocketId) {
-        io.to(userSocketId).emit("no-driver-response");
-      } else {
-        console.log(`User not found in no res  `);
-        socket.emit("ride-error", { message: "User not found" });
-      }
-    });
-
-    socket.on("driver-ride-accepted", async (data) => {
-      const userSocketId = await getFromRedis(`RU:${data.userId}`);
-      const driver = await rideService.getDriverWithVehicle(decodedId);
-
-      const OTP = crypto.randomInt(1000, 10000).toString();
-
-      if (!driver) {
-        console.error("Driver not found");
-        socket.emit("ride-error", { message: "Driver not found" });
-        return;
-      }
-      await driverService.statusOnRide(driver.id);
-      const details = {
-        userId: data.userId as string,
-        driverId: driver._id as string,
-        status: "ongoing",
-        distance: data.distance,
-        totalFare: data.fare,
-        estTime: data.time,
-        pickupLocation: data.pickupLocation as string,
-        dropOffLocation: data.dropOffLocation as string,
-        pickupCoords: data.pickupCoords,
-        dropOffCoord: data.dropOffCoord,
-        OTP,
-      };
-      const ride = await rideService.createNewRide(details);
-      // await setToRedis(
-      //   `DL:${decodedId}`,
-      //   JSON.stringify({
-      //     lat: driver.location.coordinates[1],
-      //     lng: driver.location.coordinates[0],
-      //     updatedAt: new Date().toISOString(),
-      //   })
-      //   // "EX",
-      //   // 60 * 5
-      // );
-      const rideId = ride.id;
-
-      await setToRedis(`DRID:${decodedId}`, rideId);
-      await setToRedis(`URID:${data.userId}`, rideId);
-      socket.join(`ride:${rideId}`);
-      if (userSocketId) {
-        const userSocket = io.sockets.sockets.get(userSocketId);
-        userSocket?.join(`ride:${rideId}`);
-        io.to(userSocketId).emit("ride-accepted", {
-          rideId,
-          driver,
-          distance: data.distance,
-          totalFare: data.fare,
-          estTime: data.time,
-          pickupLocation: data.pickupLocation as string,
-          dropOffLocation: data.dropOffLocation as string,
-          pickupCoords: data.pickupCoords,
-          dropOffCoords: data.dropOffCoords,
-          startedTime: new Date().toISOString(),
-          OTP,
+        rideAccepted = await new Promise<boolean>(async (resolve) => {
+          const timeOut = setTimeout(() => resolve(false), 16000);
+          await listenForDriverResponse(resolve, timeOut, driverSocket);
         });
-      } else {
-        console.log(`User not found in no res  `);
-        socket.emit("ride-error", { message: "User not found" });
+        if (rideAccepted) {
+          break;
+        }
+      }
+
+      async function listenForDriverResponse(
+        resolve: (val: boolean) => void,
+        timeout: NodeJS.Timeout,
+        driverSocket: Socket
+      ) {
+        const onAccept = async (data: {
+          token: string;
+          userId: string;
+          pickupLocation: string;
+          dropOffLocation: string;
+          distance: number;
+          time: number;
+          fare: number;
+          pickupCoords: [number, number];
+          dropOffCoords: [number, number];
+        }) => {
+          clearTimeout(timeout);
+          try {
+            const driverId = driverSocket.data.driverId;
+
+            const userSocketId = await getFromRedis(`RU:${data.userId}`);
+
+            const driver = await rideService.getDriverWithVehicle(
+              driverId as string
+            );
+
+            const OTP = crypto.randomInt(1000, 10000).toString();
+
+            if (!driver) {
+              socket.emit("ride-error", { message: "Driver not found" });
+              return;
+            }
+            await driverService.statusOnRide(driver._id as string);
+            const details = {
+              userId: data.userId as string,
+              driverId: driver._id as string,
+              status: "ongoing",
+              distance: data.distance,
+              totalFare: data.fare,
+              estTime: data.time,
+              pickupLocation: data.pickupLocation as string,
+              dropOffLocation: data.dropOffLocation as string,
+              pickupCoords: data.pickupCoords,
+              dropOffCoord: data.dropOffCoords,
+              OTP,
+            };
+            const ride = await rideService.createNewRide(details);
+            const rideId = ride.id;
+
+            await setToRedis(`DRID:${decodedId}`, rideId);
+            await setToRedis(`URID:${data.userId}`, rideId);
+            await updateDriverFelids(`driver:${decodedId}`, "status", "onRide");
+            driverSocket.join(`ride:${rideId}`);
+            if (userSocketId) {
+              console.log("Sending ride accepted to user ", userSocketId);
+              const userSocket = io.sockets.sockets.get(userSocketId);
+              userSocket?.join(`ride:${rideId}`);
+              io.to(userSocketId).emit("ride-accepted", {
+                rideId,
+                driver,
+                distance: data.distance,
+                totalFare: data.fare,
+                estTime: data.time,
+                pickupLocation: data.pickupLocation as string,
+                dropOffLocation: data.dropOffLocation as string,
+                pickupCoords: data.pickupCoords,
+                dropOffCoords: data.dropOffCoords,
+                startedTime: new Date().toISOString(),
+                OTP,
+              });
+            } else {
+              console.log(`User not found in no res  `);
+              socket.emit("ride-error", { message: "User not found" });
+            }
+            resolve(true);
+            cleanup();
+          } catch (error) {
+            console.log("in the error block", error);
+
+            return;
+          }
+        };
+
+        const onReject = () => {
+          console.log("Inside on reject ");
+
+          clearTimeout(timeout);
+          cleanup();
+          resolve(false);
+        };
+
+        const cleanup = () => {
+          console.log("Inside clean up ");
+
+          driverSocket.off("driver-ride-accepted", onAccept);
+          driverSocket.off("reject-ride", onReject);
+        };
+
+        driverSocket.once("driver-ride-accepted", onAccept);
+        driverSocket.once("reject-ride", onReject);
+      }
+
+      if (!rideAccepted) {
+        const userSocketId = await getFromRedis(`RU:${decodedId}`);
+        if (userSocketId) {
+          io.to(userSocketId).emit("no-driver-response");
+        } else {
+          console.log(`User not found in no res  `);
+          socket.emit("ride-error", { message: "User not found" });
+        }
       }
     });
 
@@ -194,7 +265,7 @@ export const initializeSocket = (
           updatedAt: new Date().toISOString(),
         })
       );
-      console.log("Driver location update ", data);
+      // console.log("Driver location update ", data);
 
       const rideId = await getFromRedis(`DRID:${decodedId}`);
 
@@ -249,6 +320,8 @@ export const initializeSocket = (
     });
 
     socket.on("cancel-ride", async (cancelledBy) => {
+      console.log("Inside cancel ride by ", cancelledBy);
+
       if (cancelledBy == "user") {
         try {
           const rideId = await getFromRedis(`URID:${decodedId}`);
@@ -266,6 +339,7 @@ export const initializeSocket = (
             decodedId,
             cancelledBy
           );
+          await updateDriverFelids(`driver:${driverId}`, "status", "online");
           if (rideId) {
             socket.to(`ride:${rideId}`).emit("ride-cancelled");
           } else {
@@ -290,6 +364,7 @@ export const initializeSocket = (
             cancelledBy
           );
           await driverService.goBackToOnline(decodedId);
+          await updateDriverFelids(`driver:${decodedId}`, "status", "online");
           if (rideId) {
             console.log("Ride cancellation sent to user by room ");
 
@@ -370,8 +445,14 @@ export const initializeSocket = (
       }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log(`${role}  disconnected`);
+      if (role == "driver") {
+        const driver = await rideService.getDriverWithVehicle(decodedId);
+        console.log("Removing driver from socket", driver.name);
+        await removeFromRedis(`driver:${decodedId}`);
+        await removeFromRedis(`drivers:${driver.vehicleDetails.category}`);
+      }
     });
   });
 };

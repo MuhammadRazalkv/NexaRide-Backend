@@ -155,7 +155,7 @@ export class DriverController implements IDriverController {
       res.status(HttpStatus.OK).json({
         driverStatus: response.driverStatus,
         vehicleStatus: response.vehicleStatus,
-        available: response.isAvailable,
+        // available: response.isAvailable,
       });
     } catch (error) {
       next(error);
@@ -374,7 +374,7 @@ export class DriverController implements IDriverController {
 
       const response = await this.driverService.toggleAvailability(req.id);
 
-      res.status(HttpStatus.OK).json({ success: true, availability: response });
+      // res.status(HttpStatus.OK).json({ success: true, availability: response });
     } catch (error) {
       next(error);
     }

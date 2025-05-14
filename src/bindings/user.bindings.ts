@@ -4,7 +4,7 @@ import { UserRepository } from "../repositories/user.repo";
 import { bindMethods } from "../utils/bindController";
 
 export const userRepo = new UserRepository()
-const userService = new UserService(userRepo)
+export const userService = new UserService(userRepo)
 const userController = bindMethods( new UserController(userService))
 
 export default userController

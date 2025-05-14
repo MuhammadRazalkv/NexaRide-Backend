@@ -106,8 +106,8 @@ export class PaymentService implements IPaymentService {
         }
         const totalFare = ride.totalFare;
         const driverId = ride.driverId;
-        const commission = Math.ceil(totalFare * 0.2);
-        const driverEarnings = Math.ceil(totalFare - commission);
+        const driverEarnings = ride.driverEarnings;
+        const commission = totalFare - driverEarnings;
         const applicationFeesDetails = {
           rideId: ride.id,
           driverId,
@@ -127,14 +127,7 @@ export class PaymentService implements IPaymentService {
           commission,
           driverEarnings
         );
-        await this.driverRepo.goBackToOnline(driverId as string);
-        // const driverSocketId = await redis.get(`OD:${driverId}`);
-        // const userSocketId = await redis.get(`RU:${ride.userId}`);
-        await updateDriverFelids(
-          `driver:${driverId}`,
-          "status",
-          "online"
-        );
+        await updateDriverFelids(`driver:${driverId}`, "status", "online");
         const driverSocketId = await getFromRedis(`OD:${driverId}`);
         const userSocketId = await getFromRedis(`RU:${ride.userId}`);
 
@@ -154,10 +147,10 @@ export class PaymentService implements IPaymentService {
   //! This is where the user pay with wallet
   async payUsingWallet(userId: string, rideId: string) {
     const ride = await this.rideRepo.findRideById(rideId);
-    console.log("Ride ", ride);
 
-    if (!ride)
+    if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
 
     const userWallet = await this.walletRepo.getUserWalletBalanceById(userId);
 
@@ -172,13 +165,12 @@ export class PaymentService implements IPaymentService {
     const userWalletBalance = userWallet.balance;
     const totalFare = ride.totalFare;
     const driverId = ride.driverId;
-
+    const driverEarnings = ride.driverEarnings;
+    const commission = totalFare - driverEarnings;
     if (userWalletBalance < totalFare) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INSUFFICIENT_BALANCE);
     }
 
-    const commission = Math.ceil(totalFare * 0.2);
-    const driverEarnings = Math.ceil(totalFare - commission);
     const applicationFeesDetails = {
       rideId: ride.id,
       driverId,
@@ -199,9 +191,6 @@ export class PaymentService implements IPaymentService {
       commission,
       driverEarnings
     );
-    await this.driverRepo.goBackToOnline(driverId as string);
-    // const driverSocketId = await redis.get(`OD:${driverId}`);
-    // const userSocketId = await redis.get(`RU:${ride.userId}`);
     const driverSocketId = await getFromRedis(`OD:${driverId}`);
     const userSocketId = await getFromRedis(`RU:${ride.userId}`);
     await updateDriverFelids(`driver:${driverId}`, "status", "online");

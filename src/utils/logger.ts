@@ -44,11 +44,11 @@ const logger = createLogger({
       format: combine(colorize(), consoleLogFormat),
     }),
     new DailyRotateFile({
-      filename: "logs/app-%DATE%.log",       
+      filename: "logs/app-%DATE%.log",
       datePattern: "DD-MM-YYYY",
       zippedArchive: true,
       maxSize: "20m",
-      maxFiles: "7d",                      
+      maxFiles: "7d",
     }),
   ],
 });

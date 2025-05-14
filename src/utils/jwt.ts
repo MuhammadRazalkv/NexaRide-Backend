@@ -1,4 +1,3 @@
-
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 
@@ -14,16 +13,22 @@ interface TokenPayload {
 }
 
 // Generate Access Token
-export const generateAccessToken = (userId: string, role: TokenPayload["role"]) => {
+export const generateAccessToken = (
+  userId: string,
+  role: TokenPayload["role"]
+) => {
   return jwt.sign({ id: userId, role }, ACCESS_SECRET, { expiresIn: "20m" });
 };
 
 // Generate Refresh Token
-export const generateRefreshToken = (userId: string, role: TokenPayload["role"]) => {
+export const generateRefreshToken = (
+  userId: string,
+  role: TokenPayload["role"]
+) => {
   return jwt.sign({ id: userId, role }, REFRESH_SECRET, { expiresIn: "7d" });
 };
 
-// Forgot Password Token 
+// Forgot Password Token
 export const forgotPasswordToken = (userId: string, email: string) => {
   return jwt.sign({ userId, email }, REFRESH_SECRET, { expiresIn: "1h" });
 };
@@ -58,4 +63,3 @@ export const extractUserIdFromToken = (token: string) => {
     throw error;
   }
 };
-

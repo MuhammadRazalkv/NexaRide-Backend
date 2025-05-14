@@ -6,20 +6,28 @@ export interface IRideHistory extends Document {
   pickupLocation: string;
   dropOffLocation: string;
   totalFare: number;
-  commission?: number, // Platform fee 
-  driverEarnings?: number,
+  baseFare: number;
+  discountAmount: number;
+  commission: number; // Platform fee
+  driverEarnings: number;
   distance: number; // In km
   estTime: number;
   timeTaken?: number; // In minutes
   status: string;
   startedAt?: Number;
   endedAt?: number;
-  cancelledAt?:number;
+  cancelledAt?: number;
   paymentStatus: string;
   pickupCoords: [number, number];
   dropOffCoords: [number, number];
-  OTP:string
-  cancelledBy?:string
+  OTP: string;
+  cancelledBy?: string;
+  appliedOffer?: {
+    offerId: string;
+    discountAmount: number;
+    offerType: string;
+    originalCommission: number;
+  };
 }
 
 const RideHistorySchema: Schema = new Schema<IRideHistory>({
@@ -34,6 +42,8 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>({
   pickupLocation: { type: String, required: true },
   dropOffLocation: { type: String, required: true },
   totalFare: { type: Number, required: true },
+  baseFare: { type: Number, required: true },
+  discountAmount: { type: Number, required: true },
   commission: { type: Number },
   driverEarnings: { type: Number },
   distance: { type: Number, required: true },
@@ -49,13 +59,19 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>({
   cancelledAt: { type: Number },
   paymentStatus: {
     type: String,
-    enum: ["pending", "completed", "failed" , 'Not required'],
+    enum: ["pending", "completed", "failed", "Not required"],
     default: "pending",
   },
-  OTP:{type:String,required:true},
-  cancelledBy:{type:String,enum:['driver',"user"]}
+  OTP: { type: String, required: true },
+  cancelledBy: { type: String, enum: ["driver", "user"] },
+  appliedOffer: {
+    offerId: { type: mongoose.Schema.Types.ObjectId, ref: "Offers" },
+    discountAmount: { type: Number, default: 0 },
+    offerType: { type: String, enum: ["percentage", "flat"], required: false },
+    originalCommission: { type: Number },
+  },
 });
 
-RideHistorySchema.index({userId:1})
-RideHistorySchema.index({driverId:1})
+RideHistorySchema.index({ userId: 1 });
+RideHistorySchema.index({ driverId: 1 });
 export default mongoose.model<IRideHistory>("RideHistory", RideHistorySchema);

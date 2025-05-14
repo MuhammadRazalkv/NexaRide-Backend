@@ -7,7 +7,7 @@ export interface IDrivers extends Document {
   password: string;
   phone: string;
   license_number: string;
-  isAvailable: String;
+  // isAvailable: String;
   vehicleId?: ObjectId;
   address: {
     street: string;
@@ -36,7 +36,7 @@ const DriversSchema: Schema = new Schema(
     password: { type: String, required: true },
     phone: { type: Number, required: true, unique: true },
     license_number: { type: String, required: true, unique: true },
-    isAvailable: { type: String ,enum:['online','offline','onRide'] , default: "offline" },
+    // isAvailable: { type: String ,enum:['online','offline','onRide'] , default: "offline" },
     vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
     address: {
       street: { type: String, required: true },

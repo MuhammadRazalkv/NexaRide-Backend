@@ -21,6 +21,7 @@ import { RideService } from "./services/ride.service";
 import { RideRepo } from "./repositories/ride.repo";
 import { VehicleRepo } from "./repositories/vehicle.repo";
 import errorHandler from "./middlewares/error.middleware";
+import { OfferRepo } from "./repositories/offer.repo";
 dotenv.config();
 
 const app = express();
@@ -71,15 +72,8 @@ app.use("/user", userRoutes);
 app.use("/driver", driverRoutes);
 app.use("/admin", adminRoutes); 
 
-const userRepo = new UserRepository();
-const userService = new UserService(userRepo);
-const driverRepo = new DriverRepo();
-const vehicleRepo = new VehicleRepo()
-const driverService = new DriverService(driverRepo,vehicleRepo);
-const rideRepo = new RideRepo()
-const rideService = new RideService(driverRepo,rideRepo)
 const server = http.createServer(app);
-initializeSocket(server, userService, driverService,rideService);
+initializeSocket(server);
 
 app.use(errorHandler)
 // Start the server

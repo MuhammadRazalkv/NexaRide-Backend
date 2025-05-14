@@ -242,7 +242,7 @@ export class RideRepo
   async getPopulatedRideInfo(id: string): Promise<PopulatedRideHistory | null> {
     const ride = await RideHistory.findById(id)
       .populate("userId", "name email phone profilePic")
-      .populate("driverId", "name email phone profilePic isAvailable")
+      .populate("driverId", "name email phone profilePic")
       .lean();
 
     return ride as unknown as PopulatedRideHistory | null;

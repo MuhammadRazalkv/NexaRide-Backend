@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Driver from "../models/driver.model";
 import { IDrivers } from "../models/driver.model";
-import Pricing from "../models/pricing.model";
+import Pricing, { IPricing } from "../models/pricing.model";
 import { ObjectId } from "mongodb";
 import { IDriverRepo } from "./interfaces/driver.repo.interface";
 
@@ -242,11 +242,11 @@ export class DriverRepo
           spherical: true,
         },
       },
-      {
-        $match: {
-          isAvailable: "online",
-        },
-      },
+      // {
+      //   $match: {
+      //     isAvailable: "online",
+      //   },
+      // },
       {
         $lookup: {
           from: "vehicles",
@@ -320,15 +320,12 @@ export class DriverRepo
     if (!result.length) {
       throw new AppError(404, "Driver not found");
     }
-
-    console.log("Result of the operation ", result[0]);
-
     return result[0] as IDriverWithVehicle;
   }
 
-  async toggleAvailability(id: string, availability: string) {
-    return this.updateById(id, { $set: { isAvailable: availability } });
-  }
+  // async toggleAvailability(id: string, availability: string) {
+  //   return this.updateById(id, { $set: { isAvailable: availability } });
+  // }
 
   async assignRandomLocation(id: string, coordinates: number[]) {
     return this.updateById(id, {
@@ -341,16 +338,20 @@ export class DriverRepo
     });
   }
   async findPrices() {
-    return Pricing.find().select("vehicleClass farePerKm");
+    return await Pricing.find().select("vehicleClass farePerKm");
   }
 
-  async goOnRide(id: string) {
-    return this.updateById(id, { $set: { isAvailable: "onRide" } });
+  async getPriceByCategory(category: string): Promise<IPricing> {
+    return await Pricing.findOne({vehicleClass:category}).select("vehicleClass farePerKm");
   }
 
-  async goBackToOnline(id: string) {
-    return this.updateById(id, { $set: { isAvailable: "online" } });
-  }
+  // async goOnRide(id: string) {
+  //   return this.updateById(id, { $set: { isAvailable: "onRide" } });
+  // }
+
+  // async goBackToOnline(id: string) {
+  //   return this.updateById(id, { $set: { isAvailable: "online" } });
+  // }
 
   async updateProfilePic(id: string, url: string) {
     return this.updateById(id, { $set: { profilePic: url } });

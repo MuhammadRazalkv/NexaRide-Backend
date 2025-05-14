@@ -1,5 +1,8 @@
 import { IDrivers } from "../models/driver.model";
-import { IDriverService, IDriverWithVehicle } from "./interfaces/driver.service.interface";
+import {
+  IDriverService,
+  IDriverWithVehicle,
+} from "./interfaces/driver.service.interface";
 import OTPRepo from "../repositories/otp.repo";
 
 import { html } from "../constants/OTP";
@@ -26,6 +29,11 @@ import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
 import cloudinary from "../utils/cloudinary";
+import {
+  getDriverInfoRedis,
+  getFromRedis,
+  updateDriverFelids,
+} from "../config/redis";
 
 const driverSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -333,7 +341,7 @@ export class DriverService implements IDriverService {
     return {
       driverStatus: driver.status,
       vehicleStatus: vehicle?.status,
-      isAvailable: driver.isAvailable,
+      // isAvailable: driver.isAvailable,
     };
   }
 
@@ -493,7 +501,6 @@ export class DriverService implements IDriverService {
       profilePic: driver.profilePic,
       status: driver.status,
       licenseNumber: driver.license_number,
-      
     };
   }
 
@@ -530,20 +537,25 @@ export class DriverService implements IDriverService {
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
-    const type = driver.isAvailable == "online" ? "offline" : "online";
-    const updatedDriver = await this.driverRepo.toggleAvailability(id, type);
-    return updatedDriver?.isAvailable;
-  }
+    const driverInfo = await getDriverInfoRedis(`driver:${id}`);
 
-  async statusOnRide(id: string) {
-    const driver = await this.driverRepo.findDriverById(id);
-    if (!driver) {
-      console.log('This is causing the problem ');
-      
+    if (!driverInfo) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
-    await this.driverRepo.goOnRide(id);
+    const newDriverStatus =
+      driverInfo.status == "online" ? "offline" : "online";
+    await updateDriverFelids(`driver:${id}`, "status", newDriverStatus);
   }
+
+  // async statusOnRide(id: string) {
+  //   const driver = await this.driverRepo.findDriverById(id);
+  //   if (!driver) {
+  //     console.log('This is causing the problem ');
+
+  //     throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+  //   }
+  //   await this.driverRepo.goOnRide(id);
+  // }
 
   async getCurrentLocation(id: string) {
     const driver = await this.driverRepo.findDriverById(id);
@@ -552,12 +564,12 @@ export class DriverService implements IDriverService {
     }
     return driver.location.coordinates;
   }
-  async goBackToOnline(id: string) {
-    if (!id) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-    await this.driverRepo.goBackToOnline(id);
-  }
+  // async goBackToOnline(id: string) {
+  //   if (!id) {
+  //     throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+  //   }
+  //   await this.driverRepo.goBackToOnline(id);
+  // }
 
   async refreshToken(token: string) {
     if (!token) {
@@ -587,7 +599,18 @@ export class DriverService implements IDriverService {
     return driver?.profilePic;
   }
 
+  async getPriceByCategory(category: string): Promise<number> {
+    if (!category) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    console.log("category ", category);
+    const updatedCategory =
+      category.charAt(0).toUpperCase() + category.slice(1);
+    const vehicleCategory = await this.driverRepo.getPriceByCategory(
+      updatedCategory
+    );
+    console.log("vehicle category info", vehicleCategory);
 
-
-
+    return vehicleCategory.farePerKm;
+  }
 }

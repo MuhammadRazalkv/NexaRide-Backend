@@ -20,12 +20,13 @@ export interface IDriverRepo {
     findAndUpdate(id: string, field: string, value: string):Promise<IDrivers | null>
     getAvailableDriversNearby(pickupCoords: [number, number]): Promise<any[]>
     getDriverWithVehicleInfo(id: string): Promise<IDriverWithVehicle>
-    toggleAvailability(id: string, availability: string):Promise<IDrivers | null>
+    // toggleAvailability(id: string, availability: string):Promise<IDrivers | null>
     assignRandomLocation(id: string, coordinates: number[]):Promise<IDrivers | null>
-    findPrices():Promise<IPricing[]>
-    goOnRide(id: string): Promise<IDrivers | null>
-    goBackToOnline(id: string): Promise<IDrivers | null>
+    // goOnRide(id: string): Promise<IDrivers | null>
+    // goBackToOnline(id: string): Promise<IDrivers | null>
     setGoogleId(id: string, email: string): Promise<IDrivers | null>
     updateProfilePic(id: string, url: string): Promise<IDrivers | null>
     getApprovedDriversCount(search:string): Promise<number>
+    findPrices():Promise<IPricing[]>
+    getPriceByCategory(category:string):Promise<IPricing>
 }

@@ -3,6 +3,7 @@
         "cfwrevnvmmvxnoat",
         "DRID",
         "geoadd",
+        "GEOAPI",
         "georadius",
         "hgetall",
         "hset",

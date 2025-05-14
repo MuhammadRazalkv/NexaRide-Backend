@@ -30,7 +30,7 @@ export interface IDriverService {
   getStatus(driverId: string): Promise<{
     driverStatus: string | undefined;
     vehicleStatus: string | undefined;
-    isAvailable: String;
+    // isAvailable: String;
   }>;
   rejectReason(driverId: string): Promise<string | undefined>;
   reApplyDriver(id: string, data: IDrivers): Promise<IDrivers | null>;
@@ -48,13 +48,14 @@ export interface IDriverService {
     field: keyof IDrivers,
     value: string
   ): Promise<string>;
-  toggleAvailability(id: string): Promise<String | undefined>;
-  statusOnRide(id: string): Promise<void>;
+  toggleAvailability(id: string): Promise<void>;
+  // statusOnRide(id: string): Promise<void>;
   getCurrentLocation(id: string): Promise<[number, number]>;
-  goBackToOnline(id: string): Promise<void>;
+  // goBackToOnline(id: string): Promise<void>;
   refreshToken(token: string): Promise<{
     newAccessToken: string;
     newRefreshToken: string;
   }>;
   updateProfilePic(id: string, image: string): Promise<string | undefined>;
+  getPriceByCategory(category:string):Promise<number>
 }

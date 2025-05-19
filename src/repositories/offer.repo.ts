@@ -41,4 +41,14 @@ export class OfferRepo extends BaseRepository<IOffer> implements IOfferRepo {
   ): Promise<IOfferUsage | null> {
     return await OfferLimit.findOne({ userId, offerId });
   }
+  async increaseOfferUsage(
+    userId: string,
+    offerId: string
+  ): Promise<IOfferUsage | null> {
+    return await OfferLimit.findOneAndUpdate(
+      { userId, offerId },
+      { usageCount: { $inc: 1 } },
+      { upsert: true }
+    );
+  }
 }

@@ -17,7 +17,7 @@ import { IAdminService } from "./interfaces/admin.service.interface";
 import { IUserRepo } from "../repositories/interfaces/user.repo.interface";
 import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
 import { IVehicleRepo } from "../repositories/interfaces/vehicle.repo.interface";
-import { IAdminRepo } from "../repositories/interfaces/admin.repo";
+import { IAdminRepo } from "../repositories/interfaces/admin.repo.interface";
 import {
   IComplaintsWithUserDriver,
   IRideRepo,

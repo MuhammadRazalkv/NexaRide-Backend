@@ -113,4 +113,22 @@ export class PaymentController implements IPaymentController {
       next(error);
     }
   }
+
+
+  async upgradeToPlus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.id
+      const {type} = req.body
+      if (!userId) {
+        throw new AppError(HttpStatus.BAD_REQUEST,messages.ID_NOT_PROVIDED)
+      }
+      if (!type) {
+        throw new AppError(HttpStatus.BAD_REQUEST,messages.MISSING_FIELDS)
+      }
+      const url = await this.paymentService.upgradeToPlus(userId,type)
+      res.status(HttpStatus.CREATED).json({success:true,url})
+    } catch (error) {
+      next(error)
+    }
+  }
 }

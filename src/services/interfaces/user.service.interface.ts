@@ -32,5 +32,11 @@ export default interface IUserService {
   updateUserName(id: string, name: string): Promise<string | undefined>;
   updateUserPhone(id: string, phone: number): Promise<number | undefined>;
   updateUserPfp(id: string, image: string): Promise<string | undefined>;
- 
+  subscriptionStatus(
+    userId: string
+  ): Promise<{
+    isSubscribed: boolean;
+    expiresAt: number | undefined;
+    type: string | undefined;
+  }>;
 }

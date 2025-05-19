@@ -6,7 +6,7 @@ import rideController from "../bindings/ride.bindings";
 import paymentController from "../bindings/payment.binding";
 
 const userRoute = Router();
-const userAuthMiddleware = authenticateWithRoles('user',userRepo);
+const userAuthMiddleware = authenticateWithRoles("user", userRepo);
 //  AUTHENTICATION
 userRoute.post("/verify-email", userController.emailVerification);
 userRoute.post("/verify-otp", userController.verifyOTP);
@@ -58,6 +58,14 @@ userRoute.post(
   paymentController.payUsingStripe
 );
 
+userRoute.post(
+  "/upgradePlan",
+  userAuthMiddleware,
+  paymentController.upgradeToPlus
+);
+
+userRoute.get('/subscription-status',userAuthMiddleware,userController.subscriptionStatus)
+
 //  RIDE-RELATED
 userRoute.get(
   "/checkPaymentStatus/:rideId",
@@ -73,9 +81,21 @@ userRoute.get(
 //! Ride routes
 
 userRoute.post("/checkCabs", userAuthMiddleware, rideController.checkCabs);
-userRoute.get('/getRideInfo',userAuthMiddleware,rideController.getRIdeInfoForUser)
-userRoute.post('/submitComplaint',userAuthMiddleware,rideController.fileComplaint)
-userRoute.post('/giveFeedBack',userAuthMiddleware,rideController.giveFeedBack)
+userRoute.get(
+  "/getRideInfo",
+  userAuthMiddleware,
+  rideController.getRIdeInfoForUser
+);
+userRoute.post(
+  "/submitComplaint",
+  userAuthMiddleware,
+  rideController.fileComplaint
+);
+userRoute.post(
+  "/giveFeedBack",
+  userAuthMiddleware,
+  rideController.giveFeedBack
+);
 //* Web hook
 
 // userRoute.post('/webhook',express.raw({ type: 'application/json' }),userController.webhook)

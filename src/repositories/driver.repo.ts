@@ -342,7 +342,9 @@ export class DriverRepo
   }
 
   async getPriceByCategory(category: string): Promise<IPricing> {
-    return await Pricing.findOne({vehicleClass:category}).select("vehicleClass farePerKm");
+    return await Pricing.findOne({ vehicleClass: category }).select(
+      "vehicleClass farePerKm"
+    );
   }
 
   // async goOnRide(id: string) {

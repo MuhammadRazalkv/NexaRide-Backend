@@ -7,4 +7,5 @@ export interface IOfferService {
     findValidOffers(now:number,rideFare:number):Promise<IOffer[] | null>
     findOfferById(offerId:string):Promise<IOffer|null>
     findOfferUsage(userId:string,offerId:string):Promise<number>
+    increaseOfferUsage(userId:string,offerId:string):Promise<void>
 }

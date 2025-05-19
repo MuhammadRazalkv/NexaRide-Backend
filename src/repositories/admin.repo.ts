@@ -1,5 +1,5 @@
 import Pricing from "../models/pricing.model";
-import { IAdminRepo } from "./interfaces/admin.repo";
+import { IAdminRepo } from "./interfaces/admin.repo.interface";
 interface IUpdateFare {
   vehicleClass: "Basic" | "Premium" | "Luxury";
   farePerKm: number;

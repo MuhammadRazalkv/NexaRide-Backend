@@ -130,6 +130,8 @@ export const initializeSocket = (server: any) => {
             bestOffer,
             driverShare,
             originalFare,
+            isPremiumUser,
+            premiumDiscount
           } = await calculateFareWithDiscount(requestedFare, decodedId);
 
           const rideResult = await findDriverForRide(
@@ -143,6 +145,8 @@ export const initializeSocket = (server: any) => {
             bestDiscount,
             originalFare,
             routeInfo.distance, //! this is in meter need to change to km
+            isPremiumUser,
+            premiumDiscount,
             io
           );
           // let rideAccepted = false;

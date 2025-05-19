@@ -75,6 +75,7 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
 
   //! Admin Commission
   async addToCommission(data: Partial<ICommission>) {
-    return CommissionModel.insertOne(data);
+    return await CommissionModel.insertOne(data);
   }
+  
 }

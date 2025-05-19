@@ -269,4 +269,19 @@ export class UserController implements IUserController {
       next(error);
     }
   }
-}
+
+  
+  async subscriptionStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.id
+      if (!userId) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+      }
+      const result = await this.userService.subscriptionStatus(userId)
+      res.status(200).json({success:true,result})
+    } catch (error) {
+      next(error)
+    }
+  }
+
+} 

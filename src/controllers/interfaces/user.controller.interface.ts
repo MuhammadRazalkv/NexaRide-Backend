@@ -23,4 +23,5 @@ export interface IUserController {
   updateUserName(req: ExtendedRequest, res: Response,next:NextFunction): Promise<void>;
   updateUserPhone(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
   updateUserPfp(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
+  subscriptionStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
 }

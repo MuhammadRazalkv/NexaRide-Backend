@@ -13,6 +13,8 @@ import { IRideRepo } from "../repositories/interfaces/ride.repo.interface";
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
+import { getPlusAmount } from "../utils/env";
+import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 const YOUR_DOMAIN = process.env.FRONT_END_URL;
@@ -21,7 +23,8 @@ export class PaymentService implements IPaymentService {
     private driverRepo: IDriverRepo,
     private userRepo: IUserRepo,
     private walletRepo: IWalletRepo,
-    private rideRepo: IRideRepo
+    private rideRepo: IRideRepo,
+    private subscriptionRepo: ISubscriptionRepo
   ) {}
 
   async addMoneyToWallet(id: string, amount: number) {
@@ -140,6 +143,40 @@ export class PaymentService implements IPaymentService {
         }
         await removeFromRedis(`URID:${ride.userId}`);
         await removeFromRedis(`DRID:${driverId}`);
+      } else if (
+        session.metadata &&
+        session.metadata.action == "upgrade_to_plus"
+      ) {
+        const userId = session.metadata.userId;
+        const user = await this.userRepo.findUserById(userId);
+        if (!user) {
+          throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
+        }
+        const type: "yearly" | "monthly" = session.metadata.type as
+          | "yearly"
+          | "monthly";
+
+        const now = new Date();
+        const expiresAt =
+          type === "monthly"
+            ? now.setMonth(now.getMonth() + 1)
+            : now.setFullYear(now.getFullYear() + 1);
+
+        const details = {
+          userId: user.id,
+          type,
+          amount: parseInt(session.metadata.amount),
+          expiresAt,
+          takenAt: Date.now(),
+        };
+        await this.subscriptionRepo.create(details);
+        await this.userRepo.updateById(user.id, {
+          $set: {
+            isSubscribed: true,
+            subscriptionExpire: expiresAt,
+            subscriptionType: type,
+          },
+        });
       }
     }
   }
@@ -249,5 +286,56 @@ export class PaymentService implements IPaymentService {
     }
     const wallet = await this.walletRepo.getDriverWalletInfo(driverId);
     return wallet;
+  }
+
+  async upgradeToPlus(id: string, type: string): Promise<string | null> {
+    if (!id) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    if (type == "yearly" || type == "monthly") {
+      const price = getPlusAmount(type);
+      if (!price)
+        throw new AppError(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          messages.MISSING_FIELDS
+        );
+      const amount = parseInt(price);
+
+      const user = await this.userRepo.findUserById(id);
+      if (!user) {
+        throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
+      }
+      const existingPremium = await this.subscriptionRepo.findOne({userId:id,expiresAt:{$gt:Date.now()}})
+      if (existingPremium) {
+        throw new AppError(HttpStatus.CONFLICT, messages.PLAN_ALREADY_EXISTS);
+      }
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          { 
+            price_data: {
+              currency: "inr",
+              product_data: {
+                name: "Upgrade to plus",
+              },
+              unit_amount: amount * 100,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${YOUR_DOMAIN}/user/subscription`,
+        cancel_url: `${YOUR_DOMAIN}/user/subscription`,
+        metadata: {
+          userId: id,
+          action: `upgrade_to_plus`,
+          type: type,
+          amount,
+        },
+      });
+
+      return session.url;
+    }
+    throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
   }
 }

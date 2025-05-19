@@ -4,6 +4,7 @@ import { IOffer } from "../models/offer.modal";
 import crypto from "crypto";
 import { getFromRedis, setToRedis, updateDriverFelids } from "../config/redis";
 import { rideService } from "../bindings/ride.bindings";
+import { offerService } from "../bindings/offer.bindings";
 
 interface INearestDrivers {
   id: string;
@@ -21,6 +22,8 @@ export async function findDriverForRide(
   bestDiscount: number,
   originalFare: number,
   distance: number,
+  premiumUser: boolean,
+  premiumDiscount: number,
   io: Server
 ) {
   const DRIVER_RESPONSE_TIMEOUT = 16000; // 16 sec
@@ -58,6 +61,7 @@ export async function findDriverForRide(
       bestDiscount,
       originalFare,
       distance,
+      premiumDiscount,
       driverShare,
       io,
       DRIVER_RESPONSE_TIMEOUT
@@ -81,7 +85,8 @@ function waitForDriverResponse(
   bestDiscount: number,
   originalFare: number,
   distance: number,
-  driverShare:number,
+  premiumDiscount: number,
+  driverShare: number,
   io: Server,
   timeout: number
 ) {
@@ -137,10 +142,11 @@ function waitForDriverResponse(
           distance: distance,
           totalFare: finalFare, // after offer applied which user should pay
           baseFare: originalFare, // the original fare before offers
-          discountAmount: Math.round(bestDiscount) || 0, // applied offer discount
-          commission:finalFare - bestDiscount,
+          premiumDiscount, // Discount for those who took a premium plan
+          offerDiscountAmount: Math.round(bestDiscount) || 0, // applied offer discount
+          commission: finalFare - bestDiscount,
           estTime: data.time,
-          driverEarnings:driverShare,
+          driverEarnings: driverShare,
           pickupLocation: data.pickupLocation,
           dropOffLocation: data.dropOffLocation,
           pickupCoords: data.pickupCoords,
@@ -159,6 +165,13 @@ function waitForDriverResponse(
         // Create ride record in database
         const ride = await rideService.createNewRide(rideDetails);
         const rideId = ride.id;
+
+        if (ride.appliedOffer) {
+          await offerService.increaseOfferUsage(
+            userId,
+            ride?.appliedOffer.offerId
+          );
+        }
 
         // Update Redis and driver status
         await Promise.all([

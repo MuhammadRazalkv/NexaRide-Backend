@@ -19,6 +19,7 @@ import { IUserRepo } from "../repositories/interfaces/user.repo.interface";
 import { AppError } from "../utils/appError";
 import { messages } from "../constants/httpMessages";
 import { HttpStatus } from "../constants/httpStatusCodes";
+import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
 
 const userSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -30,12 +31,15 @@ const userSchema = z.object({
 });
 
 const generateTokens = (userId: string) => ({
-  accessToken: generateAccessToken(userId,'user'),
-  refreshToken: generateRefreshToken(userId,'user'),
+  accessToken: generateAccessToken(userId, "user"),
+  refreshToken: generateRefreshToken(userId, "user"),
 });
 
 export class UserService implements IUserService {
-  constructor(private userRepo: IUserRepo) {}
+  constructor(
+    private userRepo: IUserRepo,
+    private subscriptionRepo: ISubscriptionRepo
+  ) {}
 
   async emailVerification(email: string) {
     if (!email)
@@ -138,7 +142,6 @@ export class UserService implements IUserService {
     if (!success) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
     }
-
     // Generate tokens
     return {
       ...generateTokens(user._id as string),
@@ -257,8 +260,8 @@ export class UserService implements IUserService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_INVALID);
     }
 
-    const newAccessToken = generateAccessToken(refresh.id,'user');
-    const newRefreshToken = generateRefreshToken(refresh.id,'user');
+    const newAccessToken = generateAccessToken(refresh.id, "user");
+    const newRefreshToken = generateRefreshToken(refresh.id, "user");
 
     return { newAccessToken, newRefreshToken };
   }
@@ -288,11 +291,38 @@ export class UserService implements IUserService {
 
     const res = await cloudinary.uploader.upload(image, {
       folder: "/UserProfilePic",
-      // type: "authenticated", 
+      // type: "authenticated",
     });
     const user = await this.userRepo.updatePfp(id, res.secure_url);
     // const user = await this.userRepo.updatePfp(id, res.public_id);
     // const profilePicUrl = generateSignedCloudinaryUrl(user?.profilePic)
     return user?.profilePic;
+  }
+
+  async subscriptionStatus(userId: string): Promise<{
+    isSubscribed: boolean;
+    expiresAt: number | undefined;
+    type: string | undefined;
+  }> {
+    if (!userId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
+    }
+
+    const subInfo = await this.subscriptionRepo.findOne({
+      userId,
+      expiresAt: { $gt: Date.now() },
+    });
+    console.log(subInfo);
+   
+
+    return {
+      isSubscribed: subInfo ? true : false,
+      expiresAt: subInfo?.expiresAt,
+      type: subInfo?.type,
+    };
   }
 }

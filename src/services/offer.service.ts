@@ -62,4 +62,11 @@ export class OfferService implements IOfferService {
     const offerUsage = await this.offerRepo.findOfferUsage(userId, offerId);
     return offerUsage ? offerUsage.usageCount : 0;
   }
+
+  async increaseOfferUsage(userId: string, offerId: string): Promise<void> {
+    if (!userId || !offerId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
+    }
+    await this.offerRepo.increaseOfferUsage(userId,offerId)
+  }
 }

@@ -6,4 +6,5 @@ export interface IPaymentController {
     webhook(req:ExtendedRequest,res:Response , next : NextFunction):Promise<void>
     payUsingWallet(req:ExtendedRequest,res:Response , next : NextFunction):Promise<void>
     payUsingStripe(req:ExtendedRequest,res:Response , next : NextFunction):Promise<void>
+    upgradeToPlus(req:ExtendedRequest,res:Response , next : NextFunction):Promise<void>
 }

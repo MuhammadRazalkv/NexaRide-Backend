@@ -66,5 +66,6 @@ export const messages = {
   DATA_FETCH_SUCCESS: "Data retrieved successfully.",
   FARE_UPDATED: "The fare has been updated successfully.",
 
-  RATING_ERROR:"Rating should be between 1 to 5"
+  RATING_ERROR:"Rating should be between 1 to 5",
+  PLAN_ALREADY_EXISTS: "User already has an active subscription."
 };

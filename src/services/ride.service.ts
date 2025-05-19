@@ -56,10 +56,8 @@ export class RideService implements IRideService {
         pickupCoords[1]
       ),
     };
-    console.log(
-      'driversByCategory',driversByCategory
-    );
-    
+    console.log("driversByCategory", driversByCategory);
+
     const updatedCabInfo = [];
 
     for (const category of vehicleCategories) {
@@ -73,8 +71,14 @@ export class RideService implements IRideService {
 
       let rideFare = Math.round(matchingFare.farePerKm * km);
 
-      const { finalFare, bestDiscount, bestOffer, originalFare } =
-        await calculateFareWithDiscount(rideFare, id);
+      const {
+        finalFare,
+        bestDiscount,
+        bestOffer,
+        originalFare,
+        isPremiumUser,
+        premiumDiscount,
+      } = await calculateFareWithDiscount(rideFare, id);
 
       updatedCabInfo.push({
         category,
@@ -83,6 +87,8 @@ export class RideService implements IRideService {
         discountApplied: bestDiscount,
         offerTitle: bestOffer?.title ?? null,
         offerId: bestOffer?.id ?? null,
+        isPremiumUser,
+        premiumDiscount,
         finalFare,
       });
     }
@@ -206,14 +212,12 @@ export class RideService implements IRideService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
     const ride = await this.rideRepo.getRideInfoWithDriver(rideId);
-    console.log("Ride Id In user  ", rideId);
-    console.log("user Id  ", userId);
 
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
     const complaintInfo = await this.rideRepo.getComplaintInfo(rideId, userId);
-    console.log("Complaint info ", complaintInfo);
+    console.log("r ", ride);
 
     return { ride, complaintInfo };
   }

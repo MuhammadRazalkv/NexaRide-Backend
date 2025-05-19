@@ -9,26 +9,29 @@ export interface ICommission extends Document {
   paymentMethod: string;
 }
 
-const CommissionSchema: Schema = new Schema<ICommission>({
-  rideId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "RideHistory",
-    required: true,
-  },
-  driverId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Driver",
-    required: true,
-  },
-  totalFare: { type: Number, required: true },
-  commission: { type: Number, required: true },
-  driverEarnings: { type: Number, required: true },
+const CommissionSchema: Schema = new Schema<ICommission>(
+  {
+    rideId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "RideHistory",
+      required: true,
+    },
+    driverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Driver",
+      required: true,
+    },
+    totalFare: { type: Number, required: true },
+    commission: { type: Number, required: true },
+    driverEarnings: { type: Number, required: true },
 
-  paymentMethod: {
-    type: String,
-    enum: ["wallet", "stripe"],
-    required: true,
+    paymentMethod: {
+      type: String,
+      enum: ["wallet", "stripe"],
+      required: true,
+    },
   },
-});
+  { timestamps: true }
+);
 
 export default mongoose.model<ICommission>("Commission", CommissionSchema);

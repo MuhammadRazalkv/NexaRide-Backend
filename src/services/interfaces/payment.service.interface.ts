@@ -7,4 +7,5 @@ export interface IPaymentService {
   payUsingWallet(userId: string, rideId: string): Promise<void>;
   payUsingStripe(userId: string, rideId: string): Promise<string | null>;
   getDriverWalletInfo(driverId: string): Promise<IDriverWallet | null>;
+  upgradeToPlus(id: string,type:string): Promise<string | null>;
 }

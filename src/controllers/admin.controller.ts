@@ -130,9 +130,7 @@ export class AdminController implements IAdminController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const result = await this.adminService.changeDriverStatus(
-        req.body.id
-      );
+      const result = await this.adminService.changeDriverStatus(req.body.id);
 
       res.status(HttpStatus.OK).json({
         success: true,
@@ -323,13 +321,6 @@ export class AdminController implements IAdminController {
         path: "/",
       });
 
-      // res.cookie("adminAccessToken", response.newAccessToken, {
-      //   httpOnly: true,
-      //   secure: false,
-      //   sameSite: "lax",
-      //   maxAge: accessMaxAge,
-      //   path: "/",
-      // });
 
       res.status(HttpStatus.CREATED).json({
         message: messages.TOKEN_CREATED,
@@ -340,55 +331,89 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async getAllComplaints(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAllComplaints(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1
-      const filterBy = req.query.filter as string
-      const {complaints,total} = await this.adminService.getAllComplaints(page,filterBy)
-      res.status(HttpStatus.OK).json({success:true,complaints,total})
+      const page = parseInt(req.query.page as string) || 1;
+      const filterBy = req.query.filter as string;
+      const { complaints, total } = await this.adminService.getAllComplaints(
+        page,
+        filterBy
+      );
+      res.status(HttpStatus.OK).json({ success: true, complaints, total });
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
 
-  async getComplaintInDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getComplaintInDetail(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const complaintId = req.query.complaintId as string
+      const complaintId = req.query.complaintId as string;
       if (!complaintId) {
-        throw new AppError(HttpStatus.BAD_REQUEST,messages.ID_NOT_PROVIDED)
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
-      const {complaint,rideInfo} = await this.adminService.getComplaintInDetail(complaintId)
-      res.status(HttpStatus.OK).json({complaint,rideInfo})
+      const { complaint, rideInfo } =
+        await this.adminService.getComplaintInDetail(complaintId);
+      res.status(HttpStatus.OK).json({ complaint, rideInfo });
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
 
-  async changeComplaintStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async changeComplaintStatus(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const {complaintId,type} = req.body
+      const { complaintId, type } = req.body;
       if (!complaintId || !type) {
-        throw new AppError(HttpStatus.BAD_REQUEST,messages.MISSING_FIELDS)
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const complaint = await this.adminService.changeComplaintStatus(complaintId,type)
-      res.status(HttpStatus.OK).json({success:true,complaint})
+      const complaint = await this.adminService.changeComplaintStatus(
+        complaintId,
+        type
+      );
+      res.status(HttpStatus.OK).json({ success: true, complaint });
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
 
-  async sendWarningMail(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async sendWarningMail(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const {complaintId} = req.body
+      const { complaintId } = req.body;
       if (!complaintId) {
-        throw new AppError(HttpStatus.BAD_REQUEST,messages.ID_NOT_PROVIDED)
-        
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
-       await this.adminService.sendWarningMail(complaintId)
-      res.status(HttpStatus.OK).json({success:true})
+      await this.adminService.sendWarningMail(complaintId);
+      res.status(HttpStatus.OK).json({ success: true });
     } catch (error) {
-      next(error)
+      next(error);
+    }
+  }
+
+  async dashboard(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const data = await this.adminService.dashBoard()
+      res.status(HttpStatus.OK).json({success:true,data})
+    } catch (error) {
+      next(error);
     }
   }
 }
-

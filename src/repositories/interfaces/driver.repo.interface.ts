@@ -2,8 +2,9 @@ import { IDrivers } from "../../models/driver.model";
 import mongoose from "mongoose";
 import { IPricing } from "../../models/pricing.model";
 import { IDriverWithVehicle } from "../../services/interfaces/driver.service.interface";
+import { BaseRepository } from "../base.repo";
 
-export interface IDriverRepo {
+export interface IDriverRepo extends BaseRepository<IDrivers> {
     findDriverById(id: mongoose.Types.ObjectId| string):Promise<IDrivers | null>
     findDriverByVehicleId(id: mongoose.Types.ObjectId | string): Promise<IDrivers | null>
     findDriverByEmail(email: string):Promise<IDrivers | null>

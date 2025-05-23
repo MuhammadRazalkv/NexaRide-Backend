@@ -73,18 +73,12 @@ export class RideRepo
     return await this.model.findOne({ _id: id });
   }
 
-  async markCompletedWithData(
-    id: string,
-    commission: number,
-    driverEarnings: number
-  ) {
+  async markCompletedWithData(id: string) {
     return await this.model.findByIdAndUpdate(id, {
       $set: {
         paymentStatus: "completed",
         status: "completed",
         endedAt: Date.now(),
-        commission,
-        driverEarnings,
       },
     });
   }
@@ -311,5 +305,103 @@ export class RideRepo
       avgRating: parseFloat(result[0].avgRating.toFixed(1)),
       totalRatings: result[0].totalRatings,
     };
+  }
+
+ 
+
+  async rideCounts(
+    id: string,
+    requestedBy: "driver" | "user"
+  ): Promise<{
+    totalRides: number;
+    completedRides: number;
+    cancelledRides: number;
+  }> {
+    const matchField = requestedBy === "driver" ? "driverId" : "userId";
+
+    const result = await RideHistory.aggregate([
+      {
+        $match: {
+          [matchField]: new mongoose.Types.ObjectId(id),
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRides: { $sum: 1 },
+          completedRides: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+          },
+          cancelledRides: {
+            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalRides: 1,
+          completedRides: 1,
+          cancelledRides: 1,
+        },
+      },
+    ]);
+    return (
+      result[0] || {
+        totalRides: 0,
+        completedRides: 0,
+        cancelledRides: 0,
+      }
+    );
+  }
+
+  async paymentInfos(
+    id: string,
+    requestedBy: "driver" | "user"
+  ): Promise<{
+    totalTransaction: number;
+    usingWallet: number;
+    usingStripe: number;
+  }> {
+    const matchField = requestedBy === "driver" ? "driverId" : "userId";
+    const result = await RideHistory.aggregate([
+      {
+        $match: {
+          [matchField]: new mongoose.Types.ObjectId(id),
+          status: "completed",
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalTransaction: { $sum: "$totalFare" },
+          usingWallet: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMethod", "wallet"] }, "$totalFare", 0],
+            },
+          },
+          usingStripe: {
+            $sum: {
+              $cond: [{ $eq: ["$paymentMethod", "stripe"] }, "$totalFare", 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalTransaction: 1,
+          usingWallet: 1,
+          usingStripe: 1,
+        },
+      },
+    ]);
+    return (
+      result[0] || {
+        totalTransaction: 0,
+        usingStripe: 0,
+        usingWallet: 0,
+      }
+    );
   }
 }

@@ -3,9 +3,10 @@ import { IDrivers } from "../../models/driver.model";
 import { IRideHistory } from "../../models/ride.history.model";
 import { IUser } from "../../models/user.model";
 import { IVehicle } from "../../models/vehicle.model";
-import { IComplaintsWithUserDriver, PopulatedRideHistory } from "../../repositories/interfaces/ride.repo.interface";
-
-
+import {
+  IComplaintsWithUserDriver,
+  PopulatedRideHistory,
+} from "../../repositories/interfaces/ride.repo.interface";
 
 interface IFare {
   basic: number;
@@ -83,8 +84,25 @@ export interface IAdminService {
     newRefreshToken: string;
   }>;
 
-  getAllComplaints(page: number,filter:string): Promise<{complaints:IComplaintsWithUserDriver[] | null,total:number}>;
-  getComplaintInDetail(complaintId: string): Promise<{complaint:IComplaints | null , rideInfo:PopulatedRideHistory | null}>;
-  changeComplaintStatus(complaintId:string,type:string):Promise<IComplaints | null >
-  sendWarningMail(id:string): Promise<void>
+  getAllComplaints(
+    page: number,
+    filter: string
+  ): Promise<{ complaints: IComplaintsWithUserDriver[] | null; total: number }>;
+  getComplaintInDetail(complaintId: string): Promise<{
+    complaint: IComplaints | null;
+    rideInfo: PopulatedRideHistory | null;
+  }>;
+  changeComplaintStatus(
+    complaintId: string,
+    type: string
+  ): Promise<IComplaints | null>;
+  sendWarningMail(id: string): Promise<void>;
+  
+  dashBoard(): Promise<{
+    users: number;
+    drivers: number;
+    completedRides: number;
+    premiumUsers: number;
+    monthlyCommissions: { month: string; totalCommission: number }[];
+  }>;
 }

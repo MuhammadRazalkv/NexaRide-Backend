@@ -10,7 +10,6 @@ interface IUserReturn {
   refreshToken: string;
 }
 import { IUser } from "../../models/user.model";
-import { IWallet } from "../../models/user.wallet.model";
 export default interface IUserService {
   emailVerification(email: string): Promise<void>;
   verifyOTP(email: string, otp: string): Promise<void>;
@@ -36,7 +35,8 @@ export default interface IUserService {
     userId: string
   ): Promise<{
     isSubscribed: boolean;
-    expiresAt: number | undefined;
+    expiresAt: number | undefined; 
     type: string | undefined;
   }>;
+  // dashboard(userId:string):Promise<{totalRides:number,completedRides:number,cancelledRides:number}>
 }

@@ -45,4 +45,14 @@ export interface IRideService {
   fileComplaint(id:string,rideId:string,reason:string,by:string,description?:string):Promise<IComplaints| null>
   findDriverRideInfo(rideId:string,driverId:string):Promise<{ride:IRideWithUser | null , complaintInfo:IComplaints | null}>
   giveFeedBack(rideId:string,submittedBy:string,rating:number,feedback?:string):Promise<void>
+  rideSummary(id:string,requestedBy:'user'|'driver'):Promise<{
+    totalRides: number;
+    completedRides: number;
+    cancelledRides: number;
+  }>
+  feedBackSummary(id:string,requestedBy:'user'|'driver'):Promise<{
+    avgRating:number;
+    totalRatings:number;
+    
+  }>
 }

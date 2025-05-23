@@ -406,6 +406,8 @@ export class DriverController implements IDriverController {
       const refreshToken = req.cookies?.driverRefreshToken;
 
       if (!refreshToken) {
+        console.log('Token not provided sending back');
+        
         res
           .status(HttpStatus.UNAUTHORIZED)
           .json({ message: messages.TOKEN_NOT_PROVIDED });

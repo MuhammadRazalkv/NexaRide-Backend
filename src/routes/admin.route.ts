@@ -13,7 +13,7 @@ adminRoute.get("/getUsers", adminAuthMiddleware, adminController.getUsers);
 
 adminRoute.get("/getFares", adminAuthMiddleware, adminController.getFares);
 adminRoute.put("/updateFare", adminAuthMiddleware, adminController.updateFare);
-
+adminRoute.get('/dashboard',adminAuthMiddleware,adminController.dashboard)
 adminRoute.patch(
   "/user/changeStatus",
   adminAuthMiddleware,

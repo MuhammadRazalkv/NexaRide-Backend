@@ -15,6 +15,11 @@ import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
 import { getPlusAmount } from "../utils/env";
 import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
+import {
+  getThisMonthRange,
+  getThisWeekRange,
+  getTodayRange,
+} from "../utils/dateUtilities";
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 const YOUR_DOMAIN = process.env.FRONT_END_URL;
@@ -119,17 +124,17 @@ export class PaymentService implements IPaymentService {
           driverEarnings,
           paymentMethod: "stripe",
         };
+        await this.rideRepo.updateById(ride.id, {
+          $set: { paymentMethod: "stripe" },
+        });
+
         await this.walletRepo.addToCommission(applicationFeesDetails);
         await this.walletRepo.addMoneyToDriver(
           driverId as string,
           ride.id,
           driverEarnings
         );
-        await this.rideRepo.markCompletedWithData(
-          ride.id,
-          commission,
-          driverEarnings
-        );
+        await this.rideRepo.markCompletedWithData(ride.id);
         await updateDriverFelids(`driver:${driverId}`, "status", "online");
         const driverSocketId = await getFromRedis(`OD:${driverId}`);
         const userSocketId = await getFromRedis(`RU:${ride.userId}`);
@@ -199,38 +204,38 @@ export class PaymentService implements IPaymentService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INSUFFICIENT_BALANCE);
     }
 
-    const userWalletBalance = userWallet.balance;
-    const totalFare = ride.totalFare;
-    const driverId = ride.driverId;
-    const driverEarnings = ride.driverEarnings;
-    const commission = totalFare - driverEarnings;
-    if (userWalletBalance < totalFare) {
+    if (userWallet.balance < ride.totalFare) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INSUFFICIENT_BALANCE);
     }
 
     const applicationFeesDetails = {
       rideId: ride.id,
-      driverId,
-      totalFare,
-      commission,
-      driverEarnings,
+      driverId: ride.driverId,
+      totalFare: ride.totalFare,
+      commission: ride.commission,
+      driverEarnings: ride.driverEarnings,
       paymentMethod: "wallet",
     };
+
     await this.walletRepo.addToCommission(applicationFeesDetails);
-    await this.walletRepo.deductMoneyFromUser(userId, totalFare);
+    await this.walletRepo.deductMoneyFromUser(userId, ride.totalFare);
     await this.walletRepo.addMoneyToDriver(
-      driverId as string,
+      ride.driverId as string,
       ride.id,
-      driverEarnings
+      ride.driverEarnings
     );
-    await this.rideRepo.markCompletedWithData(
-      ride.id,
-      commission,
-      driverEarnings
-    );
-    const driverSocketId = await getFromRedis(`OD:${driverId}`);
+    // await this.rideRepo.markCompletedWithData(ride.id);
+    await this.rideRepo.updateById(ride.id, {
+      $set: {
+        paymentMethod: "wallet",
+        paymentStatus: "completed",
+        status: "completed",
+        endedAt: Date.now(),
+      },
+    });
+    const driverSocketId = await getFromRedis(`OD:${ride.driverId}`);
     const userSocketId = await getFromRedis(`RU:${ride.userId}`);
-    await updateDriverFelids(`driver:${driverId}`, "status", "online");
+    await updateDriverFelids(`driver:${ride.driverId}`, "status", "online");
     const io = getIO();
     if (driverSocketId) {
       io.to(driverSocketId).emit("payment-received");
@@ -239,7 +244,7 @@ export class PaymentService implements IPaymentService {
       io.to(userSocketId).emit("payment-success");
     }
     await removeFromRedis(`URID:${ride.userId}`);
-    await removeFromRedis(`DRID:${driverId}`);
+    await removeFromRedis(`DRID:${ride.driverId}`);
   }
 
   async payUsingStripe(userId: string, rideId: string) {
@@ -305,14 +310,17 @@ export class PaymentService implements IPaymentService {
       if (!user) {
         throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
       }
-      const existingPremium = await this.subscriptionRepo.findOne({userId:id,expiresAt:{$gt:Date.now()}})
+      const existingPremium = await this.subscriptionRepo.findOne({
+        userId: id,
+        expiresAt: { $gt: Date.now() },
+      });
       if (existingPremium) {
         throw new AppError(HttpStatus.CONFLICT, messages.PLAN_ALREADY_EXISTS);
       }
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
-          { 
+          {
             price_data: {
               currency: "inr",
               product_data: {
@@ -337,5 +345,39 @@ export class PaymentService implements IPaymentService {
       return session.url;
     }
     throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
+  }
+
+  async transactionSummary(
+    id: string,
+    requestedBy: "user" | "driver"
+  ): Promise<{
+    totalTransaction: number;
+    usingWallet: number;
+    usingStripe: number;
+  }> {
+    if (!id) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const data = await this.rideRepo.paymentInfos(id, requestedBy);
+
+    return data;
+  }
+
+  async earningsSummary(id: string): Promise<{
+    totalEarnings: number;
+    Today: number;
+    Week: number;
+    Month: number;
+  }> {
+    if (!id) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const data = await this.walletRepo.getEarningsSummary(
+      id,
+      getTodayRange().start,
+      getThisWeekRange().start,
+      getThisMonthRange().start
+    );
+    return data;
   }
 }

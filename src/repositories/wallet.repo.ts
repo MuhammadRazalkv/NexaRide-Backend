@@ -3,6 +3,7 @@ import DriverWallet from "../models/driver.wallet.model";
 import CommissionModel, { ICommission } from "../models/commission.model";
 import { IWalletRepo } from "./interfaces/wallet.repo.interface";
 import { BaseRepository } from "./base.repo";
+import mongoose from "mongoose";
 export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
   constructor() {
     super(UserWallet);
@@ -73,9 +74,158 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
     );
   }
 
+  async getEarningsSummary(
+    driverId: string,
+    today: number,
+    week: number,
+    month: number
+  ): Promise<{
+    totalEarnings: number;
+    Today: number;
+    Week: number;
+    Month: number;
+  }> {
+    const result = await DriverWallet.aggregate([
+      {
+        $match: { driverId: new mongoose.Types.ObjectId(driverId) },
+      },
+      {
+        $unwind: "$transactions",
+      },
+      {
+        $group: {
+          _id: null,
+          totalEarnings: {
+            $sum: {
+              $cond: [
+                { $eq: ["$transactions.type", "credit"] },
+                "$transactions.amount",
+                0,
+              ],
+            },
+          },
+          Today: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gte: ["$transactions.date", today] },
+                    { $eq: ["$transactions.type", "credit"] },
+                  ],
+                },
+                "$transactions.amount",
+                0,
+              ],
+            },
+          },
+          Week: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gte: ["$transactions.date", week] },
+                    { $eq: ["$transactions.type", "credit"] },
+                  ],
+                },
+                "$transactions.amount",
+                0,
+              ],
+            },
+          },
+          Month: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gte: ["$transactions.date", month] },
+                    { $eq: ["$transactions.type", "credit"] },
+                  ],
+                },
+                "$transactions.amount",
+                0,
+              ],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          totalEarnings: 1,
+          Today: 1,
+          Week: 1,
+          Month: 1,
+        },
+      },
+    ]);
+
+    return (
+      result[0] || {
+        totalEarnings: 0,
+        Today: 0,
+        Week: 0,
+        Month: 0,
+      }
+    );
+  }
+
   //! Admin Commission
   async addToCommission(data: Partial<ICommission>) {
     return await CommissionModel.insertOne(data);
   }
-  
+
+  async getMonthlyCommission(): Promise<
+    { month: string; totalCommission: number }[]
+  > {
+    const monthlyCommissions = await CommissionModel.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: "$createdAt" },
+            month: { $month: "$createdAt" },
+          },
+          totalCommission: { $sum: "$commission" },
+        },
+      },
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1,
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: {
+            $concat: [
+              {
+                $arrayElemAt: [
+                  [
+                    "",
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "May",
+                    "Jun",
+                    "Jul",
+                    "Aug",
+                    "Sep",
+                    "Oct",
+                    "Nov",
+                    "Dec",
+                  ],
+                  "$_id.month",
+                ],
+              },
+              " ",
+              { $toString: "$_id.year" },
+            ],
+          },
+          totalCommission: 1,
+        },
+      },
+    ]);
+    return monthlyCommissions
+  }
 }

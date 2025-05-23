@@ -5,7 +5,7 @@ import rideController from "../bindings/ride.bindings";
 import paymentController from "../bindings/payment.binding";
 
 const driverRoutes = Router();
-const authMiddleware = authenticateWithRoles('driver',driverRepo);
+const authMiddleware = authenticateWithRoles("driver", driverRepo);
 driverRoutes.post("/verify-email", driverController.emailVerification);
 driverRoutes.post("/verify-otp", driverController.verifyOTP);
 driverRoutes.post("/resend-otp", driverController.reSendOTP);
@@ -85,14 +85,31 @@ driverRoutes.get(
   paymentController.getDriverWalletInfo
 );
 driverRoutes.get(
+  "/earnings-summary",
+  authMiddleware,
+  paymentController.earningsSummary
+);
+
+driverRoutes.get('/ride-summary',authMiddleware,rideController.rideSummary)
+driverRoutes.get('/feedback-summary',authMiddleware,rideController.feedBackSummary)
+
+driverRoutes.get(
   "/getRideHistory",
   authMiddleware,
   rideController.getRideHistoryDriver
 );
 
-driverRoutes.get('/getRideInfo',authMiddleware,rideController.getRIdeInfoForDriver)
+driverRoutes.get(
+  "/getRideInfo",
+  authMiddleware,
+  rideController.getRIdeInfoForDriver
+);
 
-driverRoutes.post('/submitComplaint',authMiddleware,rideController.fileComplaint)
+driverRoutes.post(
+  "/submitComplaint",
+  authMiddleware,
+  rideController.fileComplaint
+);
 
 //! This only need in dev stage
 driverRoutes.get(
@@ -100,6 +117,7 @@ driverRoutes.get(
   authMiddleware,
   driverController.getCurrentLocation
 );
-driverRoutes.post('/giveFeedBack',authMiddleware,rideController.giveFeedBack)
+
+driverRoutes.post("/giveFeedBack", authMiddleware, rideController.giveFeedBack);
 
 export default driverRoutes;

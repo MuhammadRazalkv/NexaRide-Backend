@@ -38,4 +38,8 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   async findAll(filter: FilterQuery<T> = {}) {
     return this.model.find(filter);
   }
+
+  async countDocuments(filter?: FilterQuery<T> | undefined): Promise<number> {
+    return this.model.countDocuments(filter)
+  }
 }

@@ -317,7 +317,6 @@ export class UserService implements IUserService {
       expiresAt: { $gt: Date.now() },
     });
     console.log(subInfo);
-   
 
     return {
       isSubscribed: subInfo ? true : false,
@@ -325,4 +324,17 @@ export class UserService implements IUserService {
       type: subInfo?.type,
     };
   }
+  // async dashboard(
+  //   userId: string
+  // ): Promise<{
+  //   totalRides: number;
+  //   completedRides: number;
+  //   cancelledRides: number;
+  // }> {
+  //   if (!userId) {
+  //     throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+  //   }
+  //   // const rideData = await this.r
+  //   // return 
+  // }
 }

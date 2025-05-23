@@ -311,4 +311,35 @@ export class RideService implements IRideService {
       feedback
     );
   }
+
+  async rideSummary(
+    id: string,
+    requestedBy: "user" | "driver"
+  ): Promise<{
+    totalRides: number;
+    completedRides: number;
+    cancelledRides: number;
+  }> {
+    if (!id) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+
+    const data = await this.rideRepo.rideCounts(id, requestedBy);
+    return data;
+  }
+
+  async feedBackSummary(
+    id: string,
+    requestedBy: "user" | "driver"
+  ): Promise<{
+    avgRating: number;
+    totalRatings: number;
+
+  }> {
+    if (!id) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const data = await this.rideRepo.getAvgRating(new mongoose.Types.ObjectId(id),requestedBy)
+    return data
+  }
 }

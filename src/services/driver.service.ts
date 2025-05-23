@@ -573,6 +573,8 @@ export class DriverService implements IDriverService {
 
   async refreshToken(token: string) {
     if (!token) {
+      console.log('Driver  Token not provided ');
+      
       throw new AppError(HttpStatus.UNAUTHORIZED, messages.TOKEN_NOT_PROVIDED);
     }
 

@@ -21,7 +21,9 @@ export class RideController implements IRideController {
       const data = req.body.data;
 
       const response = await this.rideService.checkCabs(userId, data);
-      res.status(HttpStatus.OK).json({ success: true, availableCabs: response });
+      res
+        .status(HttpStatus.OK)
+        .json({ success: true, availableCabs: response });
     } catch (error) {
       next(error);
     }
@@ -56,13 +58,11 @@ export class RideController implements IRideController {
       const OTP = req.body.otp;
 
       const response = await this.rideService.verifyRideOTP(driverId, OTP);
-      res
-        .status(200)
-        .json({
-          success: true,
-          startedAt: response.date,
-          rideId: response.rideId,
-        });
+      res.status(200).json({
+        success: true,
+        startedAt: response.date,
+        rideId: response.rideId,
+      });
     } catch (error) {
       next(error);
     }
@@ -233,5 +233,59 @@ export class RideController implements IRideController {
     } catch (error) {
       next(error);
     }
+  }
+
+  async rideSummary(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (!req.id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      }
+
+      const requestedBy = req.query.requestedBy;
+      if (requestedBy !== "user" && requestedBy !== "driver") {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
+      }
+
+      const data = await this.rideService.rideSummary(req.id, requestedBy);
+      res.status(HttpStatus.OK).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async feedBackSummary(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (!req.id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      }
+
+      const requestedBy = req.query.requestedBy;
+      if (requestedBy !== "user" && requestedBy !== "driver") {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
+      }
+      const data = await this.rideService.feedBackSummary(req.id, requestedBy);
+      res.status(HttpStatus.OK).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    } 
+  }
+
+  async earningsSummary(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    if (!req.id) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+    }
+    
   }
 }

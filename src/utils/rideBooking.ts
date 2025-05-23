@@ -26,6 +26,8 @@ export async function findDriverForRide(
   premiumDiscount: number,
   io: Server
 ) {
+  console.log('findDriverForRide ');
+  
   const DRIVER_RESPONSE_TIMEOUT = 16000; // 16 sec
 
   for (const driver of drivers) {
@@ -93,6 +95,8 @@ function waitForDriverResponse(
   return new Promise(async (resolve) => {
     let isResolved = false;
     const timeoutId = setTimeout(() => {
+      console.log('waitForDriverResponse Timeout');
+      
       if (!isResolved) {
         isResolved = true;
         cleanup();
@@ -110,9 +114,11 @@ function waitForDriverResponse(
       dropOffCoords: [number, number];
     }) => {
       if (isResolved) return;
+      console.log('waitForDriverResponse onAccept');
+      
       isResolved = true;
       clearTimeout(timeoutId);
-      console.log("Inside the on Accept", driverSocket);
+      console.log("Inside the on Accept");
 
       try {
         const driverId = driverSocket.data.driverId;
@@ -217,6 +223,8 @@ function waitForDriverResponse(
 
     const onReject = () => {
       if (isResolved) return;
+      console.log('waitForDriverResponse onReject');
+      
       isResolved = true;
       clearTimeout(timeoutId);
       cleanup();

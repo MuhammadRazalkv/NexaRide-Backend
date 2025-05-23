@@ -36,6 +36,7 @@ userRoute.patch(
   userController.updateUserPfp
 );
 
+
 //  WALLET & PAYMENTS
 userRoute.get(
   "/getWalletInfo",
@@ -63,6 +64,7 @@ userRoute.post(
   userAuthMiddleware,
   paymentController.upgradeToPlus
 );
+userRoute.get('/payment-summary',userAuthMiddleware,paymentController.transactionSummary)
 
 userRoute.get('/subscription-status',userAuthMiddleware,userController.subscriptionStatus)
 
@@ -96,6 +98,8 @@ userRoute.post(
   userAuthMiddleware,
   rideController.giveFeedBack
 );
+userRoute.get('/ride-summary',userAuthMiddleware,rideController.rideSummary)
+userRoute.get('/feedback-summary',userAuthMiddleware,rideController.feedBackSummary)
 //* Web hook
 
 // userRoute.post('/webhook',express.raw({ type: 'application/json' }),userController.webhook)

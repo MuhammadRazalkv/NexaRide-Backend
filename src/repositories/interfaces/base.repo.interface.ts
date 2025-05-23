@@ -8,4 +8,5 @@ export interface IBaseRepository<T extends Document> {
   updateById(id: string, update: UpdateQuery<T>): Promise<T | null>;
   updateOne(filter: FilterQuery<T>, update: UpdateQuery<T>): Promise<any>; 
   findAll(filter?: FilterQuery<T>): Promise<T[]>;
+  countDocuments(filter?: FilterQuery<T>): Promise<number>;
 }

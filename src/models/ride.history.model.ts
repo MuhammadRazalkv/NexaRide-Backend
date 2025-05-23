@@ -19,6 +19,7 @@ export interface IRideHistory extends Document {
   endedAt?: number;
   cancelledAt?: number;
   paymentStatus: string;
+  paymentMethod?: string;
   pickupCoords: [number, number];
   dropOffCoords: [number, number];
   OTP: string;
@@ -68,6 +69,11 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>(
       type: String,
       enum: ["pending", "completed", "failed", "Not required"],
       default: "pending",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["wallet", "stripe"],
+      required: false,
     },
     OTP: { type: String, required: true },
     cancelledBy: { type: String, enum: ["driver", "user"] },

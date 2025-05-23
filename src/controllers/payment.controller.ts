@@ -49,8 +49,8 @@ export class PaymentController implements IPaymentController {
     next: NextFunction
   ): Promise<void> {
     const sig = req.headers["stripe-signature"] as string;
-    console.log('web hook ');
-    
+    console.log("web hook ");
+
     try {
       await this.paymentService.webHook(req.body, sig);
       res.status(HttpStatus.OK).json({ success: true });
@@ -114,21 +114,63 @@ export class PaymentController implements IPaymentController {
     }
   }
 
-
-  async upgradeToPlus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async upgradeToPlus(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const userId = req.id
-      const {type} = req.body
+      const userId = req.id;
+      const { type } = req.body;
       if (!userId) {
-        throw new AppError(HttpStatus.BAD_REQUEST,messages.ID_NOT_PROVIDED)
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
       if (!type) {
-        throw new AppError(HttpStatus.BAD_REQUEST,messages.MISSING_FIELDS)
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const url = await this.paymentService.upgradeToPlus(userId,type)
-      res.status(HttpStatus.CREATED).json({success:true,url})
+      const url = await this.paymentService.upgradeToPlus(userId, type);
+      res.status(HttpStatus.CREATED).json({ success: true, url });
     } catch (error) {
-      next(error)
+      next(error);
+    }
+  }
+
+  async transactionSummary(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (!req.id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
+      }
+      const requestedBy = req.query.requestedBy;
+      if (requestedBy !== "user" && requestedBy !== "driver") {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
+      }
+      const data = await this.paymentService.transactionSummary(
+        req.id,
+        requestedBy
+      );
+      res.status(HttpStatus.OK).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async earningsSummary(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (!req.id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
+      }
+      const data = await this.paymentService.earningsSummary(req.id)
+      res.status(HttpStatus.OK).json({success:true,data})
+    } catch (error) {
+      next(error);
     }
   }
 }

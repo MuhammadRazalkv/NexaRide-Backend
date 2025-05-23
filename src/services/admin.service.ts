@@ -24,8 +24,9 @@ import {
   PopulatedRideHistory,
 } from "../repositories/interfaces/ride.repo.interface";
 import { IComplaints } from "../models/complaints.modal";
-import { IRideHistory } from "../models/ride.history.model";
-import { error } from "console";
+import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
+import { IWalletRepo } from "../repositories/interfaces/wallet.repo.interface";
+
 const generateTokens = () => ({
   accessToken: generateAccessToken(process.env.ADMIN_EMAIL as string, "admin"),
   refreshToken: generateRefreshToken(
@@ -50,7 +51,9 @@ export class AdminService implements IAdminService {
     private driverRepo: IDriverRepo,
     private vehicleRepo: IVehicleRepo,
     private adminRepo: IAdminRepo,
-    private rideRepo: IRideRepo
+    private rideRepo: IRideRepo,
+    private subscriptionRepo: ISubscriptionRepo,
+    private walletRepo : IWalletRepo
   ) {}
   async login(email: string, password: string) {
     if (!email || !password) {
@@ -327,17 +330,21 @@ export class AdminService implements IAdminService {
 
   async getAllComplaints(
     page: number,
-    filterBy:string
+    filterBy: string
   ): Promise<{
     complaints: IComplaintsWithUserDriver[] | null;
     total: number;
   }> {
     const limit = 5;
     const skip = (page - 1) * 5;
-    const complaints = await this.rideRepo.getAllComplaints(skip, limit,filterBy);
+    const complaints = await this.rideRepo.getAllComplaints(
+      skip,
+      limit,
+      filterBy
+    );
     const total = await this.rideRepo.getComplainsLength();
     console.log(complaints);
-    
+
     return { complaints, total };
   }
 
@@ -392,20 +399,49 @@ export class AdminService implements IAdminService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
     let email: string;
-    let name : string;
+    let name: string;
     if (complaint.filedByRole == "driver") {
-      name = ride.userId.name
+      name = ride.userId.name;
       email = ride.userId.email;
     } else {
       email = ride.driverId.email;
-      name = ride.driverId.name
+      name = ride.driverId.name;
     }
 
-    await sendEmail(email,'NexaRide: Important Notice About Your Account Activity',warningMail(name,String(complaint.id).slice(-4),String(ride.id).slice(-4),complaint.complaintReason,new Date(complaint.createdAt).toDateString(),complaint?.description)).catch((error)=>{
-      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR,error.message)
-    })
-    
-    await this.rideRepo.setWarningMailSentTrue(id)
+    await sendEmail(
+      email,
+      "NexaRide: Important Notice About Your Account Activity",
+      warningMail(
+        name,
+        String(complaint.id).slice(-4),
+        String(ride.id).slice(-4),
+        complaint.complaintReason,
+        new Date(complaint.createdAt).toDateString(),
+        complaint?.description
+      )
+    ).catch((error) => {
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, error.message);
+    });
 
+    await this.rideRepo.setWarningMailSentTrue(id);
+  }
+
+  async dashBoard(): Promise<{
+    users: number;
+    drivers: number;
+    completedRides: number;
+    premiumUsers: number;
+    monthlyCommissions:{month:string,totalCommission:number}[]
+  }> {
+    const users = await this.userRepo.countDocuments();
+    const drivers = await this.driverRepo.countDocuments();
+    const completedRides = await this.rideRepo.countDocuments({
+      status: "completed",
+    });
+    const premiumUsers = await this.subscriptionRepo.countDocuments({
+      expiresAt: { $gt: Date.now() },
+    });
+    const monthlyCommissions = await this.walletRepo.getMonthlyCommission()
+    return { users, drivers, completedRides, premiumUsers , monthlyCommissions};
   }
 }

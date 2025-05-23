@@ -19,4 +19,5 @@ export interface IAdminController {
     getComplaintInDetail(req: Request, res: Response, next: NextFunction): Promise<void>
     changeComplaintStatus(req: Request, res: Response, next: NextFunction): Promise<void>
     sendWarningMail(req: Request, res: Response, next: NextFunction): Promise<void>
+    dashboard(req: Request, res: Response, next: NextFunction): Promise<void>
 }

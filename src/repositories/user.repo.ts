@@ -98,4 +98,6 @@ export class UserRepository extends BaseRepository<IUser> implements IUserRepo {
   async updatePfp(id: string, url: string) {
     return this.updateById(id, { $set: { profilePic: url } });
   }
+
+ 
 }

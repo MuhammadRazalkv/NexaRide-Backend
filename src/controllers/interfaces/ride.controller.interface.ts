@@ -12,4 +12,6 @@ export interface IRideController {
   // getRIdeInfoForDriver(req:ExtendedRequest,res:Response , next:NextFunction):Promise<void>
   getRIdeInfoForDriver(req:ExtendedRequest,res:Response , next:NextFunction):Promise<void>
   giveFeedBack(req:ExtendedRequest,res:Response , next:NextFunction):Promise<void>
+  rideSummary(req:ExtendedRequest,res:Response , next:NextFunction):Promise<void>
+  feedBackSummary(req:ExtendedRequest,res:Response , next:NextFunction):Promise<void>
 }

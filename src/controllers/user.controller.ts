@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import { IUserController } from "./interfaces/user.controller.interface";
-
 import { ExtendedRequest } from "../middlewares/auth.middleware";
 import IUserService from "../services/interfaces/user.service.interface";
 import { HttpStatus } from "../constants/httpStatusCodes";
@@ -55,7 +54,7 @@ export class UserController implements IUserController {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        maxAge:parseInt(process.env.REFRESH_MAX_AGE as string),
+        maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
       res.status(HttpStatus.CREATED).json({
@@ -201,7 +200,7 @@ export class UserController implements IUserController {
         httpOnly: true,
         secure: process.env.PRODUCTION === "production",
         sameSite: "strict",
-        maxAge:parseInt(process.env.REFRESH_MAX_AGE as string),
+        maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
       res.status(HttpStatus.CREATED).json({
@@ -270,18 +269,22 @@ export class UserController implements IUserController {
     }
   }
 
-  
-  async subscriptionStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async subscriptionStatus(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
-      const userId = req.id
+      const userId = req.id;
       if (!userId) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const result = await this.userService.subscriptionStatus(userId)
-      res.status(200).json({success:true,result})
+      const result = await this.userService.subscriptionStatus(userId);
+      res.status(200).json({ success: true, result });
     } catch (error) {
-      next(error)
+      next(error);
     }
   }
 
-} 
+ 
+}

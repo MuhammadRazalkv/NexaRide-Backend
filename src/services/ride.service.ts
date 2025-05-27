@@ -112,7 +112,14 @@ export class RideService implements IRideService {
 
     const randomCoordinate =
       randomLocations[Math.floor(Math.random() * randomLocations.length)];
-    await this.driverRepo.assignRandomLocation(id, randomCoordinate);
+    await this.driverRepo.updateById(id, {
+      $set: {
+        location: {
+          type: "Point",
+          coordinates: randomCoordinate, 
+        },
+      },
+    });
     return randomCoordinate;
   }
 
@@ -126,16 +133,16 @@ export class RideService implements IRideService {
   }
 
   async createNewRide(data: Partial<IRideHistory>) {
-    const ride = await this.rideRepo.createNewRide(data);
+    const ride = await this.rideRepo.create(data);
     return ride;
   }
   async getUserIdByDriverId(driverId: string) {
-    const ride = await this.rideRepo.getUserIdByDriverId(driverId);
+    const ride = await this.rideRepo.findOne({ driverId, status: "ongoing" });
     return ride?.userId as string;
   }
 
   async getDriverByUserId(userId: string) {
-    const ride = await this.rideRepo.getDriverByUserId(userId);
+    const ride = await this.rideRepo.findOne({ userId, status: "ongoing" });
 
     return ride?.driverId as string;
   }
@@ -144,11 +151,14 @@ export class RideService implements IRideService {
     if (!driverId || !OTP) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findOngoingRideByDriverId(driverId);
+    const ride = await this.rideRepo.findOne({ driverId, status: "ongoing" });
+
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
     if (ride.OTP !== OTP) {
+      console.log(ride.OTP, OTP);
+
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_OTP);
     }
     await this.rideRepo.updateRideStartedAt(ride.id);
@@ -160,36 +170,81 @@ export class RideService implements IRideService {
     userId: string,
     cancelledBy: "User" | "Driver"
   ) {
-    const response = await this.rideRepo.cancelRide(
-      driverId,
-      userId,
-      cancelledBy
+    await this.rideRepo.updateOne(
+      { driverId, userId, status: "ongoing" },
+      {
+        $set: {
+          status: "canceled",
+          cancelledAt: Date.now(),
+          paymentStatus: "Not required",
+          cancelledBy,
+        },
+      }
     );
   }
+
   async getRideIdByUserAndDriver(driverId: string, userId: string) {
-    const ride = await this.rideRepo.getRideIdByUserAndDriver(driverId, userId);
+    const ride = await this.rideRepo.findOne({ driverId, userId });
     return { rideId: ride?.id, fare: ride?.totalFare };
   }
 
   async getRideHistory(id: string, page: number) {
     const limit = 8;
     const skip = (page - 1) * limit;
-    const history = await this.rideRepo.findRideByUserId(id, skip, limit);
-    const total = await this.rideRepo.getUserRideCount(id);
+    const history = await this.rideRepo.findAll(
+      { userId: id },
+      { sort: { startedAt: 1 }, skip, limit },
+      {
+        driverId: 1,
+        pickupLocation: 1,
+        dropOffLocation: 1,
+        totalFare: 1,
+        distance: 1,
+        estTime: 1,
+        timeTaken: 1,
+        status: 1,
+        startedAt: 1,
+        endedAt: 1,
+        canceledAt: 1,
+        paymentStatus: 1,
+      }
+    );
+    const total = await this.rideRepo.countDocuments({ userId: id });
     return { history, total };
   }
+
   async getRideHistoryDriver(id: string, page: number) {
     const limit = 8;
     const skip = (page - 1) * limit;
-    const history = await this.rideRepo.findRideByDriver(id, skip, limit);
-    const total = await this.rideRepo.getDriverRideCount(id);
+    const history = await this.rideRepo.findAll(
+      { driverId: id },
+      { skip, limit, sort: { createdAt: 1 } },
+      {
+        driverId: 1,
+        pickupLocation: 1,
+        dropOffLocation: 1,
+        totalFare: 1,
+        commission: 1,
+        driverEarnings: 1,
+        distance: 1,
+        estTime: 1,
+        timeTaken: 1,
+        status: 1,
+        startedAt: 1,
+        endedAt: 1,
+        canceledAt: 1,
+        paymentStatus: 1,
+      }
+    );
+    const total = await this.rideRepo.countDocuments({ driverId: id });
     return { history, total };
   }
+
   async checkPaymentStatus(rideId: string) {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findRideById(rideId);
+    const ride = await this.rideRepo.findById(rideId);
     return ride?.paymentStatus;
   }
 
@@ -197,7 +252,7 @@ export class RideService implements IRideService {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findRideById(rideId);
+    const ride = await this.rideRepo.findById(rideId);
     return ride;
   }
 
@@ -217,7 +272,6 @@ export class RideService implements IRideService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
     const complaintInfo = await this.rideRepo.getComplaintInfo(rideId, userId);
-    console.log("r ", ride);
 
     return { ride, complaintInfo };
   }
@@ -239,7 +293,6 @@ export class RideService implements IRideService {
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
-    console.log("Ride ", ride);
 
     const complaint = await this.rideRepo.createComplaint(
       rideId,
@@ -282,7 +335,7 @@ export class RideService implements IRideService {
     rating: number,
     feedback?: string
   ): Promise<void> {
-    const ride = await this.rideRepo.findRideById(rideId);
+    const ride = await this.rideRepo.findById(rideId);
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
@@ -334,12 +387,14 @@ export class RideService implements IRideService {
   ): Promise<{
     avgRating: number;
     totalRatings: number;
-
   }> {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const data = await this.rideRepo.getAvgRating(new mongoose.Types.ObjectId(id),requestedBy)
-    return data
+    const data = await this.rideRepo.getAvgRating(
+      new mongoose.Types.ObjectId(id),
+      requestedBy
+    );
+    return data;
   }
 }

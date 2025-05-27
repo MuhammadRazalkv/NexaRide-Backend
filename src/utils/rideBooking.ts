@@ -184,12 +184,16 @@ function waitForDriverResponse(
           setToRedis(`DRID:${driverId}`, rideId),
           setToRedis(`URID:${userId}`, rideId),
           updateDriverFelids(`driver:${driverId}`, "status", "onRide"),
+          
         ]);
+          console.log('promise all');
 
         // Create ride room for real-time updates
         driverSocket.join(`ride:${rideId}`);
 
         // Notify user about accepted ride
+        console.log('User socket id onAccept ',userSocketId);
+        
         if (userSocketId) {
           const userSocket = io.sockets.sockets.get(userSocketId);
           if (userSocket) {

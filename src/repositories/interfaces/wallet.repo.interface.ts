@@ -1,7 +1,9 @@
 import { IWallet } from "../../models/user.wallet.model";
 import { IDriverWallet } from "../../models/driver.wallet.model";
 import { ICommission } from "../../models/commission.model";
-export interface IWalletRepo {
+import { BaseRepository } from "../base.repo";
+import { IBaseRepository } from "./base.repo.interface";
+export interface IWalletRepo extends BaseRepository<IWallet> {
   getWalletInfo(userId: string): Promise<IWallet | null>;
   addMoneyToUserWallet(userId: string, amount: number): Promise<void>;
   getUserWalletBalanceById(userId: string): Promise<IWallet | null>;

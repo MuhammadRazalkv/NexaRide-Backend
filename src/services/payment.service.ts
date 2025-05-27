@@ -45,7 +45,7 @@ export class PaymentService implements IPaymentService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.WALLET_MAX_AMOUNT);
     }
 
-    const user = await this.userRepo.findUserById(id);
+    const user = await this.userRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
     }
@@ -76,11 +76,11 @@ export class PaymentService implements IPaymentService {
   }
 
   async getWalletInfo(id: string) {
-    const user = await this.userRepo.findUserById(id);
+    const user = await this.userRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
     }
-    const wallet = await this.walletRepo.getWalletInfo(id);
+    const wallet = await this.walletRepo.findOne({ userId: id });
     return wallet;
   }
 
@@ -102,7 +102,20 @@ export class PaymentService implements IPaymentService {
         const amount = session.amount_total! / 100;
 
         //  update the wallet
-        await this.walletRepo.addMoneyToUserWallet(userId, amount);
+        await this.walletRepo.updateOne(
+          { userId },
+          {
+            $inc: { balance: amount },
+            $push: {
+              transactions: {
+                type: "credit",
+                date: Date.now(),
+                amount: amount,
+              },
+            },
+          },
+          { new: true, upsert: true }
+        );
       } else if (
         session.metadata &&
         session.metadata.action == "ride_payment"
@@ -188,13 +201,13 @@ export class PaymentService implements IPaymentService {
 
   //! This is where the user pay with wallet
   async payUsingWallet(userId: string, rideId: string) {
-    const ride = await this.rideRepo.findRideById(rideId);
+    const ride = await this.rideRepo.findById(rideId);
 
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
 
-    const userWallet = await this.walletRepo.getUserWalletBalanceById(userId);
+    const userWallet = await this.walletRepo.findOne({userId});
 
     if (
       !userWallet ||
@@ -251,7 +264,7 @@ export class PaymentService implements IPaymentService {
     if (!userId || !rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findRideById(rideId);
+    const ride = await this.rideRepo.findById(rideId);
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
@@ -285,7 +298,7 @@ export class PaymentService implements IPaymentService {
   }
 
   async getDriverWalletInfo(driverId: string) {
-    const driver = await this.driverRepo.findDriverById(driverId);
+    const driver = await this.driverRepo.findById(driverId);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -306,7 +319,7 @@ export class PaymentService implements IPaymentService {
         );
       const amount = parseInt(price);
 
-      const user = await this.userRepo.findUserById(id);
+      const user = await this.userRepo.findById(id);
       if (!user) {
         throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
       }

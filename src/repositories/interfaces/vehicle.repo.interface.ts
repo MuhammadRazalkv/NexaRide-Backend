@@ -1,7 +1,8 @@
 import { IVehicle } from "../../models/vehicle.model";
 import { ObjectId } from "mongoose";
+import { BaseRepository } from "../base.repo";
 
-export interface IVehicleRepo {
+export interface IVehicleRepo extends BaseRepository<IVehicle> {
     findVehicleById(vehicleId: string | ObjectId): Promise<IVehicle | null>
     registerNewVehicle(data: Partial<IVehicle>): Promise<IVehicle>
     updatedVehicleData(id: string | ObjectId, data: Partial<IVehicle>):Promise<IVehicle | null>

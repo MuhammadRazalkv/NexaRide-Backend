@@ -53,7 +53,7 @@ export class AdminService implements IAdminService {
     private adminRepo: IAdminRepo,
     private rideRepo: IRideRepo,
     private subscriptionRepo: ISubscriptionRepo,
-    private walletRepo : IWalletRepo
+    private walletRepo: IWalletRepo
   ) {}
   async login(email: string, password: string) {
     if (!email || !password) {
@@ -76,8 +76,17 @@ export class AdminService implements IAdminService {
     const limit = 5;
     const skip = (page - 1) * limit;
 
-    const users = await this.userRepo.getAllUsers(skip, limit, search, sort);
-    const total = await this.userRepo.getAllUserCount(search);
+    // const users = await this.userRepo.getAllUsers(skip, limit, search, sort);
+    const users = await this.userRepo.findAll(
+      {
+        name: { $regex: search, $options: "i" },
+      },
+      { sort: { name: sort === "A-Z" ? 1 : -1 }, skip: skip, limit: limit }
+    );
+
+    const total = await this.userRepo.countDocuments({
+      name: { $regex: search, $options: "i" },
+    });
     return {
       users,
       total,
@@ -85,15 +94,14 @@ export class AdminService implements IAdminService {
   }
 
   async changeUserStatus(id: string) {
-    const user = await this.userRepo.findUserById(id);
+    const user = await this.userRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
     }
 
-    const updatedUser = await this.userRepo.blockUnblockUser(
-      id,
-      user.isBlocked
-    );
+    const updatedUser = await this.userRepo.updateById(id, {
+      $set: { isBlocked: !user.isBlocked },
+    });
 
     if (updatedUser) {
       return {
@@ -109,13 +117,16 @@ export class AdminService implements IAdminService {
   async getDrivers(page: number, search: string, sort: string) {
     const limit = 5;
     const skip = (page - 1) * 5;
-    const drivers = await this.driverRepo.getAllDrivers(
-      skip,
-      limit,
-      search,
-      sort
+
+    const drivers = await this.driverRepo.findAll(
+      { status: "approved", name: { $regex: search, $options: "i" } },
+      { sort: { name: sort === "A-Z" ? 1 : -1 }, skip, limit }
     );
-    const total = await this.driverRepo.getApprovedDriversCount(search);
+
+    const total = await this.driverRepo.countDocuments({
+      status: "approved",
+      name: { $regex: search, $options: "i" },
+    });
     return {
       drivers,
       total,
@@ -128,16 +139,16 @@ export class AdminService implements IAdminService {
       count,
     };
   }
+
   async changeDriverStatus(id: string) {
-    const driver = await this.driverRepo.findDriverById(id);
+    const driver = await this.driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    const updatedDriver = await this.driverRepo.blockUnblockDriver(
-      id,
-      driver.isBlocked
-    );
+    const updatedDriver = await this.driverRepo.updateById(id, {
+      $set: { isBlocked: !driver.isBlocked },
+    });
 
     if (updatedDriver) {
       return {
@@ -161,12 +172,14 @@ export class AdminService implements IAdminService {
     if (!id || !reason) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const driver = await this.driverRepo.findDriverById(id);
+    const driver = await this.driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    const updatedDriver = await this.driverRepo.rejectDriver(id, reason);
+    const updatedDriver = await this.driverRepo.updateById(id, {
+      $set: { rejectionReason: reason, status: "rejected" },
+    });
 
     if (updatedDriver) {
       await sendEmail(
@@ -190,12 +203,14 @@ export class AdminService implements IAdminService {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const driver = await this.driverRepo.findDriverById(id);
+    const driver = await this.driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    const updatedDriver = await this.driverRepo.approveDriver(id);
+    const updatedDriver = await this.driverRepo.updateById(id, {
+      $set: { status: "approved" },
+    });
 
     if (updatedDriver) {
       await sendEmail(
@@ -215,7 +230,24 @@ export class AdminService implements IAdminService {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const vehicle = await this.vehicleRepo.getVehicleInfo(id);
+
+    const vehicle = await this.vehicleRepo.findById(id, {
+      _id: 1,
+      nameOfOwner: 1,
+      addressOfOwner: 1,
+      brand: 1,
+      vehicleModel: 1,
+      color: 1,
+      numberPlate: 1,
+      regDate: 1,
+      expDate: 1,
+      insuranceProvider: 1,
+      policyNumber: 1,
+      vehicleImages: 1,
+      status: 1,
+      rejectionReason: 1,
+      verified: 1,
+    });
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
@@ -227,16 +259,18 @@ export class AdminService implements IAdminService {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const vehicle = await this.vehicleRepo.findVehicleById(id);
+    const vehicle = await this.vehicleRepo.findById(id);
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
-    const driver = await this.driverRepo.findDriverByVehicleId(vehicle.id);
+    const driver = await this.driverRepo.findOne({ vehicleId: id });
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    const updatedVehicle = await this.vehicleRepo.approveVehicle(id, category);
+    const updatedVehicle = await this.vehicleRepo.updateById(id, {
+      $set: { status: "approved", category },
+    });
     if (updatedVehicle) {
       await sendEmail(
         driver?.email,
@@ -255,15 +289,17 @@ export class AdminService implements IAdminService {
     if (!id || !reason) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const vehicle = await this.vehicleRepo.findVehicleById(id);
+    const vehicle = await this.vehicleRepo.findById(id);
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
-    const driver = await this.driverRepo.findDriverByVehicleId(vehicle.id);
+    const driver = await this.driverRepo.findOne({ vehicleId: id });
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
-    const updatedVehicle = await this.vehicleRepo.rejectVehicle(id, reason);
+    const updatedVehicle = await this.vehicleRepo.updateById(id, {
+      $set: { rejectionReason: reason, status: "rejected" },
+    });
 
     if (updatedVehicle) {
       await sendEmail(
@@ -312,13 +348,13 @@ export class AdminService implements IAdminService {
 
     return res;
   }
+
   async refreshToken(token: string) {
     if (!token) {
       throw new AppError(HttpStatus.UNAUTHORIZED, messages.TOKEN_NOT_PROVIDED);
     }
 
     const refresh = verifyRefreshToken(token);
-
     if (!refresh) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_INVALID);
     }
@@ -431,7 +467,7 @@ export class AdminService implements IAdminService {
     drivers: number;
     completedRides: number;
     premiumUsers: number;
-    monthlyCommissions:{month:string,totalCommission:number}[]
+    monthlyCommissions: { month: string; totalCommission: number }[];
   }> {
     const users = await this.userRepo.countDocuments();
     const drivers = await this.driverRepo.countDocuments();
@@ -441,7 +477,7 @@ export class AdminService implements IAdminService {
     const premiumUsers = await this.subscriptionRepo.countDocuments({
       expiresAt: { $gt: Date.now() },
     });
-    const monthlyCommissions = await this.walletRepo.getMonthlyCommission()
-    return { users, drivers, completedRides, premiumUsers , monthlyCommissions};
+    const monthlyCommissions = await this.walletRepo.getMonthlyCommission();
+    return { users, drivers, completedRides, premiumUsers, monthlyCommissions };
   }
 }

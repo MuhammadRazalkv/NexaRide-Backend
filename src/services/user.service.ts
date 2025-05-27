@@ -12,7 +12,7 @@ import {
   verifyForgotPasswordToken,
 } from "../utils/jwt";
 import sendEmail from "../utils/mailSender";
-import cloudinary, { generateSignedCloudinaryUrl } from "../utils/cloudinary";
+import cloudinary from "../utils/cloudinary";
 
 import IUserService from "./interfaces/user.service.interface";
 import { IUserRepo } from "../repositories/interfaces/user.repo.interface";
@@ -20,6 +20,7 @@ import { AppError } from "../utils/appError";
 import { messages } from "../constants/httpMessages";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
+import mongoose from "mongoose";
 
 const userSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -44,7 +45,7 @@ export class UserService implements IUserService {
   async emailVerification(email: string) {
     if (!email)
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    const existingUser = await this.userRepo.findUserByEmail(email);
+    const existingUser = await this.userRepo.findOne({ email });
     if (existingUser)
       throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
     const OTP = crypto.randomInt(1000, 10000).toString();
@@ -70,7 +71,7 @@ export class UserService implements IUserService {
     if (!email) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
     }
-    const existingUser = await this.userRepo.findUserByEmail(email);
+    const existingUser = await this.userRepo.findOne({ email });
     if (existingUser)
       throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
     const OTP = crypto.randomInt(1000, 10000).toString();
@@ -101,20 +102,37 @@ export class UserService implements IUserService {
     parsedData.data.password = await hashPassword(parsedData.data.password);
 
     // Register user
-    const newUser = await this.userRepo.registerNewUser(parsedData.data);
-    await OTPRepo.deleteVerifiedEmail(parsedData.data.email);
+    try {
+      const newUser = await this.userRepo.create(parsedData.data);
+      await OTPRepo.deleteVerifiedEmail(parsedData.data.email);
 
-    // Generate tokens
-    return {
-      ...generateTokens(newUser._id as string),
-      user: {
-        _id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: "User",
-        profilePic: newUser.profilePic,
-      },
-    };
+      // Generate tokens
+      return {
+        ...generateTokens(newUser._id as string),
+        user: {
+          _id: newUser._id,
+          name: newUser.name,
+          email: newUser.email,
+          role: "User",
+          profilePic: newUser.profilePic,
+        },
+      };
+    } catch (error: any) {
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        const info = field === "phone" ? "number" : "address";
+        throw new AppError(
+          HttpStatus.CONFLICT,
+          `${
+            field.charAt(0).toUpperCase() + field.slice(1)
+          } ${info} already exists`
+        );
+      }
+      throw new AppError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        messages.DATABASE_OPERATION_FAILED
+      );
+    }
   }
 
   async login(email: string, password: string) {
@@ -123,7 +141,7 @@ export class UserService implements IUserService {
     }
 
     // Check if user exists
-    const user = await this.userRepo.findUserByEmail(email);
+    const user = await this.userRepo.findOne({ email });
     if (!user) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
     }
@@ -160,7 +178,7 @@ export class UserService implements IUserService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
-    const user = await this.userRepo.findUserByEmail(email);
+    const user = await this.userRepo.findOne({ email });
 
     if (user?.isBlocked) {
       throw new AppError(HttpStatus.FORBIDDEN, messages.ACCOUNT_BLOCKED);
@@ -168,27 +186,43 @@ export class UserService implements IUserService {
 
     if (!user) {
       // New user registration
-      const userData = {
-        email,
-        googleId,
-        name,
-      };
-      const newUser = await this.userRepo.registerNewUser(userData);
-      return {
-        ...generateTokens(newUser._id as string),
-        user: {
-          _id: newUser._id,
-          name: newUser.name,
-          email: newUser.email,
-          profilePic: newUser.profilePic,
-        },
-      };
+      try {
+        const userData = {
+          email,
+          googleId,
+          name,
+        };
+        const newUser = await this.userRepo.create(userData);
+        return {
+          ...generateTokens(newUser._id as string),
+          user: {
+            _id: newUser._id,
+            name: newUser.name,
+            email: newUser.email,
+            profilePic: newUser.profilePic,
+          },
+        };
+      } catch (error: any) {
+        if (error.code === 11000) {
+          const field = Object.keys(error.keyPattern)[0];
+          const info = field === "phone" ? "number" : "address";
+          throw new AppError(
+            HttpStatus.CONFLICT,
+            `${
+              field.charAt(0).toUpperCase() + field.slice(1)
+            } ${info} already exists`
+          );
+        }
+        throw new AppError(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          messages.DATABASE_OPERATION_FAILED
+        );
+      }
     }
 
     // If user exists, only update googleId if it's missing
     if (!user.googleId) {
-      user.googleId = googleId;
-      await user.save();
+      await this.userRepo.updateById(user.id, { $set: { googleId } });
     }
 
     return {
@@ -206,12 +240,12 @@ export class UserService implements IUserService {
     if (!email) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
     }
-    const user = await this.userRepo.findUserByEmail(email);
+    const user = await this.userRepo.findOne({ email });
     if (!user) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.USER_NOT_FOUND);
     }
 
-    const token = await forgotPasswordToken(user.id, user.email);
+    const token = forgotPasswordToken(user.id, user.email);
     const resetUrl = `${process.env.FRONT_END_URL}/user/reset-password?id=${user._id}&token=${token}`;
 
     await sendEmail(
@@ -228,7 +262,7 @@ export class UserService implements IUserService {
     if (!password) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
     }
-    const user = await this.userRepo.findUserById(id);
+    const user = await this.userRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.USER_NOT_FOUND);
     }
@@ -239,14 +273,16 @@ export class UserService implements IUserService {
     }
 
     const encryptedPassword = await hashPassword(password);
-    await this.userRepo.changePassword(id, encryptedPassword);
+    await this.userRepo.updateById(id, {
+      $set: { password: encryptedPassword },
+    });
   }
 
   async getUserInfo(id: string) {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const user = await this.userRepo.findUserById(id);
+    const user = await this.userRepo.findById(id);
     return user;
   }
 
@@ -271,7 +307,7 @@ export class UserService implements IUserService {
       throw new Error("Fields are missing");
     }
 
-    const res = await this.userRepo.updateName(id, name);
+    const res = await this.userRepo.updateById(id, { $set: { name } });
     return res?.name;
   }
 
@@ -280,8 +316,25 @@ export class UserService implements IUserService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
-    const res = await this.userRepo.updatePhone(id, phone);
-    return res?.phone;
+    try {
+      const res = await this.userRepo.updateById(id, { $set: { phone } });
+      return res?.phone;
+    } catch (error: any) {
+      if (error instanceof mongoose.Error.CastError) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
+      }
+
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+
+        throw new AppError(HttpStatus.CONFLICT, `Phone already exists`);
+      }
+
+      throw new AppError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        messages.DATABASE_OPERATION_FAILED
+      );
+    }
   }
 
   async updateUserPfp(id: string, image: string) {
@@ -293,7 +346,9 @@ export class UserService implements IUserService {
       folder: "/UserProfilePic",
       // type: "authenticated",
     });
-    const user = await this.userRepo.updatePfp(id, res.secure_url);
+    const user = await this.userRepo.updateById(id, {
+      $set: { profilePic: res.secure_url },
+    });
     // const user = await this.userRepo.updatePfp(id, res.public_id);
     // const profilePicUrl = generateSignedCloudinaryUrl(user?.profilePic)
     return user?.profilePic;
@@ -316,7 +371,6 @@ export class UserService implements IUserService {
       userId,
       expiresAt: { $gt: Date.now() },
     });
-    console.log(subInfo);
 
     return {
       isSubscribed: subInfo ? true : false,
@@ -335,6 +389,6 @@ export class UserService implements IUserService {
   //     throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
   //   }
   //   // const rideData = await this.r
-  //   // return 
+  //   // return
   // }
 }

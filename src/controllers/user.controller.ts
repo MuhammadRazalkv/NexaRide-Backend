@@ -18,7 +18,7 @@ export class UserController implements IUserController {
       await this.userService.emailVerification(email);
       res
         .status(HttpStatus.CREATED)
-        .json({ message: messages.OTP_SENT_SUCCESS });
+        .json({success:true,  message: messages.OTP_SENT_SUCCESS });
     } catch (error) {
       next(error);
     }

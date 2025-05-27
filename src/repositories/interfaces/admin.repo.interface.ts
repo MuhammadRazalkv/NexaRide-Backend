@@ -4,7 +4,7 @@ interface IUpdateFare {
     farePerKm: number;
   }
   
-export interface IAdminRepo {
+export interface IAdminRepo  {
     updateFare(updates: IUpdateFare[]): Promise<(IPricing[])>
     getFares(): Promise<IPricing[]>
 }

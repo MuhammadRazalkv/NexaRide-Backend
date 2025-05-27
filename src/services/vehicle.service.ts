@@ -113,10 +113,10 @@ export class VehicleService implements IVehicleService {
     }
 
     // Convert driverId to ObjectId
-    const driverId = new mongoose.Types.ObjectId(data.driverId);
+    const driverId = data.driverId.toString();
 
     // Check if driver exists
-    const driver = await this.driverRepo.findDriverById(driverId);
+    const driver = await this.driverRepo.findById(driverId);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -141,18 +141,32 @@ export class VehicleService implements IVehicleService {
 
     // Register the vehicle with updated images
     const vehicleData = { ...parsedData.data, vehicleImages };
-    const vehicle = await this.vehicleRepo.registerNewVehicle(vehicleData);
+    try {
+      const vehicle = await this.vehicleRepo.registerNewVehicle(vehicleData);
+      await this.driverRepo.updateById(driverId, {
+        $set: { vehicleId: vehicle._id },
+      });
+      return {
+        driver: {
+          name: driver.name,
+          email: driver.email,
+          status: "Pending",
+        },
+      };
+    } catch (error: any) {
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        throw new AppError(
+          HttpStatus.CONFLICT,
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
+        );
+      }
 
-    driver.vehicleId = vehicle._id as mongoose.Schema.Types.ObjectId;
-    await driver.save();
-
-    return {
-      driver: {
-        name: driver.name,
-        email: driver.email,
-        status: "Pending",
-      },
-    };
+      throw new AppError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        messages.DATABASE_OPERATION_FAILED
+      );
+    }
   }
 
   async reApplyVehicle(id: string, data: IVehicle) {
@@ -181,56 +195,76 @@ export class VehicleService implements IVehicleService {
     }
 
     // Convert driverId to ObjectId
-    const driverId = new mongoose.Types.ObjectId(id);
+    const driverId = id.toString();
 
     // Check if driver exists
-    const driver = await this.driverRepo.findDriverById(driverId);
+    const driver = await this.driverRepo.findById(driverId);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
     if (!driver.vehicleId) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
-    const vehicleDetails = await this.vehicleRepo.findVehicleById(
-      driver.vehicleId
-    );
+    const vehicleId = String(driver.vehicleId);
+    const vehicleDetails = await this.vehicleRepo.findById(vehicleId);
     if (!vehicleDetails) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
     // Upload vehicle images
-    const vehicleImages = { ...parsedData.data.vehicleImages };
-    for (const key of ["frontView", "rearView", "interiorView"] as const) {
-      try {
-        const img = vehicleImages[key];
-        const res = await cloudinary.uploader.upload(img, {
-          folder: "/DriverVehicleImages",
-        });
-        vehicleImages[key] = res.secure_url;
-      } catch (error) {
+    try {
+      const vehicleImages = { ...parsedData.data.vehicleImages };
+      for (const key of ["frontView", "rearView", "interiorView"] as const) {
+        try {
+          const img = vehicleImages[key];
+          const res = await cloudinary.uploader.upload(img, {
+            folder: "/DriverVehicleImages",
+          });
+          vehicleImages[key] = res.secure_url;
+        } catch (error) {
+          throw new AppError(
+            HttpStatus.BAD_GATEWAY,
+            error instanceof AppError ? error.message : "Image upload failed"
+          );
+        }
+      }
+
+      // Register the vehicle with updated images
+      const vehicleData = { ...parsedData.data, vehicleImages };
+
+      await this.vehicleRepo.updateById(id, {
+        $set: { ...vehicleData, status: "pending" },
+      });
+
+      return {
+        driver: {
+          name: driver.name,
+          email: driver.email,
+          status: "Pending",
+        },
+      };
+    } catch (error: any) {
+      if (error instanceof mongoose.Error.CastError) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
+      }
+
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+
         throw new AppError(
-          HttpStatus.BAD_GATEWAY,
-          error instanceof AppError ? error.message : "Image upload failed"
+          HttpStatus.CONFLICT,
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
         );
       }
+
+      throw new AppError(
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        messages.DATABASE_OPERATION_FAILED
+      );
     }
-
-    // Register the vehicle with updated images
-    const vehicleData = { ...parsedData.data, vehicleImages };
-    const vehicle = await this.vehicleRepo.updatedVehicleData(id, vehicleData);
-
-    console.log("Vehicle registered successfully:", vehicle);
-    return {
-      driver: {
-        name: driver.name,
-        email: driver.email,
-        status: "Pending",
-      },
-    };
   }
 
   async rejectReason(driverId: string) {
-    const id = new mongoose.Types.ObjectId(driverId);
-    const driver = await this.driverRepo.findDriverById(id);
+    const driver = await this.driverRepo.findById(driverId);
 
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
@@ -238,8 +272,8 @@ export class VehicleService implements IVehicleService {
     if (!driver.vehicleId) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
-
-    const vehicle = await this.vehicleRepo.findVehicleById(driver.vehicleId);
+    const vehicleId = String(driver.vehicleId);
+    const vehicle = await this.vehicleRepo.findById(vehicleId);
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }

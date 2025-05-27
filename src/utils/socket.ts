@@ -83,6 +83,8 @@ export const initializeSocket = (server: any) => {
 
     if (role === "user") {
       setToRedis(`RU:${decodedId}`, socket.id);
+      console.log("connect user socket id ", getFromRedis(`RU:${decodedId}`));
+
       const rideId = await getFromRedis(`URID:${decodedId}`);
       if (rideId) socket.join(`ride:${rideId}`);
       // console.log(`User ${decodedId} connected with socket ID: ${socket.id}`);
@@ -131,7 +133,7 @@ export const initializeSocket = (server: any) => {
             driverShare,
             originalFare,
             isPremiumUser,
-            premiumDiscount
+            premiumDiscount,
           } = await calculateFareWithDiscount(requestedFare, decodedId);
 
           const rideResult = await findDriverForRide(
@@ -154,8 +156,8 @@ export const initializeSocket = (server: any) => {
             if (userSocketId) {
               io.to(userSocketId).emit("no-driver-response");
             } else {
-              console.log('ride not accepted and userSocketId not found');
-              
+              console.log("ride not accepted and userSocketId not found");
+
               socket.emit("ride-error", { message: "User not found" });
             }
           }

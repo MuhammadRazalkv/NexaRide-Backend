@@ -91,7 +91,7 @@ export interface IRideRepo extends IBaseRepository<IRideHistory> {
     feedback?: string
   ): Promise<IFeedback | null>;
   getAvgRating(
-    ratedAgainstId: mongoose.Types.ObjectId,
+    ratedAgainstId: mongoose.Types.ObjectId ,
     ratedAgainstRole: "user" | "driver"
   ): Promise<{ totalRatings: number; avgRating: number }>;
   rideCounts(

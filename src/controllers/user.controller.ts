@@ -18,7 +18,7 @@ export class UserController implements IUserController {
       await this.userService.emailVerification(email);
       res
         .status(HttpStatus.CREATED)
-        .json({success:true,  message: messages.OTP_SENT_SUCCESS });
+        .json({ success: true, message: messages.OTP_SENT_SUCCESS });
     } catch (error) {
       next(error);
     }
@@ -286,5 +286,45 @@ export class UserController implements IUserController {
     }
   }
 
- 
+  async subscriptionHistory(
+    req: ExtendedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (!req.id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+      }
+      const page = parseInt(req.query.page as string);
+
+      const { history, total } = await this.userService.subscriptionHistory(
+        req.id,
+        page
+      );
+      res.status(HttpStatus.OK).json({ success: true, history, total });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const refreshToken = req.cookies.userRefreshToken as string;
+      const authHeader = req.headers.authorization;
+      const accessToken = authHeader && authHeader.split(" ")[1];
+      if (!accessToken) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      }
+      await this.userService.logout(refreshToken, accessToken);
+      res.clearCookie("userRefreshToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+      });
+
+      res.status(HttpStatus.OK).json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -6,12 +6,14 @@ import { PaymentService } from "../services/payment.service";
 import { RideRepo } from "../repositories/ride.repo";
 import { bindMethods } from "../utils/bindController";
 import { SubscriptionRepo } from "../repositories/subscription.repo";
+import { CommissionRepo } from "../repositories/commission.repo";
 
 const driverRepo = new DriverRepo()
 const userRepo = new UserRepository()
 const walletRepo = new WalletRepo()
 const rideRepo = new RideRepo()
 const subscriptionRepo = new SubscriptionRepo()
-const paymentService = new PaymentService(driverRepo,userRepo,walletRepo,rideRepo,subscriptionRepo)
+const commissionRepo = new CommissionRepo()
+const paymentService = new PaymentService(driverRepo,userRepo,walletRepo,rideRepo,subscriptionRepo,commissionRepo   )
 const paymentController = bindMethods(new PaymentController(paymentService))
 export default paymentController

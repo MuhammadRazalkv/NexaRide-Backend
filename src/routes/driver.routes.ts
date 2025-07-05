@@ -90,8 +90,12 @@ driverRoutes.get(
   paymentController.earningsSummary
 );
 
-driverRoutes.get('/ride-summary',authMiddleware,rideController.rideSummary)
-driverRoutes.get('/feedback-summary',authMiddleware,rideController.feedBackSummary)
+driverRoutes.get("/ride-summary", authMiddleware, rideController.rideSummary);
+driverRoutes.get(
+  "/feedback-summary",
+  authMiddleware,
+  rideController.feedBackSummary
+);
 
 driverRoutes.get(
   "/getRideHistory",
@@ -119,5 +123,5 @@ driverRoutes.get(
 );
 
 driverRoutes.post("/giveFeedBack", authMiddleware, rideController.giveFeedBack);
-
+driverRoutes.get("/logout", authMiddleware, driverController.logout);
 export default driverRoutes;

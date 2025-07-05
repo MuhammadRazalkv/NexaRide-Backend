@@ -12,7 +12,7 @@ const SubscriptionSchema: Schema = new Schema<ISubscription>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Users",
+      ref: "User",
       required: true,
     },
     amount: { type: Number, required: true },

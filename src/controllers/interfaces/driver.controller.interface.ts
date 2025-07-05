@@ -19,4 +19,5 @@ export default interface IDriverController {
   updateAvailability(req: ExtendedRequest, res: Response , next :NextFunction): Promise<void>
   getCurrentLocation(req: ExtendedRequest, res: Response , next :NextFunction): Promise<void>
   refreshToken(req: Request, res: Response, next: NextFunction): Promise<void>
+  logout(req: Request, res: Response, next: NextFunction): Promise<void>
 }

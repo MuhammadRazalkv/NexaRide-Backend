@@ -333,7 +333,7 @@ export class RideRepo
             $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
           },
           cancelledRides: {
-            $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] },
+            $sum: { $cond: [{ $eq: ["$status", "canceled"] }, 1, 0] },
           },
         },
       },

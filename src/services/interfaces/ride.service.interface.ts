@@ -37,8 +37,8 @@ export interface IRideService {
     rideId: any;
     fare: number | undefined;
   }>;
-  getRideHistory(id: string,page:number): Promise<{history:IRideHistory[] | null,total:number}>;
-  getRideHistoryDriver(id: string,page:number): Promise<{history:IRideHistory[] | null,total:number}>;
+  getRideHistory(id: string,page:number,sort:string): Promise<{history:IRideHistory[] | null,total:number}>;
+  getRideHistoryDriver(id: string,page:number,sort:string): Promise<{history:IRideHistory[] | null,total:number}>;
   checkPaymentStatus(rideId: string): Promise<string | undefined>;
   findRideById(rideId:string):Promise<IRideHistory | null>
   findUserRideInfo(rideId:string,userId:string):Promise<{ride:IRideWithDriver | null , complaintInfo:IComplaints | null}>

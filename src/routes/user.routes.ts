@@ -36,7 +36,6 @@ userRoute.patch(
   userController.updateUserPfp
 );
 
-
 //  WALLET & PAYMENTS
 userRoute.get(
   "/getWalletInfo",
@@ -64,9 +63,22 @@ userRoute.post(
   userAuthMiddleware,
   paymentController.upgradeToPlus
 );
-userRoute.get('/payment-summary',userAuthMiddleware,paymentController.transactionSummary)
+userRoute.get(
+  "/payment-summary",
+  userAuthMiddleware,
+  paymentController.transactionSummary
+);
 
-userRoute.get('/subscription-status',userAuthMiddleware,userController.subscriptionStatus)
+userRoute.get(
+  "/subscription-status",
+  userAuthMiddleware,
+  userController.subscriptionStatus
+);
+userRoute.get(
+  "/subscription-history",
+  userAuthMiddleware,
+  userController.subscriptionHistory
+);
 
 //  RIDE-RELATED
 userRoute.get(
@@ -98,10 +110,13 @@ userRoute.post(
   userAuthMiddleware,
   rideController.giveFeedBack
 );
-userRoute.get('/ride-summary',userAuthMiddleware,rideController.rideSummary)
-userRoute.get('/feedback-summary',userAuthMiddleware,rideController.feedBackSummary)
-//* Web hook
+userRoute.get("/ride-summary", userAuthMiddleware, rideController.rideSummary);
+userRoute.get(
+  "/feedback-summary",
+  userAuthMiddleware,
+  rideController.feedBackSummary
+);
 
-// userRoute.post('/webhook',express.raw({ type: 'application/json' }),userController.webhook)
+userRoute.get("/logout", userAuthMiddleware, userController.logout);
 
 export default userRoute;

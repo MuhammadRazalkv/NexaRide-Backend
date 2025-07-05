@@ -116,7 +116,7 @@ export class RideService implements IRideService {
       $set: {
         location: {
           type: "Point",
-          coordinates: randomCoordinate, 
+          coordinates: randomCoordinate,
         },
       },
     });
@@ -188,12 +188,12 @@ export class RideService implements IRideService {
     return { rideId: ride?.id, fare: ride?.totalFare };
   }
 
-  async getRideHistory(id: string, page: number) {
+  async getRideHistory(id: string, page: number, sort: string) {
     const limit = 8;
     const skip = (page - 1) * limit;
     const history = await this.rideRepo.findAll(
       { userId: id },
-      { sort: { startedAt: 1 }, skip, limit },
+      { sort: { startedAt: sort == "new" ? -1 : 1 }, skip, limit },
       {
         driverId: 1,
         pickupLocation: 1,
@@ -213,12 +213,12 @@ export class RideService implements IRideService {
     return { history, total };
   }
 
-  async getRideHistoryDriver(id: string, page: number) {
+  async getRideHistoryDriver(id: string, page: number, sort: string) {
     const limit = 8;
     const skip = (page - 1) * limit;
     const history = await this.rideRepo.findAll(
       { driverId: id },
-      { skip, limit, sort: { createdAt: 1 } },
+      { skip, limit, sort: { createdAt: sort == "new" ? -1 : 1 } },
       {
         driverId: 1,
         pickupLocation: 1,
@@ -378,6 +378,7 @@ export class RideService implements IRideService {
     }
 
     const data = await this.rideRepo.rideCounts(id, requestedBy);
+
     return data;
   }
 

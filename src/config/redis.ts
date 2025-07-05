@@ -108,6 +108,15 @@ const getDriverInfoRedis = async (key: string) => {
   return await redis.hgetall(key);
 };
 
+export const removeDriverFromGeoIndex = async (key: string, driverId: string) => {
+  try {
+    await redis.zrem(key, driverId);
+    console.log(`Removed driver ${driverId} from geo index ${key}`);
+  } catch (error) {
+    console.error(`Failed to remove driver ${driverId} from ${key}:`, error);
+  }
+};
+
 export default redis;
 export {
   setToRedis,

@@ -16,7 +16,7 @@ export class AdminController implements IAdminController {
       );
       res.cookie("adminRefreshToken", data.refreshToken, {
         httpOnly: true,
-        secure: false,
+        secure: true,
         sameSite: "lax",
         maxAge: maxAge,
         path: "/",
@@ -321,7 +321,6 @@ export class AdminController implements IAdminController {
         path: "/",
       });
 
-
       res.status(HttpStatus.CREATED).json({
         message: messages.TOKEN_CREATED,
         accessToken: response.newAccessToken,
@@ -410,10 +409,143 @@ export class AdminController implements IAdminController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const data = await this.adminService.dashBoard()
-      res.status(HttpStatus.OK).json({success:true,data})
+      const data = await this.adminService.dashBoard();
+      res.status(HttpStatus.OK).json({ success: true, data });
     } catch (error) {
       next(error);
+    }
+  }
+
+  async rideEarnings(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+
+      const { commissions, totalCount, totalEarnings } =
+        await this.adminService.rideEarnings(page);
+      res
+        .status(HttpStatus.OK)
+        .json({ success: true, commissions, totalCount, totalEarnings });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async premiumUsers(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const filter = String(req.query.filter);
+      const { premiumUsers, total, totalEarnings } =
+        await this.adminService.premiumUsers(page, filter);
+      res
+        .status(HttpStatus.OK)
+        .json({ success: true, premiumUsers, total, totalEarnings });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async driverInfo(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const driverId = String(req.query.driverId);
+      const driver = await this.adminService.diverInfo(driverId);
+      res.status(HttpStatus.OK).json({ success: true, driver });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async driverRideAndRating(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const driverId = String(req.query.driverId);
+      const { totalRides, ratings } =
+        await this.adminService.driverRideAndRating(driverId);
+
+      res.status(HttpStatus.OK).json({ success: true, totalRides, ratings });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async vehicleInfoByDriverId(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const driverId = String(req.query.driverId);
+      const vehicle = await this.adminService.vehicleInfoByDriverId(driverId);
+      res.status(HttpStatus.OK).json({ success: true, vehicle });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async userInfo(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = String(req.query.userId);
+      const user = await this.adminService.userInfo(userId);
+      res.status(HttpStatus.OK).json({ success: true, user });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async userRideAndRating(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const userId = String(req.query.userId);
+      const { totalRides, ratings } = await this.adminService.userRideAndRating(
+        userId
+      );
+
+      res.status(HttpStatus.OK).json({ success: true, totalRides, ratings });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const refreshToken = req.cookies.userRefreshToken as string;
+      const authHeader = req.headers.authorization;
+      const accessToken = authHeader && authHeader.split(" ")[1];
+      if (!accessToken) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      }
+      await this.adminService.logout(refreshToken, accessToken);
+      res.clearCookie("adminRefreshToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path:'/'
+      });
+
+      res.status(HttpStatus.OK).json({ success: true });
+    } catch (error) {
+      next(error)
     }
   }
 }

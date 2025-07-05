@@ -33,11 +33,15 @@ export class PaymentController implements IPaymentController {
   ): Promise<void> {
     try {
       const id = req.id;
+      const page = parseInt(req.query.page as string) || 1;
       if (!id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const wallet = await this.paymentService.getWalletInfo(id);
-      res.status(HttpStatus.OK).json({ success: true, wallet });
+      const { wallet, total } = await this.paymentService.getWalletInfo(
+        id,
+        page
+      );
+      res.status(HttpStatus.OK).json({ success: true, wallet, total });
     } catch (error) {
       next(error);
     }
@@ -104,11 +108,15 @@ export class PaymentController implements IPaymentController {
   ): Promise<void> {
     try {
       const driverId = req.id;
+      const page = parseInt(req.query.page as string) || 1;
       if (!driverId) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const wallet = await this.paymentService.getDriverWalletInfo(driverId);
-      res.status(200).json({ success: true, wallet });
+      const { wallet, total } = await this.paymentService.getDriverWalletInfo(
+        driverId,
+        page
+      );
+      res.status(200).json({ success: true, wallet, total });
     } catch (error) {
       next(error);
     }
@@ -167,8 +175,8 @@ export class PaymentController implements IPaymentController {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
-      const data = await this.paymentService.earningsSummary(req.id)
-      res.status(HttpStatus.OK).json({success:true,data})
+      const data = await this.paymentService.earningsSummary(req.id);
+      res.status(HttpStatus.OK).json({ success: true, data });
     } catch (error) {
       next(error);
     }

@@ -20,4 +20,12 @@ export interface IAdminController {
     changeComplaintStatus(req: Request, res: Response, next: NextFunction): Promise<void>
     sendWarningMail(req: Request, res: Response, next: NextFunction): Promise<void>
     dashboard(req: Request, res: Response, next: NextFunction): Promise<void>
+    rideEarnings(req: Request, res: Response, next: NextFunction): Promise<void>
+    premiumUsers(req: Request, res: Response, next: NextFunction): Promise<void>
+    driverInfo(req: Request, res: Response, next: NextFunction): Promise<void>
+    userInfo(req: Request, res: Response, next: NextFunction): Promise<void>
+    driverRideAndRating(req: Request, res: Response, next: NextFunction): Promise<void>
+    vehicleInfoByDriverId(req: Request, res: Response, next: NextFunction): Promise<void>
+    userRideAndRating(req: Request, res: Response, next: NextFunction): Promise<void>
+    logout(req: Request, res: Response, next: NextFunction): Promise<void>
 }

@@ -51,6 +51,30 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
     );
   }
 
+  async getWalletWithPaginatedTransactions (
+    userId: string,
+    skip:number,
+    limit :number
+  ){
+  
+    const wallet = await this.model.findOne(
+      { userId },
+      {
+        transactions: { $slice: [skip, limit] },
+      }
+    );
+
+    const total = await this.model.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
+      { $project: { count: { $size: "$transactions" } } },
+    ]);
+
+    return {
+      transactions: wallet?.transactions || [],
+      total: total[0]?.count || 0,
+    };
+  };
+
   //! For driver
   async getDriverWalletInfo(driverId: string) {
     return DriverWallet.findOne({ driverId });
@@ -226,6 +250,6 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
         },
       },
     ]);
-    return monthlyCommissions
+    return monthlyCommissions;
   }
 }

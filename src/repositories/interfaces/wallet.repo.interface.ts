@@ -11,18 +11,33 @@ export interface IWalletRepo extends BaseRepository<IWallet> {
     userId: string,
     totalFare: number
   ): Promise<IWallet | null>;
-//! Driver 
+  //! Driver
   getDriverWalletInfo(driverId: string): Promise<IDriverWallet | null>;
   addMoneyToDriver(
     driverId: string,
     rideId: string,
     amount: number
   ): Promise<IDriverWallet>;
-  getEarningsSummary(driverId:string,today:number,week:number,month:number):Promise<{  totalEarnings: number;
+  getEarningsSummary(
+    driverId: string,
+    today: number,
+    week: number,
+    month: number
+  ): Promise<{
+    totalEarnings: number;
     Today: number;
     Week: number;
-    Month: number;}>
-//! commission
+    Month: number;
+  }>;
+  //! commission
   addToCommission(data: Partial<ICommission>): Promise<ICommission>;
-  getMonthlyCommission():Promise<{month:string,totalCommission:number}[]>
+  getMonthlyCommission(): Promise<{ month: string; totalCommission: number }[]>;
+  getWalletWithPaginatedTransactions(userId: string, skip: number, limit :number):Promise<{
+    transactions: [] | [{
+        type: string;
+        date: number;
+        amount: number;
+    }];
+    total: number;
+}>
 }

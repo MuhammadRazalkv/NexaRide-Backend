@@ -1,13 +1,8 @@
 import { IDrivers } from "../models/driver.model";
-import {
-  IDriverService,
-  IDriverWithVehicle,
-} from "./interfaces/driver.service.interface";
+import { IDriverService } from "./interfaces/driver.service.interface";
 import OTPRepo from "../repositories/otp.repo";
-
 import { html } from "../constants/OTP";
 import crypto from "crypto";
-import { z } from "zod";
 import { hashPassword } from "../utils/passwordManager";
 import {
   generateAccessToken,
@@ -19,11 +14,8 @@ import {
 import { comparePassword } from "../utils/passwordManager";
 import sendEmail from "../utils/mailSender";
 import { resetLinkBtn } from "../constants/OTP";
-
 import mongoose from "mongoose";
-
 import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
-
 import { IVehicleRepo } from "../repositories/interfaces/vehicle.repo.interface";
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
@@ -31,141 +23,14 @@ import { messages } from "../constants/httpMessages";
 import cloudinary from "../utils/cloudinary";
 import {
   getDriverInfoRedis,
-  getFromRedis,
+  setToRedis,
   updateDriverFelids,
 } from "../config/redis";
-
-const driverSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  email: z.string().email("Invalid email format"),
-  phone: z
-    .string()
-    .regex(/^[6-9]\d{9}$/, "Phone must be a valid 10-digit Indian number"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  profilePic: z.string().optional(),
-  googleId: z.string().optional(),
-  state: z.string(),
-  // License number: at least 6 characters, allows alphanumeric
-  license_number: z
-    .string()
-    .min(6, "License number must be at least 6 characters")
-    .regex(
-      /^[A-Z]{2}\d{2} \d{4} \d{7}$/,
-      "License number must contain only uppercase letters and digits"
-    ),
-
-  // License expiration: Convert string to Date before validating
-  license_exp: z.preprocess(
-    (arg) => (typeof arg === "string" ? new Date(arg) : arg),
-    z.date().min(new Date(), "License expiration date must be in the future")
-  ),
-
-  street: z.string().min(3, "Street must be at least 3 characters"),
-  city: z.string().min(2, "City must be at least 2 characters"),
-
-  // Postal Code: Must be exactly 6 digits
-  pin_code: z
-    .string()
-    .length(6, "Postal code must be exactly 6 digits")
-    .regex(/^\d{6}$/, "Postal code must be only digits"),
-
-  // Date of Birth: Convert string to Date, validate age
-  dob: z.preprocess(
-    (arg) => (typeof arg === "string" ? new Date(arg) : arg),
-    z
-      .date()
-      .max(new Date(), "Date of Birth cannot be in the future")
-      .refine(
-        (value) => {
-          const today = new Date();
-          const minAge = new Date(
-            today.getFullYear() - 18,
-            today.getMonth(),
-            today.getDate()
-          );
-          return value <= minAge;
-        },
-        { message: "You must be at least 18 years old" }
-      )
-      .refine(
-        (value) => {
-          const today = new Date();
-          const maxAge = new Date(
-            today.getFullYear() - 100,
-            today.getMonth(),
-            today.getDate()
-          );
-          return value >= maxAge;
-        },
-        { message: "Age cannot exceed 100 years" }
-      )
-  ),
-});
-
-const driverReApplySchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  phone: z
-    .string()
-    .regex(/^[6-9]\d{9}$/, "Phone must be a valid 10-digit Indian number"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  profilePic: z.string().optional(),
-  state: z.string(),
-  // License number: at least 6 characters, allows alphanumeric
-  license_number: z
-    .string()
-    .min(6, "License number must be at least 6 characters")
-    .regex(
-      /^[A-Z]{2}\d{2} \d{4} \d{7}$/,
-      "License number must contain only uppercase letters and digits"
-    ),
-
-  // License expiration: Convert string to Date before validating
-  license_exp: z.preprocess(
-    (arg) => (typeof arg === "string" ? new Date(arg) : arg),
-    z.date().min(new Date(), "License expiration date must be in the future")
-  ),
-
-  street: z.string().min(3, "Street must be at least 3 characters"),
-  city: z.string().min(2, "City must be at least 2 characters"),
-
-  // Postal Code: Must be exactly 6 digits
-  pin_code: z
-    .string()
-    .length(6, "Postal code must be exactly 6 digits")
-    .regex(/^\d{6}$/, "Postal code must be only digits"),
-
-  // Date of Birth: Convert string to Date, validate age
-  dob: z.preprocess(
-    (arg) => (typeof arg === "string" ? new Date(arg) : arg),
-    z
-      .date()
-      .max(new Date(), "Date of Birth cannot be in the future")
-      .refine(
-        (value) => {
-          const today = new Date();
-          const minAge = new Date(
-            today.getFullYear() - 18,
-            today.getMonth(),
-            today.getDate()
-          );
-          return value <= minAge;
-        },
-        { message: "You must be at least 18 years old" }
-      )
-      .refine(
-        (value) => {
-          const today = new Date();
-          const maxAge = new Date(
-            today.getFullYear() - 100,
-            today.getMonth(),
-            today.getDate()
-          );
-          return value >= maxAge;
-        },
-        { message: "Age cannot exceed 100 years" }
-      )
-  ),
-});
+import {
+  validateDriverReApplySchema,
+  validateDriverSchema,
+} from "../utils/validators/driverSchemaValidators";
+import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from "../utils/env";
 
 const generateTokens = (driverId: string) => ({
   accessToken: generateAccessToken(driverId, "driver"),
@@ -231,7 +96,9 @@ export class DriverService implements IDriverService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
-    const parsedData = driverSchema.safeParse(data);
+    const parsedData = validateDriverSchema(data);
+    // const parsedData = driverSchema.safeParse(data);
+
     if (!parsedData.success) {
       // Extracting error messages correctly
       const errorMessages = Object.values(
@@ -388,7 +255,8 @@ export class DriverService implements IDriverService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
-    const parsedData = driverReApplySchema.safeParse(data);
+    // const parsedData = driverReApplySchema.safeParse(data);
+    const parsedData = validateDriverReApplySchema(data);
     if (!parsedData.success) {
       // Extracting error messages correctly
       const errorMessages = Object.values(
@@ -521,7 +389,7 @@ export class DriverService implements IDriverService {
       license_exp: driver.license_exp,
       profilePic: driver.profilePic,
       status: driver.status,
-      licenseNumber: driver.license_number,
+      license_number: driver.license_number,
     };
   }
 
@@ -621,5 +489,12 @@ export class DriverService implements IDriverService {
     console.log("vehicle category info", vehicleCategory);
 
     return vehicleCategory.farePerKm;
+  }
+
+  async logout(refreshToken: string, accessToken: string): Promise<void> {
+    const refreshEXP = (getRefreshTokenMaxAge() / 1000) | 0;
+    const accessEXP = (getAccessTokenMaxAge() / 1000) | 0;
+    await setToRedis(refreshToken, "Blacklisted", refreshEXP);
+    await setToRedis(accessToken, "BlackListed", accessEXP);
   }
 }

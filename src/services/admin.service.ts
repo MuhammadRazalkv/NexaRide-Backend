@@ -13,7 +13,10 @@ import {
 import { AppError } from "../utils/appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
-import { IAdminService } from "./interfaces/admin.service.interface";
+import {
+  IAdminService,
+  IPremiumUsers,
+} from "./interfaces/admin.service.interface";
 import { IUserRepo } from "../repositories/interfaces/user.repo.interface";
 import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
 import { IVehicleRepo } from "../repositories/interfaces/vehicle.repo.interface";
@@ -26,6 +29,14 @@ import {
 import { IComplaints } from "../models/complaints.modal";
 import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
 import { IWalletRepo } from "../repositories/interfaces/wallet.repo.interface";
+import { ICommission } from "../models/commission.model";
+import { ICommissionRepo } from "../repositories/interfaces/commission.repo.interface";
+import { IDrivers } from "../models/driver.model";
+import mongoose from "mongoose";
+import { IVehicle } from "../models/vehicle.model";
+import { IUser } from "../models/user.model";
+import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from "../utils/env";
+import { setToRedis } from "../config/redis";
 
 const generateTokens = () => ({
   accessToken: generateAccessToken(process.env.ADMIN_EMAIL as string, "admin"),
@@ -53,7 +64,7 @@ export class AdminService implements IAdminService {
     private adminRepo: IAdminRepo,
     private rideRepo: IRideRepo,
     private subscriptionRepo: ISubscriptionRepo,
-    private walletRepo: IWalletRepo
+    private commissionRepo: ICommissionRepo
   ) {}
   async login(email: string, password: string) {
     if (!email || !password) {
@@ -477,7 +488,126 @@ export class AdminService implements IAdminService {
     const premiumUsers = await this.subscriptionRepo.countDocuments({
       expiresAt: { $gt: Date.now() },
     });
-    const monthlyCommissions = await this.walletRepo.getMonthlyCommission();
+    const monthlyCommissions = await this.commissionRepo.getMonthlyCommission();
     return { users, drivers, completedRides, premiumUsers, monthlyCommissions };
+  }
+
+  async rideEarnings(page: number): Promise<{
+    commissions: ICommission[];
+    totalEarnings: number;
+    totalCount: number;
+  }> {
+    const limit = 5;
+    const skip = (page - 1) * 5;
+
+    const commissions = await this.commissionRepo.findAll(
+      {},
+      { sort: { createdAt: -1 }, skip, limit }
+    );
+    const totalEarnings = await this.commissionRepo.totalEarnings();
+    const totalCount = await this.commissionRepo.countDocuments();
+    return { commissions, totalEarnings, totalCount };
+  }
+
+  async premiumUsers(
+    page: number,
+    filterBy: string
+  ): Promise<{
+    premiumUsers: IPremiumUsers[];
+    total: number;
+    totalEarnings: number;
+  }> {
+    const limit = 5;
+    const skip = (page - 1) * 5;
+    const premiumUsers = await this.subscriptionRepo.subscriptionInfoWithUser(
+      filterBy,
+      skip,
+      limit
+    );
+    const totalEarnings = await this.subscriptionRepo.totalEarnings();
+    const total = await this.subscriptionRepo.countDocuments();
+
+    return { premiumUsers, totalEarnings, total };
+  }
+
+  async diverInfo(driverId: string): Promise<IDrivers> {
+    if (!driverId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const driver = await this.driverRepo.findById(driverId);
+    if (!driver) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+    }
+    return driver;
+  }
+
+  async driverRideAndRating(driverId: string): Promise<{
+    totalRides: number;
+    ratings: { avgRating: number; totalRatings: number };
+  }> {
+    if (!driverId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const id = new mongoose.Types.ObjectId(driverId);
+
+    const driver = await this.driverRepo.findById(driverId);
+    if (!driver) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+    }
+    const totalRides = await this.rideRepo.countDocuments({ driverId });
+    const ratings = await this.rideRepo.getAvgRating(id, "driver");
+    return { totalRides, ratings };
+  }
+
+  async vehicleInfoByDriverId(driverId: string): Promise<IVehicle> {
+    if (!driverId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const driver = await this.driverRepo.findById(driverId);
+    if (!driver) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+    }
+    const vehicleId = String(driver.vehicleId);
+    const vehicle = await this.vehicleRepo.findById(vehicleId);
+    if (!vehicle) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
+    }
+    return vehicle;
+  }
+
+  async userInfo(userId: string): Promise<IUser> {
+    if (!userId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
+    }
+    return user;
+  }
+
+  async userRideAndRating(userId: string): Promise<{
+    totalRides: number;
+    ratings: { avgRating: number; totalRatings: number };
+  }> {
+    if (!userId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const id = new mongoose.Types.ObjectId(userId);
+
+    const driver = await this.userRepo.findById(userId);
+    if (!driver) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+    }
+    const totalRides = await this.rideRepo.countDocuments({ userId });
+    const ratings = await this.rideRepo.getAvgRating(id, "user");
+    return { totalRides, ratings };
+  }
+
+  async logout(refreshToken: string, accessToken: string): Promise<void> {
+    const refreshEXP = (getRefreshTokenMaxAge() / 1000) | 0;
+    const accessEXP = (getAccessTokenMaxAge() / 1000) | 0;
+    await setToRedis(refreshToken, "Blacklisted", refreshEXP);
+    await setToRedis(accessToken, "BlackListed", accessEXP);
   }
 }

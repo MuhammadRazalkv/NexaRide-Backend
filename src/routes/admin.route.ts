@@ -84,8 +84,18 @@ adminRoute.post(
   adminController.sendWarningMail
 );
 
+adminRoute.get('/rideEarnings',adminAuthMiddleware,adminController.rideEarnings)
+adminRoute.get('/premiumUsers',adminAuthMiddleware,adminController.premiumUsers)
+adminRoute.get('/driver-info',adminAuthMiddleware,adminController.driverInfo)
+adminRoute.get('/driver-ride-rating',adminAuthMiddleware,adminController.driverRideAndRating)
+adminRoute.get('/vehicle-info',adminAuthMiddleware,adminController.vehicleInfoByDriverId)
+adminRoute.get('/user-info',adminAuthMiddleware,adminController.userInfo)
+adminRoute.get('/user-ride-rating',adminAuthMiddleware,adminController.userRideAndRating)
 // Offer routes
 adminRoute.post("/addOffer", adminAuthMiddleware, offerController.addOffer);
 adminRoute.get("/getOffers", adminAuthMiddleware, offerController.getOffers);
 adminRoute.patch("/changeOfferStatus", adminAuthMiddleware, offerController.changeOfferStatus);
+
+adminRoute.get('/logout',adminAuthMiddleware,adminController.logout)
 export default adminRoute;
+ 

@@ -1,5 +1,4 @@
 import { IDrivers } from "../../models/driver.model";
-import { IDriverWallet } from "../../models/driver.wallet.model";
 interface DriverLoginResponse {
   driver: {
     _id: unknown;
@@ -58,4 +57,5 @@ export interface IDriverService {
   }>;
   updateProfilePic(id: string, image: string): Promise<string | undefined>;
   getPriceByCategory(category:string):Promise<number>
+  logout(refreshToken:string,accessToken:string):Promise<void>
 }

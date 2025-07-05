@@ -1,6 +1,7 @@
+import { ICommission } from "../../models/commission.model";
 import { IComplaints } from "../../models/complaints.modal";
 import { IDrivers } from "../../models/driver.model";
-import { IRideHistory } from "../../models/ride.history.model";
+import { ISubscription } from "../../models/subscription.model";
 import { IUser } from "../../models/user.model";
 import { IVehicle } from "../../models/vehicle.model";
 import {
@@ -13,6 +14,12 @@ interface IFare {
   premium: number;
   luxury: number;
 }
+
+
+export interface IPremiumUsers extends Omit<ISubscription, "userId"> {
+  userId: Partial<IUser>;
+}
+
 export interface IAdminService {
   login(
     email: string,
@@ -105,4 +112,14 @@ export interface IAdminService {
     premiumUsers: number;
     monthlyCommissions: { month: string; totalCommission: number }[];
   }>;
+
+  rideEarnings(page:number):Promise<{commissions: ICommission[]; totalEarnings: number , totalCount:number}>
+  premiumUsers(page:number,filterBy:string  ):Promise<{premiumUsers:IPremiumUsers[],total:number,totalEarnings:number}>
+
+  diverInfo(driverId:string):Promise<IDrivers>
+  driverRideAndRating(driverId:string):Promise<{totalRides:number,ratings:{avgRating:number,totalRatings:number}}>
+  vehicleInfoByDriverId(driverId:string):Promise<IVehicle>
+  userInfo(userId:string):Promise<IUser>
+  userRideAndRating(userId:string):Promise<{totalRides:number,ratings:{avgRating:number,totalRatings:number}}>
+  logout(refreshToken:string,accessToken:string):Promise<void>
 }

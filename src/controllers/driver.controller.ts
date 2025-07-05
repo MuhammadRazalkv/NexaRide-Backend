@@ -374,7 +374,7 @@ export class DriverController implements IDriverController {
 
       const response = await this.driverService.toggleAvailability(req.id);
 
-      // res.status(HttpStatus.OK).json({ success: true, availability: response });
+      res.status(HttpStatus.OK).json({ success: true });
     } catch (error) {
       next(error);
     }
@@ -406,8 +406,8 @@ export class DriverController implements IDriverController {
       const refreshToken = req.cookies?.driverRefreshToken;
 
       if (!refreshToken) {
-        console.log('Token not provided sending back');
-        
+        console.log("Token not provided sending back");
+
         res
           .status(HttpStatus.UNAUTHORIZED)
           .json({ message: messages.TOKEN_NOT_PROVIDED });
@@ -420,7 +420,7 @@ export class DriverController implements IDriverController {
         httpOnly: true,
         secure: process.env.PRODUCTION === "production",
         sameSite: "strict",
-        maxAge:parseInt(process.env.REFRESH_MAX_AGE as string),
+        maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
       res.status(HttpStatus.CREATED).json({
@@ -446,6 +446,27 @@ export class DriverController implements IDriverController {
       const newImg = await this.driverService.updateProfilePic(id, image);
 
       res.status(HttpStatus.OK).json({ success: true, image: newImg });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const refreshToken = req.cookies.userRefreshToken as string;
+      const authHeader = req.headers.authorization;
+      const accessToken = authHeader && authHeader.split(" ")[1];
+      if (!accessToken) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+      }
+      await this.driverService.logout(refreshToken, accessToken);
+      res.clearCookie("driverRefreshToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+      });
+
+      res.status(HttpStatus.OK).json({ success: true });
     } catch (error) {
       next(error);
     }

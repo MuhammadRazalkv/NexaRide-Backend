@@ -21,6 +21,9 @@ import { messages } from "../constants/httpMessages";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
 import mongoose from "mongoose";
+import { ISubscription } from "../models/subscription.model";
+import { setToRedis } from "../config/redis";
+import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from "../utils/env";
 
 const userSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
@@ -378,17 +381,29 @@ export class UserService implements IUserService {
       type: subInfo?.type,
     };
   }
-  // async dashboard(
-  //   userId: string
-  // ): Promise<{
-  //   totalRides: number;
-  //   completedRides: number;
-  //   cancelledRides: number;
-  // }> {
-  //   if (!userId) {
-  //     throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-  //   }
-  //   // const rideData = await this.r
-  //   // return
-  // }
+
+  async subscriptionHistory(
+    userId: string,
+    page: number
+  ): Promise<{history:ISubscription[] , total:number }> {
+    if (!userId) {
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    }
+    const limit = 8;
+    const skip = (page - 1) * limit;
+    const history = await this.subscriptionRepo.findAll(
+      { userId: userId },
+      { sort: { takenAt: -1 }, skip, limit }
+    );
+    const total = await this.subscriptionRepo.countDocuments({userId})
+    return {history,total}
+  }
+
+  async logout(refreshToken: string, accessToken: string): Promise<void> {
+    const refreshEXP = getRefreshTokenMaxAge() / 1000 | 0
+    const accessEXP = getAccessTokenMaxAge() / 1000 | 0
+    await setToRedis(refreshToken,'Blacklisted',refreshEXP)
+    await setToRedis(accessToken,'BlackListed',accessEXP)
+
+  }
 }

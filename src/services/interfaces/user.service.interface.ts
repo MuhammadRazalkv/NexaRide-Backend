@@ -9,6 +9,7 @@ interface IUserReturn {
   accessToken: string;
   refreshToken: string;
 }
+import { ISubscription } from "../../models/subscription.model";
 import { IUser } from "../../models/user.model";
 export default interface IUserService {
   emailVerification(email: string): Promise<void>;
@@ -31,12 +32,15 @@ export default interface IUserService {
   updateUserName(id: string, name: string): Promise<string | undefined>;
   updateUserPhone(id: string, phone: number): Promise<number | undefined>;
   updateUserPfp(id: string, image: string): Promise<string | undefined>;
-  subscriptionStatus(
-    userId: string
-  ): Promise<{
+  subscriptionStatus(userId: string): Promise<{
     isSubscribed: boolean;
-    expiresAt: number | undefined; 
+    expiresAt: number | undefined;
     type: string | undefined;
   }>;
+  subscriptionHistory(
+    userId: string,
+    page: number
+  ): Promise<{ history: ISubscription[]; total: number } >;
+  logout(refreshToken:string,accessToken:string):Promise<void>
   // dashboard(userId:string):Promise<{totalRides:number,completedRides:number,cancelledRides:number}>
 }

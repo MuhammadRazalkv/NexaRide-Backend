@@ -79,7 +79,8 @@ export class RideController implements IRideController {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
       const page = parseInt(req.query.page as string);
-      const response = await this.rideService.getRideHistory(id, page);
+      const sort = req.query.sort 
+      const response = await this.rideService.getRideHistory(id, page,sort as string);
       res.status(HttpStatus.OK).json({
         success: true,
         history: response.history,
@@ -101,7 +102,8 @@ export class RideController implements IRideController {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
       const page = parseInt(req.query.page as string);
-      const response = await this.rideService.getRideHistoryDriver(id, page);
+      const sort = req.query.sort 
+      const response = await this.rideService.getRideHistoryDriver(id, page,sort as string);
       res.status(HttpStatus.OK).json({
         success: true,
         history: response.history,

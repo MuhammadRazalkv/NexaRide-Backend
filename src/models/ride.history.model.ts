@@ -78,14 +78,17 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>(
     OTP: { type: String, required: true },
     cancelledBy: { type: String, enum: ["driver", "user"] },
     appliedOffer: {
-      offerId: { type: mongoose.Schema.Types.ObjectId, ref: "Offers" },
-      discountAmount: { type: Number, default: 0 },
-      offerType: {
-        type: String,
-        enum: ["percentage", "flat"],
-        required: false,
+      type: {
+        offerId: { type: mongoose.Schema.Types.ObjectId, ref: "Offers" },
+        discountAmount: { type: Number },
+        offerType: {
+          type: String,
+          enum: ["percentage", "flat"],
+          required: false,
+        },
+        originalCommission: { type: Number },
       },
-      originalCommission: { type: Number },
+      required: false, 
     },
   },
   { timestamps: true }

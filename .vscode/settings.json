@@ -16,6 +16,7 @@
         "SOTP",
         "tsparser",
         "URID",
-        "WITHDIST"
+        "WITHDIST",
+        "zrem"
     ]
 }

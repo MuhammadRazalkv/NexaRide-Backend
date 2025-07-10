@@ -154,7 +154,7 @@ export class PaymentService implements IPaymentService {
         session.metadata.action == "upgrade_to_plus"
       ) {
         const userId = session.metadata.userId;
-        const user = await this.userRepo.findUserById(userId);
+        const user = await this.userRepo.findById(userId);
         if (!user) {
           throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
         }
@@ -398,7 +398,6 @@ export class PaymentService implements IPaymentService {
       driverEarnings: ride.driverEarnings,
       paymentMethod,
     };
-
     await this.commissionRepo.create(applicationFeesDetails);
 
     await this.walletRepo.addMoneyToDriver(
@@ -417,12 +416,24 @@ export class PaymentService implements IPaymentService {
     const driverSocketId = await getFromRedis(`OD:${ride.driverId}`);
     const userSocketId = await getFromRedis(`RU:${ride.userId}`);
     await updateDriverFelids(`driver:${ride.driverId}`, "status", "online");
+    const user = await this.userRepo.findById(ride.userId as string);
+    const driver = await this.driverRepo.findById(ride.driverId as string);
     const io = getIO();
     if (driverSocketId) {
       io.to(driverSocketId).emit("payment-received");
+      if (driver?.softBlock) {
+        await this.driverRepo.updateById(ride.driverId as string, {
+          $set: { isBlocked: true, softBlock: false },
+        });
+      }
     }
     if (userSocketId) {
       io.to(userSocketId).emit("payment-success");
+      if (user?.softBlock) {
+        await this.userRepo.updateById(ride.userId as string, {
+          $set: { isBlocked: true, softBlock: false },
+        });
+      }
     }
     await removeFromRedis(`URID:${ride.userId}`);
     await removeFromRedis(`DRID:${ride.driverId}`);

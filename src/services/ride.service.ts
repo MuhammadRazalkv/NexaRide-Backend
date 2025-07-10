@@ -161,7 +161,10 @@ export class RideService implements IRideService {
 
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_OTP);
     }
-    await this.rideRepo.updateRideStartedAt(ride.id);
+    // await this.rideRepo.updateRideStartedAt(ride.id);
+    await this.rideRepo.updateById(ride.id, {
+      $set: { startedAt: Date.now() },
+    });
     return { rideId: ride.id, date: Date.now() };
   }
 
@@ -184,7 +187,7 @@ export class RideService implements IRideService {
   }
 
   async getRideIdByUserAndDriver(driverId: string, userId: string) {
-    const ride = await this.rideRepo.findOne({ driverId, userId });
+    const ride = await this.rideRepo.findOne({ driverId, userId , status:'ongoing' });
     return { rideId: ride?.id, fare: ride?.totalFare };
   }
 
@@ -289,7 +292,7 @@ export class RideService implements IRideService {
     if (!reason || (reason == "other" && !description)) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findRideById(rideId);
+    const ride = await this.rideRepo.findById(rideId);
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }

@@ -19,6 +19,7 @@ export interface IDrivers extends Document {
   license_exp: Date;
   verified: boolean;
   isBlocked: boolean;
+  softBlock: boolean;
   rejectionReason?: string;
   status?: string;
   profilePic?: string;
@@ -54,6 +55,7 @@ const DriversSchema: Schema = new Schema(
     },
     rejectionReason: { type: String },
     isBlocked: { type: Boolean, default: false },
+    softBlock: { type: Boolean, default: false },
     profilePic: { type: String },
     location: {
       type: {

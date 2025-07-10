@@ -84,6 +84,9 @@ adminRoute.post(
   adminController.sendWarningMail
 );
 
+adminRoute.get('/rides',adminAuthMiddleware,adminController.rideHistory)
+adminRoute.get('/ride',adminAuthMiddleware,adminController.rideInfo)
+
 adminRoute.get('/rideEarnings',adminAuthMiddleware,adminController.rideEarnings)
 adminRoute.get('/premiumUsers',adminAuthMiddleware,adminController.premiumUsers)
 adminRoute.get('/driver-info',adminAuthMiddleware,adminController.driverInfo)

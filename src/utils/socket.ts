@@ -399,7 +399,10 @@ export const initializeSocket = (server: any) => {
         await removeFromRedis(`OD:${decodedId}`);
         await removeFromRedis(`driver:${decodedId}`);
         await removeDriverFromGeoIndex(`drivers:${driver.vehicleDetails.category}`,decodedId);
+      }else if(role == 'user'){
+        await removeFromRedis(`RU:${decodedId}`)
       }
+
     });
   });
 };

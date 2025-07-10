@@ -23,6 +23,7 @@ import { messages } from "../constants/httpMessages";
 import cloudinary from "../utils/cloudinary";
 import {
   getDriverInfoRedis,
+  getFromRedis,
   setToRedis,
   updateDriverFelids,
 } from "../config/redis";
@@ -201,6 +202,15 @@ export class DriverService implements IDriverService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
     }
 
+    const activeUser = await getFromRedis(`OD:${driver.id}`);
+
+    if (activeUser) {
+      throw new AppError(
+        HttpStatus.BAD_REQUEST,
+        "Driver is already logged in from another device or session."
+      );
+    }
+
     // Generate tokens
     return {
       ...generateTokens(driver._id as string),
@@ -248,38 +258,58 @@ export class DriverService implements IDriverService {
   }
 
   async reApplyDriver(id: string, data: IDrivers) {
-    if (!data) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-    if (!id) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
+    try {
+      if (!data) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+      }
+      if (!id) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+      }
 
-    // const parsedData = driverReApplySchema.safeParse(data);
-    const parsedData = validateDriverReApplySchema(data);
-    if (!parsedData.success) {
-      // Extracting error messages correctly
-      const errorMessages = Object.values(
-        parsedData.error.flatten().fieldErrors
-      )
-        .flat()
-        .join(", ");
+      // const parsedData = driverReApplySchema.safeParse(data);
+      const parsedData = validateDriverReApplySchema(data);
+      if (!parsedData.success) {
+        // Extracting error messages correctly
+        const errorMessages = Object.values(
+          parsedData.error.flatten().fieldErrors
+        )
+          .flat()
+          .join(", ");
+
+        throw new AppError(
+          HttpStatus.BAD_REQUEST,
+          messages.VALIDATION_ERROR + errorMessages
+        );
+      }
+
+      if (!parsedData.data.password)
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
+      parsedData.data.password = await hashPassword(parsedData.data.password);
+
+      const updatedData = await this.driverRepo.updateById(id, {
+        $set: { ...parsedData.data, status: "pending" },
+      });
+
+      return updatedData;
+    } catch (error: any) {
+      if (error instanceof mongoose.Error.CastError) {
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
+      }
+
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+
+        throw new AppError(
+          HttpStatus.CONFLICT,
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
+        );
+      }
 
       throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        messages.VALIDATION_ERROR + errorMessages
+        HttpStatus.INTERNAL_SERVER_ERROR,
+        messages.DATABASE_OPERATION_FAILED
       );
     }
-
-    if (!parsedData.data.password)
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
-    parsedData.data.password = await hashPassword(parsedData.data.password);
-
-    const updatedData = await this.driverRepo.updateById(id, {
-      $set: { ...parsedData.data, status: "pending" },
-    });
-
-    return updatedData;
   }
 
   async checkGoogleAuth(id: string, email: string) {
@@ -320,6 +350,15 @@ export class DriverService implements IDriverService {
     // If user exists, only update googleId if it's missing
     if (!driver.googleId) {
       await this.driverRepo.updateOne({ email }, { $set: { googleId } });
+    }
+
+    const activeUser = await getFromRedis(`OD:${driver.id}`);
+
+    if (activeUser) {
+      throw new AppError(
+        HttpStatus.BAD_REQUEST,
+        "Driver is already logged in from another device or session."
+      );
     }
 
     return {
@@ -424,7 +463,7 @@ export class DriverService implements IDriverService {
   }
 
   async toggleAvailability(id: string) {
-    const driver = await this.driverRepo.findDriverById(id);
+    const driver = await this.driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }

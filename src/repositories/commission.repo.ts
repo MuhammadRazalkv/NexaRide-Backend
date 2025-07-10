@@ -66,7 +66,7 @@ export class CommissionRepo
   }
 
   async totalEarnings(): Promise<number> {
-    const result =  await commissionModel.aggregate([
+    const result = await commissionModel.aggregate([
       {
         $group: {
           _id: null,
@@ -74,6 +74,6 @@ export class CommissionRepo
         },
       },
     ]);
-    return result[0].totalEarnings || 0
+    return result[0].totalEarnings || 0;
   }
 }

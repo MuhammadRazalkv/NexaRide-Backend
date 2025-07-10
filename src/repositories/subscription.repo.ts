@@ -25,7 +25,8 @@ export class SubscriptionRepo
       match.expiresAt = { $lt: now };
     }
 
-    const subscriptions = await Subscription.find(match).sort({createdAt:-1})
+    const subscriptions = await Subscription.find(match)
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate({

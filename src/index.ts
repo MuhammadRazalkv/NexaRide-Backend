@@ -11,17 +11,9 @@ import driverRoutes from "./routes/driver.routes";
 import adminRoutes from "./routes/admin.route";
 import http from "http";
 import { initializeSocket } from "./utils/socket";
-
-import { UserService } from "./services/user.service";
-import { UserRepository } from "./repositories/user.repo";
-import { DriverRepo } from "./repositories/driver.repo";
-import { DriverService } from "./services/driver.service";
 import paymentController from "./bindings/payment.binding";
-import { RideService } from "./services/ride.service";
-import { RideRepo } from "./repositories/ride.repo";
-import { VehicleRepo } from "./repositories/vehicle.repo";
 import errorHandler from "./middlewares/error.middleware";
-import { OfferRepo } from "./repositories/offer.repo";
+
 dotenv.config();
 
 const app = express();

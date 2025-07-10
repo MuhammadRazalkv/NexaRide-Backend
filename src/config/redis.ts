@@ -87,11 +87,16 @@ const getAvailableDriversByGeo = async (
     "ASC"
   )) as [string, string][];
 
+  console.log('Raw result of driver finding ',key ,rawResults);
+  
+
   const availableDrivers: { id: string; socketId: string; distance: number }[] =
     [];
 
   for (const [driverId, distanceStr] of rawResults) {
     const driverData = await redis.hgetall(`driver:${driverId}`);
+    console.log('Driver data on driver finding ',driverData);
+    
     if (driverData.status === "online") {
       availableDrivers.push({
         id: driverId,

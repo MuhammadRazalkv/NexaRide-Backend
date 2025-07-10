@@ -1,6 +1,7 @@
 import { ICommission } from "../../models/commission.model";
 import { IComplaints } from "../../models/complaints.modal";
 import { IDrivers } from "../../models/driver.model";
+import { IRideHistory } from "../../models/ride.history.model";
 import { ISubscription } from "../../models/subscription.model";
 import { IUser } from "../../models/user.model";
 import { IVehicle } from "../../models/vehicle.model";
@@ -8,14 +9,13 @@ import {
   IComplaintsWithUserDriver,
   PopulatedRideHistory,
 } from "../../repositories/interfaces/ride.repo.interface";
+import { IRideWithUserAndDriver } from "./ride.service.interface";
 
 interface IFare {
   basic: number;
   premium: number;
   luxury: number;
 }
-
-
 export interface IPremiumUsers extends Omit<ISubscription, "userId"> {
   userId: Partial<IUser>;
 }
@@ -41,7 +41,7 @@ export interface IAdminService {
   }>;
   changeUserStatus(id: string): Promise<{
     message: string;
-    user: IUser;
+    user: Partial<IUser>;
   }>;
   getDrivers(
     page: number,
@@ -104,7 +104,7 @@ export interface IAdminService {
     type: string
   ): Promise<IComplaints | null>;
   sendWarningMail(id: string): Promise<void>;
-  
+
   dashBoard(): Promise<{
     users: number;
     drivers: number;
@@ -113,13 +113,42 @@ export interface IAdminService {
     monthlyCommissions: { month: string; totalCommission: number }[];
   }>;
 
-  rideEarnings(page:number):Promise<{commissions: ICommission[]; totalEarnings: number , totalCount:number}>
-  premiumUsers(page:number,filterBy:string  ):Promise<{premiumUsers:IPremiumUsers[],total:number,totalEarnings:number}>
+  rideEarnings(
+    page: number
+  ): Promise<{
+    commissions: ICommission[];
+    totalEarnings: number;
+    totalCount: number;
+  }>;
+  premiumUsers(
+    page: number,
+    filterBy: string
+  ): Promise<{
+    premiumUsers: IPremiumUsers[];
+    total: number;
+    totalEarnings: number;
+  }>;
 
-  diverInfo(driverId:string):Promise<IDrivers>
-  driverRideAndRating(driverId:string):Promise<{totalRides:number,ratings:{avgRating:number,totalRatings:number}}>
-  vehicleInfoByDriverId(driverId:string):Promise<IVehicle>
-  userInfo(userId:string):Promise<IUser>
-  userRideAndRating(userId:string):Promise<{totalRides:number,ratings:{avgRating:number,totalRatings:number}}>
-  logout(refreshToken:string,accessToken:string):Promise<void>
+  diverInfo(driverId: string): Promise<IDrivers>;
+  driverRideAndRating(
+    driverId: string
+  ): Promise<{
+    totalRides: number;
+    ratings: { avgRating: number; totalRatings: number };
+  }>;
+  vehicleInfoByDriverId(driverId: string): Promise<IVehicle>;
+  userInfo(userId: string): Promise<IUser>;
+  userRideAndRating(
+    userId: string
+  ): Promise<{
+    totalRides: number;
+    ratings: { avgRating: number; totalRatings: number };
+  }>;
+  rideHistory(
+    page: number,
+    sort: string,
+    filter: "all" | "ongoing" | "canceled" | "completed"
+  ): Promise<{ history: IRideHistory[] | null; total: number }>;
+  rideInfo(rideId: string): Promise<IRideWithUserAndDriver>;
+  logout(refreshToken: string, accessToken: string): Promise<void>;
 }

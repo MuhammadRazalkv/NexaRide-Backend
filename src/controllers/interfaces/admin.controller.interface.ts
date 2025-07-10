@@ -27,5 +27,7 @@ export interface IAdminController {
     driverRideAndRating(req: Request, res: Response, next: NextFunction): Promise<void>
     vehicleInfoByDriverId(req: Request, res: Response, next: NextFunction): Promise<void>
     userRideAndRating(req: Request, res: Response, next: NextFunction): Promise<void>
+    rideHistory(req: Request, res: Response, next: NextFunction): Promise<void>
+    rideInfo(req: Request, res: Response, next: NextFunction): Promise<void>
     logout(req: Request, res: Response, next: NextFunction): Promise<void>
 }

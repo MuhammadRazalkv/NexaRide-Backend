@@ -15,7 +15,7 @@ export interface IRideHistory extends Document {
   estTime: number;
   timeTaken?: number; // In minutes
   status: string;
-  startedAt?: Number;
+  startedAt?: number;
   endedAt?: number;
   cancelledAt?: number;
   paymentStatus: string;
@@ -88,7 +88,7 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>(
         },
         originalCommission: { type: Number },
       },
-      required: false, 
+      required: false,
     },
   },
   { timestamps: true }

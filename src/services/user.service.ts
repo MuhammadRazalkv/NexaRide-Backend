@@ -22,7 +22,7 @@ import { HttpStatus } from "../constants/httpStatusCodes";
 import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
 import mongoose from "mongoose";
 import { ISubscription } from "../models/subscription.model";
-import { setToRedis } from "../config/redis";
+import { getFromRedis, setToRedis } from "../config/redis";
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from "../utils/env";
 
 const userSchema = z.object({
@@ -163,6 +163,15 @@ export class UserService implements IUserService {
     if (!success) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
     }
+    const activeUser = await getFromRedis(`RU:${user.id}`);
+
+    if (activeUser) {
+      throw new AppError(
+        HttpStatus.BAD_REQUEST,
+        "User is already logged in from another device or session."
+      );
+    }
+
     // Generate tokens
     return {
       ...generateTokens(user._id as string),
@@ -226,6 +235,15 @@ export class UserService implements IUserService {
     // If user exists, only update googleId if it's missing
     if (!user.googleId) {
       await this.userRepo.updateById(user.id, { $set: { googleId } });
+    }
+
+    const activeUser = await getFromRedis(`RU:${user.id}`);
+
+    if (activeUser) {
+      throw new AppError(
+        HttpStatus.BAD_REQUEST,
+        "User is already logged in from another device or session."
+      );
     }
 
     return {
@@ -385,7 +403,7 @@ export class UserService implements IUserService {
   async subscriptionHistory(
     userId: string,
     page: number
-  ): Promise<{history:ISubscription[] , total:number }> {
+  ): Promise<{ history: ISubscription[]; total: number }> {
     if (!userId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
@@ -395,15 +413,14 @@ export class UserService implements IUserService {
       { userId: userId },
       { sort: { takenAt: -1 }, skip, limit }
     );
-    const total = await this.subscriptionRepo.countDocuments({userId})
-    return {history,total}
+    const total = await this.subscriptionRepo.countDocuments({ userId });
+    return { history, total };
   }
 
   async logout(refreshToken: string, accessToken: string): Promise<void> {
-    const refreshEXP = getRefreshTokenMaxAge() / 1000 | 0
-    const accessEXP = getAccessTokenMaxAge() / 1000 | 0
-    await setToRedis(refreshToken,'Blacklisted',refreshEXP)
-    await setToRedis(accessToken,'BlackListed',accessEXP)
-
+    const refreshEXP = (getRefreshTokenMaxAge() / 1000) | 0;
+    const accessEXP = (getAccessTokenMaxAge() / 1000) | 0;
+    await setToRedis(refreshToken, "Blacklisted", refreshEXP);
+    await setToRedis(accessToken, "BlackListed", accessEXP);
   }
 }

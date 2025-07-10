@@ -8,6 +8,7 @@ export interface IUser extends Document {
   profilePic?: string;
   password?: string;
   isBlocked: boolean;
+  softBlock: boolean;
 }
 
 const userSchema = new Schema<IUser>(
@@ -18,6 +19,7 @@ const userSchema = new Schema<IUser>(
     phone: { type: Number, unique: true },
     password: { type: String },
     isBlocked: { type: Boolean, default: false },
+    softBlock: { type: Boolean, default: false },
     profilePic: { type: String },
   },
   { timestamps: true }

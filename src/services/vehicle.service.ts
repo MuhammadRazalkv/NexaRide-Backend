@@ -160,9 +160,10 @@ export class VehicleService implements IVehicleService {
       // Register the vehicle with updated images
       const vehicleData = { ...parsedData.data, vehicleImages };
 
-      await this.vehicleRepo.updateById(id, {
+      await this.vehicleRepo.updateById(vehicleId, {
         $set: { ...vehicleData, status: "pending" },
       });
+
 
       return {
         driver: {
@@ -172,6 +173,8 @@ export class VehicleService implements IVehicleService {
         },
       };
     } catch (error: any) {
+      console.log(error);
+
       if (error instanceof mongoose.Error.CastError) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
       }

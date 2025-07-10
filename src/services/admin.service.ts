@@ -28,7 +28,7 @@ import {
 } from "../repositories/interfaces/ride.repo.interface";
 import { IComplaints } from "../models/complaints.modal";
 import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
-import { IWalletRepo } from "../repositories/interfaces/wallet.repo.interface";
+
 import { ICommission } from "../models/commission.model";
 import { ICommissionRepo } from "../repositories/interfaces/commission.repo.interface";
 import { IDrivers } from "../models/driver.model";
@@ -37,6 +37,8 @@ import { IVehicle } from "../models/vehicle.model";
 import { IUser } from "../models/user.model";
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from "../utils/env";
 import { setToRedis } from "../config/redis";
+import { IRideHistory } from "../models/ride.history.model";
+import { IRideWithUserAndDriver } from "./interfaces/ride.service.interface";
 
 const generateTokens = () => ({
   accessToken: generateAccessToken(process.env.ADMIN_EMAIL as string, "admin"),
@@ -110,19 +112,53 @@ export class AdminService implements IAdminService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
     }
 
-    const updatedUser = await this.userRepo.updateById(id, {
-      $set: { isBlocked: !user.isBlocked },
-    });
+    if (!user.softBlock) {
+      const ongoingRide = await this.rideRepo.findOne({
+        userId: id,
+        status: "ongoing",
+      });
 
-    if (updatedUser) {
-      return {
-        message: updatedUser.isBlocked
-          ? "User blocked successfully"
-          : "User unblocked successfully",
-        user: updatedUser,
-      };
+      if (ongoingRide) {
+        const updatedSoftUser = await this.userRepo.updateById(id, {
+          $set: { softBlock: true },
+        });
+        if (updatedSoftUser) {
+          return {
+            message:
+              "User is currently on a ride and will be blocked after completion",
+            user: {
+              id: updatedSoftUser._id,
+              name: updatedSoftUser.name,
+              isBlocked: updatedSoftUser.isBlocked,
+              softBlock: updatedSoftUser.softBlock,
+            },
+          };
+        }
+      }
+
+      const updatedUser = await this.userRepo.updateById(id, {
+        $set: { isBlocked: !user.isBlocked },
+      });
+
+      if (updatedUser) {
+        return {
+          message: updatedUser.isBlocked
+            ? "User blocked successfully"
+            : "User unblocked successfully",
+          user: {
+            id: updatedUser._id,
+            name: updatedUser.name,
+            isBlocked: updatedUser.isBlocked,
+            softBlock: updatedUser.softBlock,
+          },
+        };
+      }
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.SERVER_ERROR);
     }
-    throw new AppError(HttpStatus.BAD_REQUEST, messages.SERVER_ERROR);
+    throw new AppError(
+      HttpStatus.BAD_REQUEST,
+      "User will be blocked after the ride is completed"
+    );
   }
 
   async getDrivers(page: number, search: string, sort: string) {
@@ -157,18 +193,38 @@ export class AdminService implements IAdminService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    const updatedDriver = await this.driverRepo.updateById(id, {
-      $set: { isBlocked: !driver.isBlocked },
-    });
+    if (!driver.softBlock) {
+      const ongoingRide = await this.rideRepo.findOne({
+        driverId: id,
+        status: "ongoing",
+      });
+      if (ongoingRide) {
+        const updatedSoftBlock = await this.driverRepo.updateById(id, {
+          $set: { softBlock: true },
+        });
+        if (updatedSoftBlock) {
+          return {
+            message:
+              "User is currently on a ride and will be blocked after completion",
+            driver: updatedSoftBlock,
+          };
+        }
+      }
 
-    if (updatedDriver) {
-      return {
-        message: updatedDriver.isBlocked
-          ? "Driver blocked successfully"
-          : "Driver unblocked successfully",
-        driver: updatedDriver,
-      };
+      const updatedDriver = await this.driverRepo.updateById(id, {
+        $set: { isBlocked: !driver.isBlocked },
+      });
+
+      if (updatedDriver) {
+        return {
+          message: updatedDriver.isBlocked
+            ? "Driver blocked successfully"
+            : "Driver unblocked successfully",
+          driver: updatedDriver,
+        };
+      }
     }
+
     throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.SERVER_ERROR);
   }
 
@@ -602,6 +658,52 @@ export class AdminService implements IAdminService {
     const totalRides = await this.rideRepo.countDocuments({ userId });
     const ratings = await this.rideRepo.getAvgRating(id, "user");
     return { totalRides, ratings };
+  }
+
+  async rideHistory(
+    page: number,
+    sort: string,
+    filter: "all" | "completed" | "canceled" | "ongoing"
+  ): Promise<{ history: IRideHistory[] | null; total: number }> {
+    const limit = 8;
+    const skip = (page - 1) * limit;
+    const filterBy = filter === "all" ? {} : { status: filter };
+    console.log("Filer by ", filterBy);
+
+    const history = await this.rideRepo.findAll(
+      filterBy,
+      { skip, limit, sort: { createdAt: sort == "new" ? -1 : 1 } },
+      {
+        driverId: 1,
+        pickupLocation: 1,
+        dropOffLocation: 1,
+        totalFare: 1,
+        commission: 1,
+        driverEarnings: 1,
+        distance: 1,
+        estTime: 1,
+        timeTaken: 1,
+        status: 1,
+        startedAt: 1,
+        endedAt: 1,
+        canceledAt: 1,
+        paymentStatus: 1,
+      }
+    );
+    const total = await this.rideRepo.countDocuments(filterBy);
+    // console.log('Total ',total);
+    // console.log("History ", history);
+
+    return { history, total };
+  }
+
+  async rideInfo(rideId: string): Promise<IRideWithUserAndDriver> {
+    const rideInfo = await this.rideRepo.getRideInfoWithDriverAndUser(rideId);
+    if (!rideInfo) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
+
+    return rideInfo;
   }
 
   async logout(refreshToken: string, accessToken: string): Promise<void> {

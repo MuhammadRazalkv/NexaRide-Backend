@@ -159,7 +159,8 @@ function waitForDriverResponse(
           dropOffLocation: data.dropOffLocation,
           pickupCoords: data.pickupCoords,
           dropOffCoords: data.dropOffCoords,
-          OTP
+          OTP,
+          startedAt:Date.now()
         };
         if (bestOffer && bestOffer.id) {
           console.log('passed the if statement ',bestOffer , bestOffer.id);

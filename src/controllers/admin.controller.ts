@@ -88,11 +88,12 @@ export class AdminController implements IAdminController {
   ): Promise<void> {
     try {
       const result = await this.adminService.changeUserStatus(req.body.id);
-
+      console.log(result);
+      
       res.status(HttpStatus.OK).json({
         success: true,
         message: result.message,
-        user: result.user,
+        user:result.user
       });
     } catch (error) {
       next(error);
@@ -540,10 +541,52 @@ export class AdminController implements IAdminController {
         httpOnly: true,
         secure: true,
         sameSite: "lax",
-        path:'/'
+        path: "/",
       });
 
       res.status(HttpStatus.OK).json({ success: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async rideHistory(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const sort = (req.query.sort as string) || "";
+      console.log(
+        'filter query ',req.query.filter
+      );
+      
+      const filterBy =
+        (req.query.filter as "all" | "ongoing" | "canceled" | "completed") ||
+        "all";
+        console.log('Filter by query ',filterBy);
+        
+      const { history, total } = await this.adminService.rideHistory(
+        page,
+        sort,
+        filterBy
+      );
+
+      res.status(HttpStatus.OK).json({ success: true, history, total });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async rideInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const rideId = req.query.rideId as string
+      if (!rideId) {
+        throw new AppError(HttpStatus.BAD_REQUEST,messages.ID_NOT_PROVIDED)
+      }
+      const rideInfo = await this.adminService.rideInfo(rideId)
+      res.status(HttpStatus.OK).json({success:true,rideInfo})
     } catch (error) {
       next(error)
     }

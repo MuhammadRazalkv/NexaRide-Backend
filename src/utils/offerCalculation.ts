@@ -31,7 +31,6 @@ export async function calculateFareWithDiscount(
     const todayTimestamp = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
     try {
       const offers = await offerService.findValidOffers(todayTimestamp, fare);
-
       if (offers && offers.length) {
         for (const offer of offers) {
           // Check if user has already exceeded the offer usage limit

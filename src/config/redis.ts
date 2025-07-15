@@ -87,16 +87,15 @@ const getAvailableDriversByGeo = async (
     "ASC"
   )) as [string, string][];
 
-  console.log('Raw result of driver finding ',key ,rawResults);
-  
+  console.log("Raw result of driver finding ", key, rawResults);
 
   const availableDrivers: { id: string; socketId: string; distance: number }[] =
     [];
 
   for (const [driverId, distanceStr] of rawResults) {
     const driverData = await redis.hgetall(`driver:${driverId}`);
-    console.log('Driver data on driver finding ',driverData);
-    
+    console.log("Driver data on driver finding ", driverData);
+
     if (driverData.status === "online") {
       availableDrivers.push({
         id: driverId,
@@ -113,7 +112,11 @@ const getDriverInfoRedis = async (key: string) => {
   return await redis.hgetall(key);
 };
 
-export const removeDriverFromGeoIndex = async (key: string, driverId: string) => {
+const changeExpInRedis = async (key: string, value: number) => {
+  await redis.expire(key, value);
+};
+
+const removeDriverFromGeoIndex = async (key: string, driverId: string) => {
   try {
     await redis.zrem(key, driverId);
     console.log(`Removed driver ${driverId} from geo index ${key}`);
@@ -133,4 +136,6 @@ export {
   getAvailableDriversByGeo,
   updateDriverFelids,
   getDriverInfoRedis,
+  changeExpInRedis,
+  removeDriverFromGeoIndex,
 };

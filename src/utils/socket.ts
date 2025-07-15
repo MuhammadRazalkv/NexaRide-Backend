@@ -8,16 +8,14 @@ import {
   getAvailableDriversByGeo,
   updateDriverFelids,
   removeDriverFromGeoIndex,
+  changeExpInRedis,
 } from "../config/redis";
 import { extractUserIdFromToken } from "./jwt";
-import crypto from "crypto";
 import { AppError } from "./appError";
 import { HttpStatus } from "../constants/httpStatusCodes";
 import { messages } from "../constants/httpMessages";
 import { userService } from "../bindings/user.bindings";
 import { rideService } from "../bindings/ride.bindings";
-import { offerService } from "../bindings/offer.bindings";
-import { IOffer } from "../models/offer.modal";
 import { validateRideRequest } from "./validators/rideRequestValidators";
 import { getRouteDetails } from "./geoApi";
 import { calculateFareWithDiscount } from "./offerCalculation";
@@ -35,13 +33,10 @@ export const initializeSocket = (server: any) => {
     const role = socket.handshake.auth?.role;
 
     if (!token || !role) {
-      console.log("Token or role missing");
       return next(new Error("Authentication error"));
     }
 
     try {
-      console.log("here in the token handshake");
-
       const decodedId = extractUserIdFromToken(token);
       console.log(role, "id ", decodedId);
 
@@ -60,7 +55,7 @@ export const initializeSocket = (server: any) => {
       socket.data.driverId = decodedId;
       console.log("Driver connected ");
 
-      await setToRedis(`OD:${decodedId}`, socket.id);
+      await setToRedis(`OD:${decodedId}`, socket.id, 90);
       const rideId = await getFromRedis(`DRID:${decodedId}`);
       if (rideId) {
         socket.join(`ride:${rideId}`);
@@ -87,13 +82,24 @@ export const initializeSocket = (server: any) => {
     }
 
     if (role === "user") {
-      setToRedis(`RU:${decodedId}`, socket.id);
-      console.log("connect user socket id ", getFromRedis(`RU:${decodedId}`));
+      await setToRedis(`RU:${decodedId}`, socket.id, 90);
+      console.log("connect user socket id ", socket.id);
 
       const rideId = await getFromRedis(`URID:${decodedId}`);
       if (rideId) socket.join(`ride:${rideId}`);
       // console.log(`User ${decodedId} connected with socket ID: ${socket.id}`);
     }
+
+    socket.on("keep-alive", async () => {
+      try {
+        const key = role === "driver" ? `OD:${decodedId}` : `RU:${decodedId}`;
+        await changeExpInRedis(key, 90);
+      } catch (err) {
+        console.error("Failed to refresh Redis TTL:", err);
+        socket.emit("ride-error", { message: "Failed to refresh " });
+        return;
+      }
+    });
 
     // Send ride request to a specific group
     socket.on("request-ride", async (data) => {
@@ -137,24 +143,15 @@ export const initializeSocket = (server: any) => {
           return;
         }
 
-        // const {
-        //   finalFare,
-        //   bestDiscount,
-        //   bestOffer,
-        //   driverShare,
-        //   originalFare,
-        //   isPremiumUser,
-        //   premiumDiscount,
-        // } = await calculateFareWithDiscount(requestedFare, decodedId);
         const fareData = await calculateFareWithDiscount(
           requestedFare,
           decodedId
         );
         if (!fareData) {
-           socket.emit("ride-error", {
+          socket.emit("ride-error", {
             message: "Fare calculation failed",
           });
-          return
+          return;
         }
 
         const {
@@ -203,15 +200,6 @@ export const initializeSocket = (server: any) => {
     });
 
     socket.on("driver-location-update", async (data) => {
-      // await setToRedis(
-      //   `DL:${decodedId}`,
-      //   JSON.stringify({
-      //     lat: data.location[1],
-      //     lng: data.location[0],
-      //     updatedAt: new Date().toISOString(),
-      //   })
-      // );
-
       const rideId = await getFromRedis(`DRID:${decodedId}`);
       console.log("Retrieved rideId:", rideId);
 
@@ -391,18 +379,24 @@ export const initializeSocket = (server: any) => {
     });
 
     socket.on("disconnect", async () => {
-      console.log(`${role}  disconnected`);
-      if (role == "driver") {
-        const driver = await rideService.getDriverWithVehicle(decodedId);
-
-        console.log("Removing driver from socket", driver.name);
-        await removeFromRedis(`OD:${decodedId}`);
-        await removeFromRedis(`driver:${decodedId}`);
-        await removeDriverFromGeoIndex(`drivers:${driver.vehicleDetails.category}`,decodedId);
-      }else if(role == 'user'){
-        await removeFromRedis(`RU:${decodedId}`)
+      try {
+        if (role == "driver") {
+          const driver = await rideService.getDriverWithVehicle(decodedId);
+          if (driver) {
+            await removeFromRedis(`OD:${decodedId}`);
+            await removeFromRedis(`driver:${decodedId}`);
+            await removeDriverFromGeoIndex(
+              `drivers:${driver.vehicleDetails.category}`,
+              decodedId
+            );
+            console.log("Removed driver", driver.name);
+          }
+        } else if (role == "user") {
+          await removeFromRedis(`RU:${decodedId}`);
+        }
+      } catch (err) {
+        console.error("Error during socket disconnect cleanup:", err);
       }
-
     });
   });
 };

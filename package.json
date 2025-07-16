@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node dist/index.js",
     "build": "tsc",
-    "dev": "concurrently \"stripe listen --forward-to localhost:3000/user/webhook\" \"nodemon"
+    "dev": "nodemon"
   },
   "keywords": [],
   "author": "",

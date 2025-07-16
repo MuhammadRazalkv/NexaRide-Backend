@@ -19,6 +19,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.post(
+  "/user/webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.webhook
+);
+
 // Middleware
 app.use(
   cors({
@@ -27,11 +33,7 @@ app.use(
   })
 );
 
-app.post(
-  "/user/webhook",
-  express.raw({ type: "application/json" }),
-  paymentController.webhook
-);
+
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));

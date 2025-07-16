@@ -109,15 +109,20 @@ export class PaymentService implements IPaymentService {
 
   // ! This is the payment related section
   async webHook(body: any, sig: string) {
+    console.log('webhook service layer ');
+    
     let event = stripe.webhooks.constructEvent(
       body,
       sig,
       process.env.WEBHOOK_SECRET_KEY as string
     );
 
+    console.log('event type ',event.type);
+    
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-
+      console.log("checkout.session.completed test passed ");
+      
       if (session.metadata && session.metadata.action === "wallet_topUp") {
         console.log("Wallet topUp");
 
@@ -143,6 +148,8 @@ export class PaymentService implements IPaymentService {
         session.metadata &&
         session.metadata.action == "ride_payment"
       ) {
+        console.log('ride payment ');
+        
         const rideId = session.metadata.rideId;
         const ride = await this.rideRepo.findById(rideId);
         if (!ride) {
@@ -153,6 +160,8 @@ export class PaymentService implements IPaymentService {
         session.metadata &&
         session.metadata.action == "upgrade_to_plus"
       ) {
+        console.log('Upgrade to plus');
+        
         const userId = session.metadata.userId;
         const user = await this.userRepo.findById(userId);
         if (!user) {
@@ -185,6 +194,7 @@ export class PaymentService implements IPaymentService {
         });
       }
     }
+    
   }
 
   //! This is where the user pay with wallet

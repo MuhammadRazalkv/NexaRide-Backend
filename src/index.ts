@@ -62,12 +62,12 @@ redis.on("error", (err) => console.error("Redis Error:", err));
 // Routes
 app.use("/user", userRoutes);
 app.use("/driver", driverRoutes);
-app.use("/admin", adminRoutes); 
+app.use("/admin", adminRoutes);
 
 const server = http.createServer(app);
 initializeSocket(server);
 
-app.use(errorHandler)
+app.use(errorHandler);
 // Start the server
 connectDB().then(() => {
   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

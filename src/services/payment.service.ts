@@ -114,15 +114,25 @@ export class PaymentService implements IPaymentService {
     console.log("typeof body:", typeof body); // must be 'object' (Buffer)
     console.log("Is buffer:", Buffer.isBuffer(body)); // must be true
 
-    let event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.WEBHOOK_SECRET_KEY as string
-    );
+    // let event = stripe.webhooks.constructEvent(
+    //   body,
+    //   sig,
+    //   process.env.WEBHOOK_SECRET_KEY as string
+    // );
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(
+        body,
+        sig,
+        process.env.WEBHOOK_SECRET_KEY as string
+      );
+    } catch (err: any) {
+      console.error("Stripe signature verification failed:", err.message);
+    }
 
-    console.log("event type ", event.type);
+    console.log("event type ", event?.type);
 
-    if (event.type === "checkout.session.completed") {
+    if (event && event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       console.log("checkout.session.completed test passed ");
 

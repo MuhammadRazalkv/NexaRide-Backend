@@ -113,7 +113,7 @@ export class PaymentService implements IPaymentService {
     
     let event = stripe.webhooks.constructEvent(
       body,
-      sig,
+      sig,  
       process.env.WEBHOOK_SECRET_KEY as string
     );
 

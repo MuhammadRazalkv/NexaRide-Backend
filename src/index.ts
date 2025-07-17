@@ -13,51 +13,16 @@ import http from "http";
 import { initializeSocket } from "./utils/socket";
 import paymentController from "./bindings/payment.binding";
 import errorHandler from "./middlewares/error.middleware";
-import Stripe from "stripe";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// app.post(
-//   "/user/webhook",
-//   express.raw({ type: "application/json" }),
-//   paymentController.webhook
-// );
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {});
-
-// Use raw body ONLY for this route
 app.post(
   "/user/webhook",
   express.raw({ type: "application/json" }),
-  (req, res): void => {
-    const sig = req.headers["stripe-signature"] as string;
-    const webhookSecret = process.env.WEBHOOK_SECRET_KEY!;
-
-    let event;
-
-    try {
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-      console.log("✅ Verified event:", event.type);
-    } catch (err: any) {
-      console.error("❌ Stripe signature verification failed:", err.message);
-      res.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
-
-    // Handle the event
-    switch (event.type) {
-      case "checkout.session.completed":
-        // your logic here
-        break;
-      default:
-        console.log(`Unhandled event type ${event.type}`);
-    }
-
-    res.status(200).send("OK");
-  }
+  paymentController.webhook
 );
 
 // Middleware
@@ -67,6 +32,8 @@ app.use(
     credentials: true,
   })
 );
+
+
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));

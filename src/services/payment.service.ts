@@ -110,6 +110,7 @@ export class PaymentService implements IPaymentService {
   // ! This is the payment related section
   async webHook(body: any, sig: string) {
     console.log('webhook service layer ');
+    console.log('Secret key ',process.env.WEBHOOK_SECRET_KEY);
     
     let event = stripe.webhooks.constructEvent(
       body,

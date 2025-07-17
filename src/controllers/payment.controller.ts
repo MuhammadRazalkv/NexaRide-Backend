@@ -55,11 +55,12 @@ export class PaymentController implements IPaymentController {
     console.log("web hook controller layer 1  ");
     const sig = req.headers["stripe-signature"] as string;
     console.log('Web hook control layer 2');
+    console.log(sig);
     
     try {
       await this.paymentService.webHook(req.body, sig);
       res.status(HttpStatus.OK).json({ success: true });
-    } catch (error) {
+    } catch (error) {     
       next(error);
     }
   }

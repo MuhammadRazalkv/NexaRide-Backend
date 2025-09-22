@@ -55,7 +55,7 @@ export const initializeSocket = (server: any) => {
       socket.data.driverId = decodedId;
       console.log("Driver connected ");
 
-      await setToRedis(`OD:${decodedId}`, socket.id, 90);
+      await setToRedis(`OD:${decodedId}`, socket.id, 120);
       const rideId = await getFromRedis(`DRID:${decodedId}`);
       if (rideId) {
         socket.join(`ride:${rideId}`);
@@ -92,8 +92,11 @@ export const initializeSocket = (server: any) => {
 
     socket.on("keep-alive", async () => {
       try {
+        console.log("Keep alive event ", role);
+
         const key = role === "driver" ? `OD:${decodedId}` : `RU:${decodedId}`;
-        await changeExpInRedis(key, 90);
+        await changeExpInRedis(key, 120);
+        console.log("Keep alive event succcess ");
       } catch (err) {
         console.error("Failed to refresh Redis TTL:", err);
         socket.emit("ride-error", { message: "Failed to refresh " });

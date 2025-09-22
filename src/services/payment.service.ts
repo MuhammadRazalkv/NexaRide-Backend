@@ -244,6 +244,8 @@ export class PaymentService implements IPaymentService {
         },
       }
     );
+    console.log('Calling post payment from wallet payment');
+    
     await this._handlePostPayment(ride, "wallet");
   }
 
@@ -406,6 +408,8 @@ export class PaymentService implements IPaymentService {
     ride: IRideHistory,
     paymentMethod: "wallet" | "stripe"
   ): Promise<void> {
+    console.log('Inside post payment section ');
+    
     const applicationFeesDetails = {
       rideId: ride.id,
       driverId: ride.driverId,
@@ -421,7 +425,8 @@ export class PaymentService implements IPaymentService {
       paymentMethod,
     };
     await this.commissionRepo.create(applicationFeesDetails);
-
+    console.log('Created commission repo ',applicationFeesDetails);
+    
     await this.walletRepo.addMoneyToDriver(
       ride.driverId as string,
       ride.id,
@@ -435,13 +440,22 @@ export class PaymentService implements IPaymentService {
         endedAt: Date.now(),
       },
     });
+    console.log('Wallet and ride info updated in post payment ');
+    
     const driverSocketId = await getFromRedis(`OD:${ride.driverId}`);
+    console.log('Driver socket id ',driverSocketId)
     const userSocketId = await getFromRedis(`RU:${ride.userId}`);
+    console.log('User socket id ',userSocketId);
+    
     await updateDriverFelids(`driver:${ride.driverId}`, "status", "online");
+    console.log('Driver filed updated to status online ');
+    
     const user = await this.userRepo.findById(ride.userId as string);
     const driver = await this.driverRepo.findById(ride.driverId as string);
     const io = getIO();
     if (driverSocketId) {
+      console.log('Driver socket id found sending to the recieved event ');
+      
       io.to(driverSocketId).emit("payment-received");
       if (driver?.softBlock) {
         await this.driverRepo.updateById(ride.driverId as string, {
@@ -450,6 +464,7 @@ export class PaymentService implements IPaymentService {
       }
     }
     if (userSocketId) {
+      console.log('User payment success')
       io.to(userSocketId).emit("payment-success");
       if (user?.softBlock) {
         await this.userRepo.updateById(ride.userId as string, {
@@ -459,5 +474,7 @@ export class PaymentService implements IPaymentService {
     }
     await removeFromRedis(`URID:${ride.userId}`);
     await removeFromRedis(`DRID:${ride.driverId}`);
+    console.log('Finished post payment');
+    
   }
 }

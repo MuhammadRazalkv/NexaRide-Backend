@@ -1,8 +1,8 @@
-import axios from "axios";
-import { getGeoApiKey } from "./env";
+import axios from 'axios';
+import { getGeoApiKey } from './env';
 export const getRouteDetails = async (
   pickupCoords: [number, number],
-  dropOffCoords: [number, number]
+  dropOffCoords: [number, number],
 ) => {
   try {
     const apiKey = getGeoApiKey();

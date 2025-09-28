@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IOffer extends Document {
   title: string;
@@ -15,7 +15,7 @@ export interface IOffer extends Document {
 const OfferSchema = new Schema<IOffer>(
   {
     title: { type: String, required: true },
-    type: { type: String, enum: ["percentage", "flat"], required: true },
+    type: { type: String, enum: ['percentage', 'flat'], required: true },
     value: { type: Number, required: true },
     maxDiscount: { type: Number, required: true },
     minFare: { type: Number, required: true },
@@ -24,9 +24,9 @@ const OfferSchema = new Schema<IOffer>(
     validTill: { type: Number, required: true },
     usageLimitPerUser: { type: Number, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Offer = mongoose.model<IOffer>("Offers", OfferSchema);
+const Offer = mongoose.model<IOffer>('Offers', OfferSchema);
 
 export default Offer;

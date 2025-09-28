@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICommission extends Document {
   rideId: mongoose.Types.ObjectId | string;
@@ -17,12 +17,12 @@ const CommissionSchema: Schema = new Schema<ICommission>(
   {
     rideId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "RideHistory",
+      ref: 'RideHistory',
       required: true,
     },
     driverId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Driver",
+      ref: 'Driver',
       required: true,
     },
     originalFare: { type: Number, required: true },
@@ -35,11 +35,11 @@ const CommissionSchema: Schema = new Schema<ICommission>(
 
     paymentMethod: {
       type: String,
-      enum: ["wallet", "stripe"],
+      enum: ['wallet', 'stripe'],
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default mongoose.model<ICommission>("Commission", CommissionSchema);
+export default mongoose.model<ICommission>('Commission', CommissionSchema);

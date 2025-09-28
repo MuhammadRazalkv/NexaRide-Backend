@@ -1,18 +1,14 @@
-import { ExtendedRequest } from "../middlewares/auth.middleware";
-import { Response, NextFunction } from "express";
-import { IRideController } from "./interfaces/ride.controller.interface";
-import { IRideService } from "../services/interfaces/ride.service.interface";
-import { AppError } from "../utils/appError";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { messages } from "../constants/httpMessages";
+import { ExtendedRequest } from '../middlewares/auth.middleware';
+import { Response, NextFunction } from 'express';
+import { IRideController } from './interfaces/ride.controller.interface';
+import { IRideService } from '../services/interfaces/ride.service.interface';
+import { AppError } from '../utils/appError';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { messages } from '../constants/httpMessages';
 
 export class RideController implements IRideController {
   constructor(private rideService: IRideService) {}
-  async checkCabs(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async checkCabs(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.id;
       if (!userId) {
@@ -21,9 +17,7 @@ export class RideController implements IRideController {
       const data = req.body.data;
 
       const response = await this.rideService.checkCabs(userId, data);
-      res
-        .status(HttpStatus.OK)
-        .json({ success: true, availableCabs: response });
+      res.status(HttpStatus.OK).json({ success: true, availableCabs: response });
     } catch (error) {
       next(error);
     }
@@ -32,7 +26,7 @@ export class RideController implements IRideController {
   async assignRandomLocation(
     req: ExtendedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
       if (!req.id) {
@@ -45,11 +39,7 @@ export class RideController implements IRideController {
     }
   }
 
-  async verifyRideOTP(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async verifyRideOTP(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const driverId = req.id;
       if (!driverId) {
@@ -68,19 +58,15 @@ export class RideController implements IRideController {
     }
   }
 
-  async getRideHistory(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getRideHistory(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       if (!id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
       const page = parseInt(req.query.page as string);
-      const sort = req.query.sort 
-      const response = await this.rideService.getRideHistory(id, page,sort as string);
+      const sort = req.query.sort;
+      const response = await this.rideService.getRideHistory(id, page, sort as string);
       res.status(HttpStatus.OK).json({
         success: true,
         history: response.history,
@@ -94,7 +80,7 @@ export class RideController implements IRideController {
   async getRideHistoryDriver(
     req: ExtendedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
       const id = req.id;
@@ -102,8 +88,8 @@ export class RideController implements IRideController {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
       const page = parseInt(req.query.page as string);
-      const sort = req.query.sort 
-      const response = await this.rideService.getRideHistoryDriver(id, page,sort as string);
+      const sort = req.query.sort;
+      const response = await this.rideService.getRideHistoryDriver(id, page, sort as string);
       res.status(HttpStatus.OK).json({
         success: true,
         history: response.history,
@@ -114,11 +100,7 @@ export class RideController implements IRideController {
     }
   }
 
-  async checkPaymentStatus(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async checkPaymentStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       if (!id) {
@@ -132,55 +114,38 @@ export class RideController implements IRideController {
     }
   }
 
-  async getRIdeInfoForUser(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getRIdeInfoForUser(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       const rideId = req.query.rideId;
       if (!id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
-      if (!rideId || rideId === "null" || String(rideId).trim() === "") {
+      if (!rideId || rideId === 'null' || String(rideId).trim() === '') {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
 
-      const { ride, complaintInfo } = await this.rideService.findUserRideInfo(
-        rideId as string,
-        id
-      );
+      const { ride, complaintInfo } = await this.rideService.findUserRideInfo(rideId as string, id);
       res.status(HttpStatus.OK).json({ ride, complaintInfo });
     } catch (error) {
       next(error);
     }
   }
 
-  async fileComplaint(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async fileComplaint(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       const { rideId, reason, by, description } = req.body;
       if (!id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
-      if (!rideId || rideId === "null" || String(rideId).trim() === "") {
+      if (!rideId || rideId === 'null' || String(rideId).trim() === '') {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
       if (!reason) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const complaint = await this.rideService.fileComplaint(
-        id,
-        rideId,
-        reason,
-        by,
-        description
-      );
+      const complaint = await this.rideService.fileComplaint(id, rideId, reason, by, description);
       res.status(HttpStatus.CREATED).json({ success: true, complaint });
     } catch (error) {
       next(error);
@@ -190,7 +155,7 @@ export class RideController implements IRideController {
   async getRIdeInfoForDriver(
     req: ExtendedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
       const id = req.id;
@@ -198,15 +163,15 @@ export class RideController implements IRideController {
       if (!id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
-      if (!rideId || rideId === "null" || String(rideId).trim() === "") {
+      if (!rideId || rideId === 'null' || String(rideId).trim() === '') {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
       }
 
       const { ride, complaintInfo } = await this.rideService.findDriverRideInfo(
         rideId as string,
-        id
+        id,
       );
-      console.log("complaint info  ", complaintInfo);
+      console.log('complaint info  ', complaintInfo);
 
       res.status(HttpStatus.OK).json({ success: true, ride, complaintInfo });
     } catch (error) {
@@ -214,22 +179,13 @@ export class RideController implements IRideController {
     }
   }
 
-  async giveFeedBack(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async giveFeedBack(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const { rideId, submittedBy, rating, feedback } = req.body;
       if (!rideId || !submittedBy || !rating) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      await this.rideService.giveFeedBack(
-        rideId,
-        submittedBy,
-        Number(rating),
-        feedback
-      );
+      await this.rideService.giveFeedBack(rideId, submittedBy, Number(rating), feedback);
 
       res.status(HttpStatus.CREATED).json({ success: true });
     } catch (error) {
@@ -237,18 +193,14 @@ export class RideController implements IRideController {
     }
   }
 
-  async rideSummary(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async rideSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
 
       const requestedBy = req.query.requestedBy;
-      if (requestedBy !== "user" && requestedBy !== "driver") {
+      if (requestedBy !== 'user' && requestedBy !== 'driver') {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
       }
 
@@ -259,35 +211,26 @@ export class RideController implements IRideController {
     }
   }
 
-  async feedBackSummary(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async feedBackSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
 
       const requestedBy = req.query.requestedBy;
-      if (requestedBy !== "user" && requestedBy !== "driver") {
+      if (requestedBy !== 'user' && requestedBy !== 'driver') {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
       }
       const data = await this.rideService.feedBackSummary(req.id, requestedBy);
       res.status(HttpStatus.OK).json({ success: true, data });
     } catch (error) {
       next(error);
-    } 
+    }
   }
 
-  async earningsSummary(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async earningsSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     if (!req.id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
     }
-    
   }
 }

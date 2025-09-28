@@ -1,4 +1,4 @@
-import { v2 } from "cloudinary";
+import { v2 } from 'cloudinary';
 
 v2.config({
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -10,14 +10,14 @@ export default v2;
 
 export const generateSignedCloudinaryUrl = (
   publicId?: string,
-  expiresIn: number = 1 * 60
+  expiresIn: number = 1 * 60,
 ): string | undefined => {
   const expiresAt = Math.floor(Date.now() / 1000) + expiresIn;
   if (!publicId) {
     return undefined;
   }
   return v2.url(publicId, {
-    type: "authenticated",
+    type: 'authenticated',
     secure: true,
     sign_url: true,
     expires_at: expiresAt,

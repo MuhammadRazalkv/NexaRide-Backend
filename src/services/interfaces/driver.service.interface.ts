@@ -1,20 +1,13 @@
-import { IDrivers } from "../../models/driver.model";
-interface DriverLoginResponse {
-  driver: {
-    _id: unknown;
-    name: string;
-    email: string;
-    profilePic?: string;
-  };
-  accessToken: string;
-  refreshToken: string;
-}
-export interface IDriverWithVehicle extends Omit<Partial<IDrivers>, "vehicleId"> {
+import { LoginDTO } from '../../dtos/request/auth.req.dto';
+import { LoginResDTO } from '../../dtos/response/auth.res.dto';
+import { IDrivers } from '../../models/driver.model';
+
+export interface IDriverWithVehicle extends Omit<Partial<IDrivers>, 'vehicleId'> {
   vehicleDetails: {
     brand: string;
     vehicleModel: string;
     color: string;
-    category:  "Basic" | "Premium" | "Luxury";
+    category: 'Basic' | 'Premium' | 'Luxury';
   };
 }
 
@@ -25,7 +18,7 @@ export interface IDriverService {
   addInfo(data: IDrivers): Promise<{
     driverId: string;
   }>;
-  login(driverData: IDrivers): Promise<DriverLoginResponse>;
+  login(driverData: LoginDTO): Promise<LoginResDTO>;
   getStatus(driverId: string): Promise<{
     driverStatus: string | undefined;
     vehicleStatus: string | undefined;
@@ -34,19 +27,11 @@ export interface IDriverService {
   rejectReason(driverId: string): Promise<string | undefined>;
   reApplyDriver(id: string, data: IDrivers): Promise<IDrivers | null>;
   checkGoogleAuth(id: string, email: string): Promise<string | undefined>;
-  googleLogin(
-    googleId: string,
-    email: string,
-    profilePic?: string
-  ): Promise<DriverLoginResponse>;
+  googleLogin(googleId: string, email: string, profilePic?: string): Promise<LoginResDTO>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(id: string, token: string, password: string): Promise<void>;
   getDriverInfo(id: string): Promise<Partial<IDrivers>>;
-  updateDriverInfo(
-    id: string,
-    field: keyof IDrivers,
-    value: string
-  ): Promise<string>;
+  updateDriverInfo(id: string, field: keyof IDrivers, value: string): Promise<string>;
   toggleAvailability(id: string): Promise<void>;
   // statusOnRide(id: string): Promise<void>;
   getCurrentLocation(id: string): Promise<[number, number]>;
@@ -56,6 +41,6 @@ export interface IDriverService {
     newRefreshToken: string;
   }>;
   updateProfilePic(id: string, image: string): Promise<string | undefined>;
-  getPriceByCategory(category:string):Promise<number>
-  logout(refreshToken:string,accessToken:string):Promise<void>
+  getPriceByCategory(category: string): Promise<number>;
+  logout(refreshToken: string, accessToken: string): Promise<void>;
 }

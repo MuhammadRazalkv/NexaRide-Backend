@@ -1,6 +1,6 @@
-import { getFromRedis, removeFromRedis, setToRedis } from "../config/redis";
-import { IOTPRepo } from "../interface/otp.repo.interface";
-import sendEmail from "../utils/mailSender";
+import { getFromRedis, removeFromRedis, setToRedis } from '../config/redis';
+import { IOTPRepo } from '../interface/otp.repo.interface';
+import sendEmail from '../utils/mailSender';
 
 class OTPRepo implements IOTPRepo {
   private OTP_EXPIRATION = 1 * 60;
@@ -22,7 +22,7 @@ class OTPRepo implements IOTPRepo {
 
   // Mark email as verified
   async markEmailVerified(email: string) {
-    await setToRedis(`verified:${email}`, "true", 24 * 60 * 60);
+    await setToRedis(`verified:${email}`, 'true', 24 * 60 * 60);
     // await redis.set(`verified:${email}`, "true", "EX", 24 * 60 * 60);
   }
 
@@ -30,7 +30,7 @@ class OTPRepo implements IOTPRepo {
   async isEmailVerified(email: string): Promise<boolean> {
     const isVerified = await getFromRedis(`verified:${email}`);
     // const isVerified = await redis.get(`verified:${email}`);
-    return isVerified === "true";
+    return isVerified === 'true';
   }
 
   // Delete verified email (optional, if needed)

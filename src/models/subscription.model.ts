@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ISubscription extends Document {
   userId: mongoose.Types.ObjectId | string;
@@ -12,7 +12,7 @@ const SubscriptionSchema: Schema = new Schema<ISubscription>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     amount: { type: Number, required: true },
@@ -20,15 +20,12 @@ const SubscriptionSchema: Schema = new Schema<ISubscription>(
     takenAt: { type: Number, required: true },
     type: {
       type: String,
-      enum: ["yearly", "monthly"],
+      enum: ['yearly', 'monthly'],
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Subscription = mongoose.model<ISubscription>(
-  "Subscription",
-  SubscriptionSchema
-);
+const Subscription = mongoose.model<ISubscription>('Subscription', SubscriptionSchema);
 export default Subscription;

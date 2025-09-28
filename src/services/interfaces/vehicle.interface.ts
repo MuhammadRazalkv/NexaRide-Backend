@@ -1,4 +1,4 @@
-import { IVehicle } from "../../models/vehicle.model";
+import { IVehicle } from '../../models/vehicle.model';
 export interface IVehicleService {
   addVehicle(data: IVehicle): Promise<{
     driver: {
@@ -9,7 +9,7 @@ export interface IVehicleService {
   }>;
   reApplyVehicle(
     id: string,
-    data: IVehicle
+    data: IVehicle,
   ): Promise<{
     driver: {
       name: any;

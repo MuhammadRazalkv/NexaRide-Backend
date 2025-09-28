@@ -1,22 +1,23 @@
 {
-    "cSpell.words": [
-        "cfwrevnvmmvxnoat",
-        "DRID",
-        "geoadd",
-        "GEOAPI",
-        "georadius",
-        "hgetall",
-        "hset",
-        "IOTP",
-        "Iride",
-        "minfo",
-        "Neue",
-        "ridehistories",
-        "signup",
-        "SOTP",
-        "tsparser",
-        "URID",
-        "WITHDIST",
-        "zrem"
-    ]
+  "cSpell.words": [
+    "cfwrevnvmmvxnoat",
+    "DRID",
+    "dtos",
+    "geoadd",
+    "GEOAPI",
+    "georadius",
+    "hgetall",
+    "hset",
+    "IOTP",
+    "Iride",
+    "minfo",
+    "Neue",
+    "ridehistories",
+    "signup",
+    "SOTP",
+    "tsparser",
+    "URID",
+    "WITHDIST",
+    "zrem"
+  ]
 }

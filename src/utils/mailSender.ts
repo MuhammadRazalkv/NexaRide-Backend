@@ -1,9 +1,9 @@
-import { AppError } from "./appError";
+import { AppError } from './appError';
 
-const nodemailer = require("nodemailer");
+const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
+  host: 'smtp.gmail.com',
   port: 465,
   secure: true,
   auth: {
@@ -12,23 +12,19 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export default async function sendEmail(
-  to: string,
-  subject: string,
-  html: string
-) {
+export default async function sendEmail(to: string, subject: string, html: string) {
   try {
     // Send mail with defined transport object
     await transporter.sendMail({
-      from: "NexaRide" + process.env.APP_GMAIL,
+      from: 'NexaRide' + process.env.APP_GMAIL,
       to: to,
       subject: subject,
-      text: "This is a plain text message",
+      text: 'This is a plain text message',
       html: html,
     });
 
-    console.log("Email sent to:", to);
+    console.log('Email sent to:', to);
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error('Error sending email:', error);
   }
 }

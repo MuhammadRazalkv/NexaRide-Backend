@@ -1,71 +1,51 @@
-import { Request, Response, NextFunction } from "express";
-import IDriverController from "./interfaces/driver.controller.interface";
-import { ExtendedRequest } from "../middlewares/auth.middleware";
-import cloudinary from "../utils/cloudinary";
-import { IDriverService } from "../services/interfaces/driver.service.interface";
-import { IVehicleService } from "../services/interfaces/vehicle.interface";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { messages } from "../constants/httpMessages";
-import { AppError } from "../utils/appError";
+import { Request, Response, NextFunction } from 'express';
+import IDriverController from './interfaces/driver.controller.interface';
+import { ExtendedRequest } from '../middlewares/auth.middleware';
+import cloudinary from '../utils/cloudinary';
+import { IDriverService } from '../services/interfaces/driver.service.interface';
+import { IVehicleService } from '../services/interfaces/vehicle.interface';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { messages } from '../constants/httpMessages';
+import { AppError } from '../utils/appError';
+import { validate } from '../utils/validators/validateZod';
+import { loginDTO } from '../dtos/request/auth.req.dto';
 
 export class DriverController implements IDriverController {
   constructor(
     private driverService: IDriverService,
-    private vehicleService: IVehicleService
+    private vehicleService: IVehicleService,
   ) {}
-  async emailVerification(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async emailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const email = req.body.email;
       await this.driverService.emailVerification(email);
-      res
-        .status(HttpStatus.CREATED)
-        .json({ message: messages.OTP_SENT_SUCCESS });
+      res.status(HttpStatus.CREATED).json({ message: messages.OTP_SENT_SUCCESS });
     } catch (error) {
       next(error);
     }
   }
 
-  async verifyOTP(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, otp } = req.body;
       await this.driverService.verifyOTP(email, otp);
-      res
-        .status(HttpStatus.OK)
-        .json({ message: messages.EMAIL_VERIFICATION_SUCCESS });
+      res.status(HttpStatus.OK).json({ message: messages.EMAIL_VERIFICATION_SUCCESS });
     } catch (error) {
       next(error);
     }
   }
 
-  async reSendOTP(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async reSendOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email } = req.body;
       await this.driverService.reSendOTP(email);
-      res
-        .status(HttpStatus.CREATED)
-        .json({ message: messages.OTP_SENT_SUCCESS });
+      res.status(HttpStatus.CREATED).json({ message: messages.OTP_SENT_SUCCESS });
     } catch (error) {
       next(error);
     }
   }
 
-  async addInfo(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async addInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const response = await this.driverService.addInfo(req.body.data);
 
@@ -78,16 +58,12 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async addVehicle(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async addVehicle(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      console.log("addVehicle reached", req.body.data);
+      console.log('addVehicle reached', req.body.data);
 
       const response = await this.vehicleService.addVehicle(req.body.data);
-      console.log("response ", response);
+      console.log('response ', response);
 
       res.status(HttpStatus.CREATED).json({
         message: messages.VEHICLE_CREATION_SUCCESS,
@@ -100,29 +76,26 @@ export class DriverController implements IDriverController {
 
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await this.driverService.login(req.body);
-      res.cookie("driverRefreshToken", data.refreshToken, {
+      const loginData = validate(loginDTO, req.body);
+      const data = await this.driverService.login(loginData);
+      res.cookie('driverRefreshToken', data.refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "none",
+        sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
       res.status(HttpStatus.OK).json({
         message: messages.LOGIN_SUCCESS,
         accessToken: data.accessToken,
-        driver: data.driver,
+        driver: data.user,
       });
     } catch (error) {
       next(error);
     }
   }
 
-  async checkGoogleAuth(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async checkGoogleAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
     const { id, email } = req.body;
 
     try {
@@ -141,11 +114,7 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async getStatus(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
@@ -162,11 +131,7 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async rejectReason(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async rejectReason(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
@@ -181,20 +146,13 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async reApplyDriver(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async reApplyDriver(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      console.log("addInfo reached", req.body);
+      console.log('addInfo reached', req.body);
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const updatedData = await this.driverService.reApplyDriver(
-        req.id,
-        req.body
-      );
+      const updatedData = await this.driverService.reApplyDriver(req.id, req.body);
 
       res.status(HttpStatus.OK).json({
         message: messages.SUBMITTED_FOR_REVERIFICATION,
@@ -208,7 +166,7 @@ export class DriverController implements IDriverController {
   async vehicleRejectReason(
     req: ExtendedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
       if (!req.id) {
@@ -224,19 +182,12 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async reApplyVehicle(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async reApplyVehicle(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      const response = await this.vehicleService.reApplyVehicle(
-        req.id,
-        req.body.data
-      );
+      const response = await this.vehicleService.reApplyVehicle(req.id, req.body.data);
 
       res.status(HttpStatus.OK).json({
         message: messages.SUBMITTED_FOR_REVERIFICATION,
@@ -252,7 +203,7 @@ export class DriverController implements IDriverController {
     try {
       const img = req.body.imgUrl;
       const res = await cloudinary.uploader.upload(img, {
-        folder: "/demo",
+        folder: '/demo',
       });
       console.log(res);
     } catch (error) {
@@ -260,41 +211,29 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async googleLogin(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async googleLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, googleId, profilePic } = req.body;
 
-      const data = await this.driverService.googleLogin(
-        googleId,
-        email,
-        profilePic
-      );
+      const data = await this.driverService.googleLogin(googleId, email, profilePic);
 
-      res.cookie("driverRefreshToken", data.refreshToken, {
+      res.cookie('driverRefreshToken', data.refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "none",
+        sameSite: 'none',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
       res.status(HttpStatus.OK).json({
         message: messages.LOGIN_SUCCESS,
         accessToken: data.accessToken,
-        driver: data.driver,
+        driver: data.user,
       });
     } catch (error) {
       next(error);
     }
   }
 
-  async requestPasswordReset(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async requestPasswordReset(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await this.driverService.requestPasswordReset(req.body.email);
       res.status(HttpStatus.OK).json({
@@ -305,27 +244,17 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async resetPassword(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id, token, password } = req.body;
       await this.driverService.resetPassword(id, token, password);
-      res
-        .status(HttpStatus.OK)
-        .json({ message: messages.PASSWORD_RESET_SUCCESS });
+      res.status(HttpStatus.OK).json({ message: messages.PASSWORD_RESET_SUCCESS });
     } catch (error) {
       next(error);
     }
   }
 
-  async getDriverInfo(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getDriverInfo(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
@@ -338,11 +267,7 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async updateDriverInfo(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async updateDriverInfo(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
@@ -350,11 +275,7 @@ export class DriverController implements IDriverController {
 
       const { field, value } = req.body;
 
-      const response = await this.driverService.updateDriverInfo(
-        req.id,
-        field,
-        value
-      );
+      const response = await this.driverService.updateDriverInfo(req.id, field, value);
 
       res.status(HttpStatus.OK).json({ success: true, updatedFiled: response });
     } catch (error) {
@@ -362,11 +283,7 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async updateAvailability(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async updateAvailability(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.id) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
@@ -380,11 +297,7 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async getCurrentLocation(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getCurrentLocation(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const driverId = req.id;
       if (!driverId) {
@@ -397,29 +310,23 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async refreshToken(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const refreshToken = req.cookies?.driverRefreshToken;
 
       if (!refreshToken) {
-        console.log("Token not provided sending back");
+        console.log('Token not provided sending back');
 
-        res
-          .status(HttpStatus.UNAUTHORIZED)
-          .json({ message: messages.TOKEN_NOT_PROVIDED });
+        res.status(HttpStatus.UNAUTHORIZED).json({ message: messages.TOKEN_NOT_PROVIDED });
         return;
       }
 
       const response = await this.driverService.refreshToken(refreshToken);
 
-      res.cookie("driverRefreshToken", response.newRefreshToken, {
+      res.cookie('driverRefreshToken', response.newRefreshToken, {
         httpOnly: true,
-        secure: process.env.PRODUCTION === "production",
-        sameSite: "strict",
+        secure: process.env.PRODUCTION === 'production',
+        sameSite: 'strict',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
@@ -432,11 +339,7 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async updateProfilePic(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async updateProfilePic(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       const image = req.body.image;
@@ -455,15 +358,15 @@ export class DriverController implements IDriverController {
     try {
       const refreshToken = req.cookies.userRefreshToken as string;
       const authHeader = req.headers.authorization;
-      const accessToken = authHeader && authHeader.split(" ")[1];
+      const accessToken = authHeader && authHeader.split(' ')[1];
       if (!accessToken) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
       await this.driverService.logout(refreshToken, accessToken);
-      res.clearCookie("driverRefreshToken", {
+      res.clearCookie('driverRefreshToken', {
         httpOnly: true,
         secure: true,
-        sameSite: "none",
+        sameSite: 'none',
       });
 
       res.status(HttpStatus.OK).json({ success: true });

@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRideHistory extends Document {
   userId: mongoose.Types.ObjectId | string;
@@ -36,12 +36,12 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     driverId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Drivers",
+      ref: 'Drivers',
       required: true,
     },
     pickupCoords: { type: [Number], required: true },
@@ -59,7 +59,7 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>(
     timeTaken: { type: Number, required: false },
     status: {
       type: String,
-      enum: ["completed", "canceled", "ongoing"],
+      enum: ['completed', 'canceled', 'ongoing'],
       required: true,
     },
     startedAt: { type: Number },
@@ -67,23 +67,23 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>(
     cancelledAt: { type: Number },
     paymentStatus: {
       type: String,
-      enum: ["pending", "completed", "failed", "Not required"],
-      default: "pending",
+      enum: ['pending', 'completed', 'failed', 'Not required'],
+      default: 'pending',
     },
     paymentMethod: {
       type: String,
-      enum: ["wallet", "stripe"],
+      enum: ['wallet', 'stripe'],
       required: false,
     },
     OTP: { type: String, required: true },
-    cancelledBy: { type: String, enum: ["driver", "user"] },
+    cancelledBy: { type: String, enum: ['driver', 'user'] },
     appliedOffer: {
       type: {
-        offerId: { type: mongoose.Schema.Types.ObjectId, ref: "Offers" },
+        offerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Offers' },
         discountAmount: { type: Number },
         offerType: {
           type: String,
-          enum: ["percentage", "flat"],
+          enum: ['percentage', 'flat'],
           required: false,
         },
         originalCommission: { type: Number },
@@ -91,9 +91,9 @@ const RideHistorySchema: Schema = new Schema<IRideHistory>(
       required: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 RideHistorySchema.index({ userId: 1 });
 RideHistorySchema.index({ driverId: 1 });
-export default mongoose.model<IRideHistory>("RideHistory", RideHistorySchema);
+export default mongoose.model<IRideHistory>('RideHistory', RideHistorySchema);

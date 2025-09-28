@@ -1,5 +1,5 @@
-import mongoose from "mongoose";
-import { Schema, model, Document } from "mongoose";
+import mongoose from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
 export interface IWallet extends Document {
   userId: mongoose.Types.ObjectId | string;
@@ -9,7 +9,7 @@ export interface IWallet extends Document {
       type: string;
       date: number;
       amount: number;
-    }
+    },
   ];
 }
 
@@ -17,7 +17,7 @@ const userWallet = new Schema<IWallet>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     balance: { type: Number, required: true, default: 0 },
@@ -25,7 +25,7 @@ const userWallet = new Schema<IWallet>(
       {
         type: {
           type: String,
-          enum: ["credit", "debit"],
+          enum: ['credit', 'debit'],
           //   required: true,
         },
         date: { type: Number },
@@ -33,7 +33,7 @@ const userWallet = new Schema<IWallet>(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default model<IWallet>("UserWallet", userWallet);
+export default model<IWallet>('UserWallet', userWallet);

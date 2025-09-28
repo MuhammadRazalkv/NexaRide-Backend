@@ -1,10 +1,10 @@
-import { messages } from "../constants/httpMessages";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { IOffer } from "../models/offer.modal";
-import { IOfferRepo } from "../repositories/interfaces/offer.repo.interface";
-import { AppError } from "../utils/appError";
-import validateOfferData from "../utils/validators/offerValidation";
-import { IOfferService } from "./interfaces/offer.service.interface";
+import { messages } from '../constants/httpMessages';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { IOffer } from '../models/offer.modal';
+import { IOfferRepo } from '../repositories/interfaces/offer.repo.interface';
+import { AppError } from '../utils/appError';
+import validateOfferData from '../utils/validators/offerValidation';
+import { IOfferService } from './interfaces/offer.service.interface';
 
 export class OfferService implements IOfferService {
   constructor(private offerRepo: IOfferRepo) {}
@@ -46,10 +46,7 @@ export class OfferService implements IOfferService {
     return offer;
   }
 
-  async findValidOffers(
-    now: number,
-    rideFare: number
-  ): Promise<IOffer[] | null> {
+  async findValidOffers(now: number, rideFare: number): Promise<IOffer[] | null> {
     const validOffers = await this.offerRepo.findAll({
       isActive: true,
       validFrom: { $lte: now },
@@ -73,5 +70,4 @@ export class OfferService implements IOfferService {
     }
     await this.offerRepo.increaseOfferUsage(userId, offerId);
   }
-  
 }

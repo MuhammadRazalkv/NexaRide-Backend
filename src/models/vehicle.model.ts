@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, ObjectId } from "mongoose";
+import mongoose, { Schema, Document, ObjectId } from 'mongoose';
 
 export interface IVehicle extends Document {
   driverId: mongoose.Types.ObjectId;
@@ -43,20 +43,20 @@ const VehicleSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
     },
     rejectionReason: { type: String },
     verified: { type: Boolean, default: false },
     category: {
       type: String,
-      enum: ["Basic", "Premium", "Luxury"],
+      enum: ['Basic', 'Premium', 'Luxury'],
       require: false,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Vehicle = mongoose.model<IVehicle>("Vehicle", VehicleSchema);
+const Vehicle = mongoose.model<IVehicle>('Vehicle', VehicleSchema);
 
 export default Vehicle;

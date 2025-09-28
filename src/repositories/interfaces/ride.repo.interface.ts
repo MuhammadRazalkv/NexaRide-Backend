@@ -1,31 +1,19 @@
-import { IRideHistory } from "../../models/ride.history.model";
-import { UpdateResult } from "mongodb";
+import { IRideHistory } from '../../models/ride.history.model';
+import { UpdateResult } from 'mongodb';
 import {
   IRideWithDriver,
   IRideWithUser,
   IRideWithUserAndDriver,
-} from "../../services/interfaces/ride.service.interface";
-import { IComplaints } from "../../models/complaints.modal";
-import mongoose, { Types } from "mongoose";
-import { IUser } from "../../models/user.model";
-import { IDrivers } from "../../models/driver.model";
-import { IFeedback } from "../../models/feedbacks.model";
-import { IBaseRepository } from "./base.repo.interface";
-export interface IComplaintsWithUserDriver {
-  _id: Types.ObjectId;
-  rideId: Types.ObjectId;
-  filedById: Types.ObjectId;
-  filedByRole: string;
-  complaintReason: string;
-  description?: string;
-  status: string;
-  createdAt: Date;
-  updatedAt: Date;
-  user: string;
-  driver: string;
-}
-export interface PopulatedRideHistory
-  extends Omit<IRideHistory, "userId" | "driverId"> {
+} from '../../services/interfaces/ride.service.interface';
+import { IComplaints } from '../../models/complaints.modal';
+import mongoose, { Types } from 'mongoose';
+import { IUser } from '../../models/user.model';
+import { IDrivers } from '../../models/driver.model';
+import { IFeedback } from '../../models/feedbacks.model';
+import { IBaseRepository } from './base.repo.interface';
+import { ComplaintsWithUserDriver } from '../../dtos/response/complaint.res.dto';
+
+export interface PopulatedRideHistory extends Omit<IRideHistory, 'userId' | 'driverId'> {
   userId: IUser;
   driverId: IDrivers;
 }
@@ -66,17 +54,14 @@ export interface IRideRepo extends IBaseRepository<IRideHistory> {
     filedById: string,
     filedByRole: string,
     reason: string,
-    description?: string
+    description?: string,
   ): Promise<IComplaints | null>;
-  getComplaintInfo(
-    rideId: string,
-    filedById: string
-  ): Promise<IComplaints | null>;
+  getComplaintInfo(rideId: string, filedById: string): Promise<IComplaints | null>;
   getAllComplaints(
     skip: number,
     limit: number,
-    filterBy: string
-  ): Promise<IComplaintsWithUserDriver[] | null>;
+    filterBy: string,
+  ): Promise<ComplaintsWithUserDriver[] | null>;
   getRideInfoWithUser(rideId: string): Promise<IRideWithUser | null>;
   getComplainsLength(): Promise<number>;
   getComplaintById(id: string): Promise<IComplaints | null>;
@@ -87,18 +72,18 @@ export interface IRideRepo extends IBaseRepository<IRideHistory> {
     rideId: mongoose.Types.ObjectId,
     ratedById: mongoose.Types.ObjectId,
     ratedAgainstId: mongoose.Types.ObjectId,
-    ratedByRole: "user" | "driver",
-    ratedAgainstRole: "user" | "driver",
+    ratedByRole: 'user' | 'driver',
+    ratedAgainstRole: 'user' | 'driver',
     rating: number,
-    feedback?: string
+    feedback?: string,
   ): Promise<IFeedback | null>;
   getAvgRating(
-    ratedAgainstId: mongoose.Types.ObjectId ,
-    ratedAgainstRole: "user" | "driver"
+    ratedAgainstId: mongoose.Types.ObjectId,
+    ratedAgainstRole: 'user' | 'driver',
   ): Promise<{ totalRatings: number; avgRating: number }>;
   rideCounts(
     id: string,
-    requestedBy: "driver" | "user"
+    requestedBy: 'driver' | 'user',
   ): Promise<{
     totalRides: number;
     completedRides: number;
@@ -106,11 +91,10 @@ export interface IRideRepo extends IBaseRepository<IRideHistory> {
   }>;
   paymentInfos(
     id: string,
-    requestedBy: "driver" | "user"
+    requestedBy: 'driver' | 'user',
   ): Promise<{
     totalTransaction: number;
     usingWallet: number;
     usingStripe: number;
   }>;
-
 }

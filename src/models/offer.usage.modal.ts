@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IOfferUsage extends Document {
   userId: mongoose.Types.ObjectId | string;
@@ -10,19 +10,19 @@ const OfferUsageSchema = new Schema<IOfferUsage>(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     offerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Offers",
+      ref: 'Offers',
       required: true,
     },
     usageCount: { type: Number, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const OfferLimit = mongoose.model<IOfferUsage>("OfferLimit", OfferUsageSchema);
+const OfferLimit = mongoose.model<IOfferUsage>('OfferLimit', OfferUsageSchema);
 
 export default OfferLimit;

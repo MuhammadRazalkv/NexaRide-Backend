@@ -1,18 +1,18 @@
-import { IVehicle } from "../models/vehicle.model";
-import cloudinary from "../utils/cloudinary";
-import mongoose from "mongoose";
-import { IVehicleService } from "./interfaces/vehicle.interface";
-import { IVehicleRepo } from "../repositories/interfaces/vehicle.repo.interface";
-import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
-import { AppError } from "../utils/appError";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { messages } from "../constants/httpMessages";
-import { validateVehicleSchema } from "../utils/validators/vehicleSchemaValidators";
+import { IVehicle } from '../models/vehicle.model';
+import cloudinary from '../utils/cloudinary';
+import mongoose from 'mongoose';
+import { IVehicleService } from './interfaces/vehicle.interface';
+import { IVehicleRepo } from '../repositories/interfaces/vehicle.repo.interface';
+import { IDriverRepo } from '../repositories/interfaces/driver.repo.interface';
+import { AppError } from '../utils/appError';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { messages } from '../constants/httpMessages';
+import { validateVehicleSchema } from '../utils/validators/vehicleSchemaValidators';
 
 export class VehicleService implements IVehicleService {
   constructor(
     private vehicleRepo: IVehicleRepo,
-    private driverRepo: IDriverRepo
+    private driverRepo: IDriverRepo,
   ) {}
   async addVehicle(data: IVehicle) {
     if (!data) {
@@ -28,16 +28,9 @@ export class VehicleService implements IVehicleService {
     // const parsedData = vehicleSchema.safeParse(data);
     const parsedData = validateVehicleSchema(data);
     if (!parsedData.success) {
-      const errorMessages = Object.values(
-        parsedData.error.flatten().fieldErrors
-      )
-        .flat()
-        .join(", ");
+      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors).flat().join(', ');
 
-      throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        messages.VALIDATION_ERROR + errorMessages
-      );
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + errorMessages);
     }
 
     // Convert driverId to ObjectId
@@ -51,18 +44,18 @@ export class VehicleService implements IVehicleService {
 
     // Upload vehicle images
     const vehicleImages = { ...parsedData.data.vehicleImages };
-    for (const key of ["frontView", "rearView", "interiorView"] as const) {
+    for (const key of ['frontView', 'rearView', 'interiorView'] as const) {
       try {
         const img = vehicleImages[key];
         const res = await cloudinary.uploader.upload(img, {
-          folder: "/DriverVehicleImages",
+          folder: '/DriverVehicleImages',
         });
         vehicleImages[key] = res.secure_url;
       } catch (error) {
         console.error(`Failed to upload image ${vehicleImages[key]}:`, error);
         throw new AppError(
           HttpStatus.BAD_GATEWAY,
-          error instanceof AppError ? error.message : "Image upload failed"
+          error instanceof AppError ? error.message : 'Image upload failed',
         );
       }
     }
@@ -78,7 +71,7 @@ export class VehicleService implements IVehicleService {
         driver: {
           name: driver.name,
           email: driver.email,
-          status: "Pending",
+          status: 'Pending',
         },
       };
     } catch (error: any) {
@@ -86,14 +79,11 @@ export class VehicleService implements IVehicleService {
         const field = Object.keys(error.keyPattern)[0];
         throw new AppError(
           HttpStatus.CONFLICT,
-          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`,
         );
       }
 
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 
@@ -111,16 +101,9 @@ export class VehicleService implements IVehicleService {
     const parsedData = validateVehicleSchema(data);
     // const parsedData = vehicleSchema.safeParse(data);
     if (!parsedData.success) {
-      const errorMessages = Object.values(
-        parsedData.error.flatten().fieldErrors
-      )
-        .flat()
-        .join(", ");
+      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors).flat().join(', ');
 
-      throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        messages.VALIDATION_ERROR + errorMessages
-      );
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + errorMessages);
     }
 
     // Convert driverId to ObjectId
@@ -142,17 +125,17 @@ export class VehicleService implements IVehicleService {
     // Upload vehicle images
     try {
       const vehicleImages = { ...parsedData.data.vehicleImages };
-      for (const key of ["frontView", "rearView", "interiorView"] as const) {
+      for (const key of ['frontView', 'rearView', 'interiorView'] as const) {
         try {
           const img = vehicleImages[key];
           const res = await cloudinary.uploader.upload(img, {
-            folder: "/DriverVehicleImages",
+            folder: '/DriverVehicleImages',
           });
           vehicleImages[key] = res.secure_url;
         } catch (error) {
           throw new AppError(
             HttpStatus.BAD_GATEWAY,
-            error instanceof AppError ? error.message : "Image upload failed"
+            error instanceof AppError ? error.message : 'Image upload failed',
           );
         }
       }
@@ -161,15 +144,14 @@ export class VehicleService implements IVehicleService {
       const vehicleData = { ...parsedData.data, vehicleImages };
 
       await this.vehicleRepo.updateById(vehicleId, {
-        $set: { ...vehicleData, status: "pending" },
+        $set: { ...vehicleData, status: 'pending' },
       });
-
 
       return {
         driver: {
           name: driver.name,
           email: driver.email,
-          status: "Pending",
+          status: 'Pending',
         },
       };
     } catch (error: any) {
@@ -184,14 +166,11 @@ export class VehicleService implements IVehicleService {
 
         throw new AppError(
           HttpStatus.CONFLICT,
-          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`,
         );
       }
 
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 
@@ -209,7 +188,7 @@ export class VehicleService implements IVehicleService {
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
-    if (vehicle.status !== "rejected") {
+    if (vehicle.status !== 'rejected') {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.DRIVER_NOT_REJECTED);
     }
 

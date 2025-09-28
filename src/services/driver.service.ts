@@ -1,60 +1,53 @@
-import { IDrivers } from "../models/driver.model";
-import { IDriverService } from "./interfaces/driver.service.interface";
-import OTPRepo from "../repositories/otp.repo";
-import { html } from "../constants/OTP";
-import crypto from "crypto";
-import { hashPassword } from "../utils/passwordManager";
+import { IDrivers } from '../models/driver.model';
+import { IDriverService } from './interfaces/driver.service.interface';
+import OTPRepo from '../repositories/otp.repo';
+import { html } from '../constants/OTP';
+import crypto from 'crypto';
+import { hashPassword } from '../utils/passwordManager';
 import {
   generateAccessToken,
   generateRefreshToken,
   forgotPasswordToken,
   verifyForgotPasswordToken,
   verifyRefreshToken,
-} from "../utils/jwt";
-import { comparePassword } from "../utils/passwordManager";
-import sendEmail from "../utils/mailSender";
-import { resetLinkBtn } from "../constants/OTP";
-import mongoose from "mongoose";
-import { IDriverRepo } from "../repositories/interfaces/driver.repo.interface";
-import { IVehicleRepo } from "../repositories/interfaces/vehicle.repo.interface";
-import { AppError } from "../utils/appError";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { messages } from "../constants/httpMessages";
-import cloudinary from "../utils/cloudinary";
-import {
-  getDriverInfoRedis,
-  getFromRedis,
-  setToRedis,
-  updateDriverFelids,
-} from "../config/redis";
+} from '../utils/jwt';
+import { comparePassword } from '../utils/passwordManager';
+import sendEmail from '../utils/mailSender';
+import { resetLinkBtn } from '../constants/OTP';
+import mongoose from 'mongoose';
+import { IDriverRepo } from '../repositories/interfaces/driver.repo.interface';
+import { IVehicleRepo } from '../repositories/interfaces/vehicle.repo.interface';
+import { AppError } from '../utils/appError';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { messages } from '../constants/httpMessages';
+import cloudinary from '../utils/cloudinary';
+import { getDriverInfoRedis, getFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
 import {
   validateDriverReApplySchema,
   validateDriverSchema,
-} from "../utils/validators/driverSchemaValidators";
-import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from "../utils/env";
+} from '../utils/validators/driverSchemaValidators';
+import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
 
 const generateTokens = (driverId: string) => ({
-  accessToken: generateAccessToken(driverId, "driver"),
-  refreshToken: generateRefreshToken(driverId, "driver"),
+  accessToken: generateAccessToken(driverId, 'driver'),
+  refreshToken: generateRefreshToken(driverId, 'driver'),
 });
 
 export class DriverService implements IDriverService {
   constructor(
     private driverRepo: IDriverRepo,
-    private vehicleRepo: IVehicleRepo
+    private vehicleRepo: IVehicleRepo,
   ) {}
 
   async emailVerification(email: string) {
-    if (!email)
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
+    if (!email) throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
     const existingDriver = await this.driverRepo.findOne({ email });
-    if (existingDriver)
-      throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
+    if (existingDriver) throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
 
     const OTP = crypto.randomInt(1000, 10000).toString();
-    console.log("OTP", OTP);
+    console.log('OTP', OTP);
     OTPRepo.setOTP(email, OTP);
-    OTPRepo.sendOTP(email, "Your NexaRide OTP", html(OTP)).catch((error) => {
+    OTPRepo.sendOTP(email, 'Your NexaRide OTP', html(OTP)).catch((error) => {
       throw new AppError(HttpStatus.BAD_GATEWAY, error.message);
     });
   }
@@ -79,17 +72,14 @@ export class DriverService implements IDriverService {
     }
 
     const existingUser = await this.driverRepo.findOne({ email });
-    if (existingUser)
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_ALREADY_EXISTS);
+    if (existingUser) throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_ALREADY_EXISTS);
 
     const OTP = crypto.randomInt(1000, 10000).toString();
-    console.log("resend - OTP", OTP);
+    console.log('resend - OTP', OTP);
     OTPRepo.setOTP(email, OTP);
-    OTPRepo.sendOTP(email, "Your new  NexaRide OTP", html(OTP)).catch(
-      (error) => {
-        throw new AppError(HttpStatus.BAD_GATEWAY, error.message);
-      }
-    );
+    OTPRepo.sendOTP(email, 'Your new  NexaRide OTP', html(OTP)).catch((error) => {
+      throw new AppError(HttpStatus.BAD_GATEWAY, error.message);
+    });
   }
 
   async addInfo(data: IDrivers) {
@@ -102,16 +92,9 @@ export class DriverService implements IDriverService {
 
     if (!parsedData.success) {
       // Extracting error messages correctly
-      const errorMessages = Object.values(
-        parsedData.error.flatten().fieldErrors
-      )
-        .flat()
-        .join(", ");
+      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors).flat().join(', ');
 
-      throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        messages.VALIDATION_ERROR + ":" + errorMessages
-      );
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + ':' + errorMessages);
     }
     if (!parsedData.data.email) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
@@ -140,12 +123,12 @@ export class DriverService implements IDriverService {
 
     const randomCoordinate: [number, number] =
       randomLocations[Math.floor(Math.random() * randomLocations.length)];
-
+    
     const { state, city, street, pin_code, ...rest } = parsedData.data;
     const updatedData = {
       ...rest,
       address: { state, city, street, pin_code },
-      location: { type: "Point", coordinates: randomCoordinate },
+      location: { type: 'Point', coordinates: randomCoordinate },
     };
     try {
       const newDriver = await this.driverRepo.create(updatedData);
@@ -162,14 +145,11 @@ export class DriverService implements IDriverService {
 
         throw new AppError(
           HttpStatus.CONFLICT,
-          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`,
         );
       }
 
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 
@@ -189,10 +169,7 @@ export class DriverService implements IDriverService {
 
     // Verify password
     if (!driver.password) {
-      throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        messages.GOOGLE_REGISTERED_ACCOUNT
-      );
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.GOOGLE_REGISTERED_ACCOUNT);
     }
 
     const success = await comparePassword(driverData.password, driver.password);
@@ -207,14 +184,14 @@ export class DriverService implements IDriverService {
     if (activeUser) {
       throw new AppError(
         HttpStatus.BAD_REQUEST,
-        "Driver is already logged in from another device or session."
+        'Driver is already logged in from another device or session.',
       );
     }
 
     // Generate tokens
     return {
       ...generateTokens(driver._id as string),
-      driver: {
+      user: {
         _id: driver._id,
         name: driver.name,
         email: driver.email,
@@ -225,10 +202,9 @@ export class DriverService implements IDriverService {
   async getStatus(driverId: string) {
     // const id = new mongoose.Types.ObjectId(driverId);
     const driver = await this.driverRepo.findById(driverId);
-    if (!driver)
-      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+    if (!driver) throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
 
-    const vehicleId = driver.vehicleId ? driver.vehicleId.toString() : "";
+    const vehicleId = driver.vehicleId ? driver.vehicleId.toString() : '';
     const vehicle = await this.vehicleRepo.findById(vehicleId);
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
@@ -248,7 +224,7 @@ export class DriverService implements IDriverService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    if (driver.status !== "rejected") {
+    if (driver.status !== 'rejected') {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.DRIVER_NOT_REJECTED);
     }
 
@@ -270,16 +246,11 @@ export class DriverService implements IDriverService {
       const parsedData = validateDriverReApplySchema(data);
       if (!parsedData.success) {
         // Extracting error messages correctly
-        const errorMessages = Object.values(
-          parsedData.error.flatten().fieldErrors
-        )
+        const errorMessages = Object.values(parsedData.error.flatten().fieldErrors)
           .flat()
-          .join(", ");
+          .join(', ');
 
-        throw new AppError(
-          HttpStatus.BAD_REQUEST,
-          messages.VALIDATION_ERROR + errorMessages
-        );
+        throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + errorMessages);
       }
 
       if (!parsedData.data.password)
@@ -287,7 +258,7 @@ export class DriverService implements IDriverService {
       parsedData.data.password = await hashPassword(parsedData.data.password);
 
       const updatedData = await this.driverRepo.updateById(id, {
-        $set: { ...parsedData.data, status: "pending" },
+        $set: { ...parsedData.data, status: 'pending' },
       });
 
       return updatedData;
@@ -301,14 +272,11 @@ export class DriverService implements IDriverService {
 
         throw new AppError(
           HttpStatus.CONFLICT,
-          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`,
         );
       }
 
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 
@@ -322,7 +290,7 @@ export class DriverService implements IDriverService {
         });
       }
 
-      const message = "Driver already exists , please log in instead";
+      const message = 'Driver already exists , please log in instead';
       return message;
     }
     OTPRepo.markEmailVerified(email);
@@ -357,13 +325,13 @@ export class DriverService implements IDriverService {
     if (activeUser) {
       throw new AppError(
         HttpStatus.BAD_REQUEST,
-        "Driver is already logged in from another device or session."
+        'Driver is already logged in from another device or session.',
       );
     }
 
     return {
       ...generateTokens(driver._id as string),
-      driver: {
+      user: {
         _id: driver._id,
         name: driver.name,
         email: driver.email,
@@ -386,8 +354,8 @@ export class DriverService implements IDriverService {
 
     await sendEmail(
       driver.email,
-      "Password Reset Request - Action Required",
-      resetLinkBtn(resetUrl)
+      'Password Reset Request - Action Required',
+      resetLinkBtn(resetUrl),
     );
   }
 
@@ -432,32 +400,26 @@ export class DriverService implements IDriverService {
     };
   }
 
-  async updateDriverInfo(
-    id: string,
-    field: keyof IDrivers | string,
-    value: string
-  ) {
+  async updateDriverInfo(id: string, field: keyof IDrivers | string, value: string) {
     if (!id || !field || !value) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
     // Handle nested address fields
-    const addressFields = ["street", "city", "state", "pin_code"];
+    const addressFields = ['street', 'city', 'state', 'pin_code'];
     if (addressFields.includes(field)) {
       field = `address.${field}`;
     }
 
     const response = await this.driverRepo.updateById(id, {
-      $set: { [field]: value, status: "pending" },
+      $set: { [field]: value, status: 'pending' },
     });
     if (!response) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
     // Safely get the nested value
-    const updatedValue = field
-      .split(".")
-      .reduce((acc: any, key) => acc?.[key], response);
+    const updatedValue = field.split('.').reduce((acc: any, key) => acc?.[key], response);
 
     return updatedValue;
   }
@@ -472,9 +434,8 @@ export class DriverService implements IDriverService {
     if (!driverInfo) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
-    const newDriverStatus =
-      driverInfo.status == "online" ? "offline" : "online";
-    await updateDriverFelids(`driver:${id}`, "status", newDriverStatus);
+    const newDriverStatus = driverInfo.status == 'online' ? 'offline' : 'online';
+    await updateDriverFelids(`driver:${id}`, 'status', newDriverStatus);
   }
 
   async getCurrentLocation(id: string) {
@@ -495,8 +456,8 @@ export class DriverService implements IDriverService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_INVALID);
     }
 
-    const newAccessToken = generateAccessToken(refresh.id, "driver");
-    const newRefreshToken = generateRefreshToken(refresh.id, "driver");
+    const newAccessToken = generateAccessToken(refresh.id, 'driver');
+    const newRefreshToken = generateRefreshToken(refresh.id, 'driver');
 
     return { newAccessToken, newRefreshToken };
   }
@@ -507,7 +468,7 @@ export class DriverService implements IDriverService {
     }
 
     const res = await cloudinary.uploader.upload(image, {
-      folder: "/DriverProfilePic",
+      folder: '/DriverProfilePic',
     });
     const driver = await this.driverRepo.updateById(id, {
       $set: { profilePic: res.secure_url },
@@ -520,12 +481,9 @@ export class DriverService implements IDriverService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
-    const updatedCategory =
-      category.charAt(0).toUpperCase() + category.slice(1);
-    const vehicleCategory = await this.driverRepo.getPriceByCategory(
-      updatedCategory
-    );
-    console.log("vehicle category info", vehicleCategory);
+    const updatedCategory = category.charAt(0).toUpperCase() + category.slice(1);
+    const vehicleCategory = await this.driverRepo.getPriceByCategory(updatedCategory);
+    console.log('vehicle category info', vehicleCategory);
 
     return vehicleCategory.farePerKm;
   }
@@ -533,7 +491,7 @@ export class DriverService implements IDriverService {
   async logout(refreshToken: string, accessToken: string): Promise<void> {
     const refreshEXP = (getRefreshTokenMaxAge() / 1000) | 0;
     const accessEXP = (getAccessTokenMaxAge() / 1000) | 0;
-    await setToRedis(refreshToken, "Blacklisted", refreshEXP);
-    await setToRedis(accessToken, "BlackListed", accessEXP);
+    await setToRedis(refreshToken, 'Blacklisted', refreshEXP);
+    await setToRedis(accessToken, 'BlackListed', accessEXP);
   }
 }

@@ -1,59 +1,43 @@
-import { Request, Response, NextFunction } from "express";
-import { IUserController } from "./interfaces/user.controller.interface";
-import { ExtendedRequest } from "../middlewares/auth.middleware";
-import IUserService from "../services/interfaces/user.service.interface";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { messages } from "../constants/httpMessages";
-import { AppError } from "../utils/appError";
+import { Request, Response, NextFunction } from 'express';
+import { IUserController } from './interfaces/user.controller.interface';
+import { ExtendedRequest } from '../middlewares/auth.middleware';
+import IUserService from '../services/interfaces/user.service.interface';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { messages } from '../constants/httpMessages';
+import { AppError } from '../utils/appError';
 export class UserController implements IUserController {
   constructor(private userService: IUserService) {}
 
-  async emailVerification(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async emailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const email = req.body.email;
       await this.userService.emailVerification(email);
-      res
-        .status(HttpStatus.CREATED)
-        .json({ success: true, message: messages.OTP_SENT_SUCCESS });
+      res.status(HttpStatus.CREATED).json({ success: true, message: messages.OTP_SENT_SUCCESS });
     } catch (error) {
       next(error);
     }
   }
 
-  async verifyOTP(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, otp } = req.body;
       await this.userService.verifyOTP(email, otp);
-      res
-        .status(HttpStatus.OK)
-        .json({ message: messages.EMAIL_VERIFICATION_SUCCESS });
+      res.status(HttpStatus.OK).json({ message: messages.EMAIL_VERIFICATION_SUCCESS });
     } catch (error) {
       next(error);
     }
   }
 
-  async addInfo(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async addInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const data = await this.userService.addInfo(req.body);
 
       // Securely store the refresh token in an HTTP-only cookie
 
-      res.cookie("userRefreshToken", data.refreshToken, {
+      res.cookie('userRefreshToken', data.refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "none",
+        sameSite: 'none',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
@@ -67,17 +51,11 @@ export class UserController implements IUserController {
     }
   }
 
-  async reSendOTP(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async reSendOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email } = req.body;
       await this.userService.reSendOTP(email);
-      res
-        .status(HttpStatus.CREATED)
-        .json({ message: messages.OTP_SENT_SUCCESS });
+      res.status(HttpStatus.CREATED).json({ message: messages.OTP_SENT_SUCCESS });
     } catch (error) {
       next(error);
     }
@@ -87,10 +65,10 @@ export class UserController implements IUserController {
     try {
       const { email, password } = req.body;
       const data = await this.userService.login(email, password);
-      res.cookie("userRefreshToken", data.refreshToken, {
+      res.cookie('userRefreshToken', data.refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "none",
+        sameSite: 'none',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
@@ -104,19 +82,15 @@ export class UserController implements IUserController {
     }
   }
 
-  async googleLogin(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async googleLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, googleId, name } = req.body;
       const data = await this.userService.googleLogin(email, googleId, name);
 
-      res.cookie("userRefreshToken", data.refreshToken, {
+      res.cookie('userRefreshToken', data.refreshToken, {
         httpOnly: true,
         secure: true,
-        sameSite: "none",
+        sameSite: 'none',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
@@ -130,11 +104,7 @@ export class UserController implements IUserController {
     }
   }
 
-  async requestPasswordReset(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async requestPasswordReset(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       await this.userService.requestPasswordReset(req.body.email);
       res.status(HttpStatus.OK).json({
@@ -145,27 +115,17 @@ export class UserController implements IUserController {
     }
   }
 
-  async resetPassword(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id, token, password } = req.body;
       await this.userService.resetPassword(id, token, password);
-      res
-        .status(HttpStatus.OK)
-        .json({ message: messages.PASSWORD_RESET_SUCCESS });
+      res.status(HttpStatus.OK).json({ message: messages.PASSWORD_RESET_SUCCESS });
     } catch (error) {
       next(error);
     }
   }
 
-  async getUserInfo(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async getUserInfo(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       if (!id) {
@@ -179,27 +139,21 @@ export class UserController implements IUserController {
     }
   }
 
-  async refreshToken(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async refreshToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const refreshToken = req.cookies?.userRefreshToken;
 
       if (!refreshToken) {
-        res
-          .status(HttpStatus.UNAUTHORIZED)
-          .json({ message: messages.TOKEN_NOT_PROVIDED });
+        res.status(HttpStatus.UNAUTHORIZED).json({ message: messages.TOKEN_NOT_PROVIDED });
         return;
       }
 
       const response = await this.userService.refreshToken(refreshToken);
 
-      res.cookie("refreshToken", response.newRefreshToken, {
+      res.cookie('refreshToken', response.newRefreshToken, {
         httpOnly: true,
-        secure: process.env.PRODUCTION === "production",
-        sameSite: "strict",
+        secure: process.env.PRODUCTION === 'production',
+        sameSite: 'strict',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
@@ -212,11 +166,7 @@ export class UserController implements IUserController {
     }
   }
 
-  async updateUserName(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async updateUserName(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       const name = req.body.name;
@@ -231,11 +181,7 @@ export class UserController implements IUserController {
     }
   }
 
-  async updateUserPhone(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async updateUserPhone(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       const phone = req.body.phone;
@@ -250,11 +196,7 @@ export class UserController implements IUserController {
     }
   }
 
-  async updateUserPfp(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async updateUserPfp(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = req.id;
       const image = req.body.image;
@@ -269,11 +211,7 @@ export class UserController implements IUserController {
     }
   }
 
-  async subscriptionStatus(
-    req: ExtendedRequest,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> {
+  async subscriptionStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.id;
       if (!userId) {
@@ -289,7 +227,7 @@ export class UserController implements IUserController {
   async subscriptionHistory(
     req: ExtendedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
       if (!req.id) {
@@ -297,10 +235,7 @@ export class UserController implements IUserController {
       }
       const page = parseInt(req.query.page as string);
 
-      const { history, total } = await this.userService.subscriptionHistory(
-        req.id,
-        page
-      );
+      const { history, total } = await this.userService.subscriptionHistory(req.id, page);
       res.status(HttpStatus.OK).json({ success: true, history, total });
     } catch (error) {
       next(error);
@@ -311,15 +246,15 @@ export class UserController implements IUserController {
     try {
       const refreshToken = req.cookies.userRefreshToken as string;
       const authHeader = req.headers.authorization;
-      const accessToken = authHeader && authHeader.split(" ")[1];
+      const accessToken = authHeader && authHeader.split(' ')[1];
       if (!accessToken) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
       await this.userService.logout(refreshToken, accessToken);
-      res.clearCookie("userRefreshToken", {
+      res.clearCookie('userRefreshToken', {
         httpOnly: true,
         secure: true,
-        sameSite: "none",
+        sameSite: 'none',
       });
 
       res.status(HttpStatus.OK).json({ success: true });

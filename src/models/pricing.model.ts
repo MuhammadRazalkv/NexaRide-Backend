@@ -1,7 +1,7 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPricing extends Document {
-  vehicleClass: "Basic" | "Premium" | "Luxury";
+  vehicleClass: 'Basic' | 'Premium' | 'Luxury';
   farePerKm: number;
 }
 
@@ -9,14 +9,14 @@ const PricingSchema: Schema = new Schema(
   {
     vehicleClass: {
       type: String,
-      enum: ["Basic", "Premium", "Luxury"],
+      enum: ['Basic', 'Premium', 'Luxury'],
       required: true,
     },
     farePerKm: { type: Number, required: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Pricing = mongoose.model<IPricing>("Pricing", PricingSchema);
+const Pricing = mongoose.model<IPricing>('Pricing', PricingSchema);
 
 export default Pricing;

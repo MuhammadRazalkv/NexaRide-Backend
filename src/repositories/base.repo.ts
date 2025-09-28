@@ -1,5 +1,5 @@
-import { Model, Document, FilterQuery, UpdateQuery } from "mongoose";
-import { IBaseRepository } from "./interfaces/base.repo.interface";
+import { Model, Document, FilterQuery, UpdateQuery } from 'mongoose';
+import { IBaseRepository } from './interfaces/base.repo.interface';
 
 export class BaseRepository<T extends Document> implements IBaseRepository<T> {
   protected model: Model<T>;
@@ -8,17 +8,11 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     this.model = model;
   }
 
-  async findOne(
-    filter: FilterQuery<T>,
-    projection?: Record<string, 1 | 0>
-  ): Promise<T | null> {
+  async findOne(filter: FilterQuery<T>, projection?: Record<string, 1 | 0>): Promise<T | null> {
     return this.model.findOne(filter).select(projection || {});
   }
 
-  async findById(
-    id: string,
-    projection?: Record<string, 1 | 0>
-  ): Promise<T | null> {
+  async findById(id: string, projection?: Record<string, 1 | 0>): Promise<T | null> {
     return this.model.findById(id).select(projection || {});
   }
 
@@ -26,10 +20,7 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     return this.model.create(data);
   }
 
-  async update(
-    filter: FilterQuery<T>,
-    update: UpdateQuery<T>
-  ): Promise<T | null> {
+  async update(filter: FilterQuery<T>, update: UpdateQuery<T>): Promise<T | null> {
     return this.model.findOneAndUpdate(filter, update, { new: true });
   }
 
@@ -43,8 +34,8 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
     options?: {
       upsert?: boolean;
       new?: boolean;
-    }
-  ):Promise<any> {
+    },
+  ): Promise<any> {
     return this.model.findOneAndUpdate(filter, update, {
       new: options?.new ?? false,
       upsert: options?.upsert ?? false,
@@ -57,9 +48,10 @@ export class BaseRepository<T extends Document> implements IBaseRepository<T> {
       sort?: Record<string, 1 | -1>;
       skip?: number;
       limit?: number;
-    }, projection?: Record<string, 1 | 0>
+    },
+    projection?: Record<string, 1 | 0>,
   ) {
-    let query = this.model.find(filter).select(projection || {});;
+    let query = this.model.find(filter).select(projection || {});
 
     if (options?.sort) {
       query = query.sort(options.sort);

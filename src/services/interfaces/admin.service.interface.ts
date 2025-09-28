@@ -1,39 +1,40 @@
-import { ICommission } from "../../models/commission.model";
-import { IComplaints } from "../../models/complaints.modal";
-import { IDrivers } from "../../models/driver.model";
-import { IRideHistory } from "../../models/ride.history.model";
-import { ISubscription } from "../../models/subscription.model";
-import { IUser } from "../../models/user.model";
-import { IVehicle } from "../../models/vehicle.model";
+import { LoginResponseAdminDTO } from '../../dtos/response/auth.res.dto';
+import { BaseAccountDTO } from '../../dtos/response/base.res.dto';
+import { CommissionResDTO } from '../../dtos/response/commission.res.dto';
+import { ComplaintResDTO, ComplaintsWithUserDriver } from '../../dtos/response/complaint.res.dto';
+import { DriverResDTO, DriverWithVehicleResDTO, VehicleResDTO } from '../../dtos/response/driver.res.dto';
+import { PremiumUsersResDTO } from '../../dtos/response/premium.user.res.dto';
+import { FullRideListView, PopulatedRideResDTO, RideInfoWithUserAndDriverNameDTO } from '../../dtos/response/ride.res.dto';
+import { UserResDTO } from '../../dtos/response/user.dto';
+import { ICommission } from '../../models/commission.model';
+import { IComplaints } from '../../models/complaints.modal';
+import { IDrivers } from '../../models/driver.model';
+import { IRideHistory } from '../../models/ride.history.model';
+import { ISubscription } from '../../models/subscription.model';
+import { IUser } from '../../models/user.model';
+import { IVehicle } from '../../models/vehicle.model';
 import {
-  IComplaintsWithUserDriver,
   PopulatedRideHistory,
-} from "../../repositories/interfaces/ride.repo.interface";
-import { IRideWithUserAndDriver } from "./ride.service.interface";
+} from '../../repositories/interfaces/ride.repo.interface';
+import { IRideWithUserAndDriver } from './ride.service.interface';
 
 interface IFare {
   basic: number;
   premium: number;
   luxury: number;
 }
-export interface IPremiumUsers extends Omit<ISubscription, "userId"> {
-  userId: Partial<IUser>;
+export interface IPremiumUsers extends Omit<ISubscription, 'userId'> {
+  userId: string
 }
 
 export interface IAdminService {
-  login(
-    email: string,
-    password: string
-  ): Promise<{
-    accessToken: string;
-    refreshToken: string;
-  }>;
+  login(email: string, password: string): Promise<LoginResponseAdminDTO>;
   getUsers(
     page: number,
     search: string,
-    sort: string
+    sort: string,
   ): Promise<{
-    users: IUser[] | null;
+    users: BaseAccountDTO[];
     total: number;
   }>;
   getPendingDriverCount(): Promise<{
@@ -41,48 +42,46 @@ export interface IAdminService {
   }>;
   changeUserStatus(id: string): Promise<{
     message: string;
-    user: Partial<IUser>;
+    user: BaseAccountDTO;
   }>;
   getDrivers(
     page: number,
     search: string,
-    sort: string
+    sort: string,
   ): Promise<{
-    drivers: IDrivers[];
+    drivers: BaseAccountDTO[];
     total: number;
   }>;
   changeDriverStatus(id: string): Promise<{
     message: string;
-    driver: IDrivers;
+    driver: DriverResDTO;
   }>;
-  getPendingDriversWithVehicle(): Promise<{
-    drivers: Partial<IDrivers>[];
-  }>;
+  getPendingDriversWithVehicle(): Promise<DriverWithVehicleResDTO[]>;
   rejectDriver(
     id: string,
-    reason: string
+    reason: string,
   ): Promise<{
     message: string;
-    driver: IDrivers;
+    driver: DriverResDTO;
   }>;
   approveDriver(id: string): Promise<{
     message: string;
-    driver: IDrivers;
+    driver: DriverResDTO;
   }>;
-  getVehicleInfo(id: string): Promise<IVehicle>;
+  getVehicleInfo(id: string): Promise<VehicleResDTO>;
   approveVehicle(
     id: string,
-    category: string
+    category: string,
   ): Promise<{
     message: string;
-    vehicle: IVehicle;
+    vehicle: VehicleResDTO;
   }>;
   rejectVehicle(
     id: string,
-    reason: string
+    reason: string,
   ): Promise<{
     message: string;
-    vehicle: IVehicle;
+    vehicle: VehicleResDTO;
   }>;
   updateFare(fare: IFare): Promise<IFare>;
   getFares(): Promise<IFare>;
@@ -93,16 +92,13 @@ export interface IAdminService {
 
   getAllComplaints(
     page: number,
-    filter: string
-  ): Promise<{ complaints: IComplaintsWithUserDriver[] | null; total: number }>;
+    filter: string,
+  ): Promise<{ complaints: ComplaintsWithUserDriver[] | null; total: number }>;
   getComplaintInDetail(complaintId: string): Promise<{
-    complaint: IComplaints | null;
-    rideInfo: PopulatedRideHistory | null;
+    complaint: ComplaintResDTO | null;
+    rideInfo: PopulatedRideResDTO | null;
   }>;
-  changeComplaintStatus(
-    complaintId: string,
-    type: string
-  ): Promise<IComplaints | null>;
+  changeComplaintStatus(complaintId: string, type: string): Promise<ComplaintResDTO>;
   sendWarningMail(id: string): Promise<void>;
 
   dashBoard(): Promise<{
@@ -113,42 +109,36 @@ export interface IAdminService {
     monthlyCommissions: { month: string; totalCommission: number }[];
   }>;
 
-  rideEarnings(
-    page: number
-  ): Promise<{
-    commissions: ICommission[];
+  rideEarnings(page: number): Promise<{
+    commissions: CommissionResDTO[];
     totalEarnings: number;
     totalCount: number;
   }>;
   premiumUsers(
     page: number,
-    filterBy: string
+    filterBy: string,
   ): Promise<{
-    premiumUsers: IPremiumUsers[];
+    premiumUsers: PremiumUsersResDTO[];
     total: number;
     totalEarnings: number;
   }>;
 
-  diverInfo(driverId: string): Promise<IDrivers>;
-  driverRideAndRating(
-    driverId: string
-  ): Promise<{
+  diverInfo(driverId: string): Promise<DriverResDTO>;
+  driverRideAndRating(driverId: string): Promise<{
     totalRides: number;
     ratings: { avgRating: number; totalRatings: number };
   }>;
-  vehicleInfoByDriverId(driverId: string): Promise<IVehicle>;
-  userInfo(userId: string): Promise<IUser>;
-  userRideAndRating(
-    userId: string
-  ): Promise<{
+  vehicleInfoByDriverId(driverId: string): Promise<VehicleResDTO>;
+  userInfo(userId: string): Promise<UserResDTO>;
+  userRideAndRating(userId: string): Promise<{
     totalRides: number;
     ratings: { avgRating: number; totalRatings: number };
   }>;
   rideHistory(
     page: number,
     sort: string,
-    filter: "all" | "ongoing" | "canceled" | "completed"
-  ): Promise<{ history: IRideHistory[] | null; total: number }>;
-  rideInfo(rideId: string): Promise<IRideWithUserAndDriver>;
+    filter: 'all' | 'ongoing' | 'canceled' | 'completed',
+  ): Promise<{ history: FullRideListView[] | null; total: number }>;
+  rideInfo(rideId: string): Promise<RideInfoWithUserAndDriverNameDTO>;
   logout(refreshToken: string, accessToken: string): Promise<void>;
 }

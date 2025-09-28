@@ -1,12 +1,9 @@
-import { ISubscription } from "../models/subscription.model";
-import Subscription from "../models/subscription.model";
-import { IPremiumUsers } from "../services/interfaces/admin.service.interface";
-import { BaseRepository } from "./base.repo";
-import { ISubscriptionRepo } from "./interfaces/subscription.repo.interface";
-export class SubscriptionRepo
-  extends BaseRepository<ISubscription>
-  implements ISubscriptionRepo
-{
+import { ISubscription } from '../models/subscription.model';
+import Subscription from '../models/subscription.model';
+import { IPremiumUsers } from '../services/interfaces/admin.service.interface';
+import { BaseRepository } from './base.repo';
+import { ISubscriptionRepo } from './interfaces/subscription.repo.interface';
+export class SubscriptionRepo extends BaseRepository<ISubscription> implements ISubscriptionRepo {
   constructor() {
     super(Subscription);
   }
@@ -14,14 +11,14 @@ export class SubscriptionRepo
   async subscriptionInfoWithUser(
     filterBy: string,
     skip: number,
-    limit: number
+    limit: number,
   ): Promise<IPremiumUsers[]> {
     const now = Date.now();
     let match: Record<string, any> = {};
 
-    if (filterBy === "Active") {
+    if (filterBy === 'Active') {
       match.expiresAt = { $gte: now };
-    } else if (filterBy === "InActive") {
+    } else if (filterBy === 'InActive') {
       match.expiresAt = { $lt: now };
     }
 
@@ -30,8 +27,8 @@ export class SubscriptionRepo
       .skip(skip)
       .limit(limit)
       .populate({
-        path: "userId",
-        select: "name",
+        path: 'userId',
+        select: 'name -_id',
       })
       .lean<IPremiumUsers[]>();
 
@@ -43,7 +40,7 @@ export class SubscriptionRepo
       {
         $group: {
           _id: null,
-          totalEarnings: { $sum: "$amount" },
+          totalEarnings: { $sum: '$amount' },
         },
       },
     ]);

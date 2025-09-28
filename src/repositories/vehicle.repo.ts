@@ -1,16 +1,13 @@
-import mongoose from "mongoose";
-import { ObjectId } from "mongoose";
-import { IVehicle } from "../models/vehicle.model";
-import Vehicle from "../models/vehicle.model";
-import { IVehicleRepo } from "./interfaces/vehicle.repo.interface";
-import { BaseRepository } from "./base.repo";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { AppError } from "../utils/appError";
-import { messages } from "../constants/httpMessages";
-export class VehicleRepo
-  extends BaseRepository<IVehicle>
-  implements IVehicleRepo
-{
+import mongoose from 'mongoose';
+import { ObjectId } from 'mongoose';
+import { IVehicle } from '../models/vehicle.model';
+import Vehicle from '../models/vehicle.model';
+import { IVehicleRepo } from './interfaces/vehicle.repo.interface';
+import { BaseRepository } from './base.repo';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { AppError } from '../utils/appError';
+import { messages } from '../constants/httpMessages';
+export class VehicleRepo extends BaseRepository<IVehicle> implements IVehicleRepo {
   constructor() {
     super(Vehicle);
   }
@@ -27,14 +24,11 @@ export class VehicleRepo
         const field = Object.keys(error.keyPattern)[0];
         throw new AppError(
           HttpStatus.CONFLICT,
-          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`
+          `${field.charAt(0).toUpperCase() + field.slice(1)} already exists`,
         );
       }
 
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 

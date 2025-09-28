@@ -1,13 +1,13 @@
-import { AdminController } from "../controllers/admin.controller";
-import { AdminService } from "../services/admin.service";
-import { AdminRepo } from "../repositories/admin.repo";
-import { UserRepository } from "../repositories/user.repo";
-import { DriverRepo } from "../repositories/driver.repo";
-import { VehicleRepo } from "../repositories/vehicle.repo";
-import { bindMethods } from "../utils/bindController";
-import { RideRepo } from "../repositories/ride.repo";
-import { SubscriptionRepo } from "../repositories/subscription.repo";
-import { CommissionRepo } from "../repositories/commission.repo";
+import { AdminController } from '../controllers/admin.controller';
+import { AdminService } from '../services/admin.service';
+import { AdminRepo } from '../repositories/admin.repo';
+import { UserRepository } from '../repositories/user.repo';
+import { DriverRepo } from '../repositories/driver.repo';
+import { VehicleRepo } from '../repositories/vehicle.repo';
+import { bindMethods } from '../utils/bindController';
+import { RideRepo } from '../repositories/ride.repo';
+import { SubscriptionRepo } from '../repositories/subscription.repo';
+import { CommissionRepo } from '../repositories/commission.repo';
 
 const adminRepo = new AdminRepo();
 const userRepo = new UserRepository();
@@ -23,6 +23,6 @@ const adminService = new AdminService(
   adminRepo,
   rideRepo,
   subscriptionRepo,
-  commissionRepo
+  commissionRepo,
 );
 export const adminController = bindMethods(new AdminController(adminService));

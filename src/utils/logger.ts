@@ -25,8 +25,8 @@
 
 // export default logger;
 
-import { createLogger, format, transports } from "winston";
-import DailyRotateFile from "winston-daily-rotate-file";
+import { createLogger, format, transports } from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
 
 const { combine, timestamp, printf, json, colorize } = format;
 
@@ -37,18 +37,18 @@ const consoleLogFormat = printf(({ level, message }) => {
 
 // Winston logger
 const logger = createLogger({
-  level: "info",
+  level: 'info',
   format: combine(timestamp(), json()),
   transports: [
     new transports.Console({
       format: combine(colorize(), consoleLogFormat),
     }),
     new DailyRotateFile({
-      filename: "logs/app-%DATE%.log",
-      datePattern: "DD-MM-YYYY",
+      filename: 'logs/app-%DATE%.log',
+      datePattern: 'DD-MM-YYYY',
       zippedArchive: true,
-      maxSize: "20m",
-      maxFiles: "7d",
+      maxSize: '20m',
+      maxFiles: '7d',
     }),
   ],
 });

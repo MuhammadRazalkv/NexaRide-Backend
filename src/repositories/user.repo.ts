@@ -1,10 +1,10 @@
-import { UpdateResult } from "mongoose";
-import User, { IUser } from "../models/user.model";
-import { BaseRepository } from "./base.repo";
-import { IUserRepo } from "./interfaces/user.repo.interface";
-import { AppError } from "../utils/appError";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { messages } from "../constants/httpMessages";
+import { UpdateResult } from 'mongoose';
+import User, { IUser } from '../models/user.model';
+import { BaseRepository } from './base.repo';
+import { IUserRepo } from './interfaces/user.repo.interface';
+import { AppError } from '../utils/appError';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { messages } from '../constants/httpMessages';
 
 export class UserRepository extends BaseRepository<IUser> implements IUserRepo {
   constructor() {
@@ -25,18 +25,13 @@ export class UserRepository extends BaseRepository<IUser> implements IUserRepo {
     } catch (error: any) {
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
-        const info = field === "phone" ? "number" : "address";
+        const info = field === 'phone' ? 'number' : 'address';
         throw new AppError(
           HttpStatus.CONFLICT,
-          `${
-            field.charAt(0).toUpperCase() + field.slice(1)
-          } ${info} already exists`
+          `${field.charAt(0).toUpperCase() + field.slice(1)} ${info} already exists`,
         );
       }
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 
@@ -98,6 +93,4 @@ export class UserRepository extends BaseRepository<IUser> implements IUserRepo {
   // async updatePfp(id: string, url: string) {
   //   return this.updateById(id, { $set: { profilePic: url } });
   // }
-
- 
 }

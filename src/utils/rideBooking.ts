@@ -1,11 +1,11 @@
-import { Server, Socket } from "socket.io";
-import { IUser } from "../models/user.model";
-import { IOffer } from "../models/offer.modal";
-import crypto from "crypto";
-import { getFromRedis, setToRedis, updateDriverFelids } from "../config/redis";
-import { rideService } from "../bindings/ride.bindings";
-import { offerService } from "../bindings/offer.bindings";
-import { IRideHistory } from "../models/ride.history.model";
+import { Server, Socket } from 'socket.io';
+import { IUser } from '../models/user.model';
+import { IOffer } from '../models/offer.modal';
+import crypto from 'crypto';
+import { getFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
+import { rideService } from '../bindings/ride.bindings';
+import { offerService } from '../bindings/offer.bindings';
+import { IRideHistory } from '../models/ride.history.model';
 
 interface INearestDrivers {
   id: string;
@@ -25,9 +25,9 @@ export async function findDriverForRide(
   distance: number,
   premiumUser: boolean,
   premiumDiscount: number,
-  io: Server
+  io: Server,
 ) {
-  console.log("findDriverForRide ");
+  console.log('findDriverForRide ');
 
   const DRIVER_RESPONSE_TIMEOUT = 16000; // 16 sec
 
@@ -41,7 +41,7 @@ export async function findDriverForRide(
     }
 
     // Send ride request to driver
-    driverSocket.emit("new-ride-req", {
+    driverSocket.emit('new-ride-req', {
       user: {
         id: user.id,
         name: user.name,
@@ -67,7 +67,7 @@ export async function findDriverForRide(
       premiumDiscount,
       driverShare,
       io,
-      DRIVER_RESPONSE_TIMEOUT
+      DRIVER_RESPONSE_TIMEOUT,
     );
 
     if (rideAccepted) {
@@ -91,12 +91,12 @@ function waitForDriverResponse(
   premiumDiscount: number,
   driverShare: number,
   io: Server,
-  timeout: number
+  timeout: number,
 ) {
   return new Promise(async (resolve) => {
     let isResolved = false;
     const timeoutId = setTimeout(() => {
-      console.log("waitForDriverResponse Timeout");
+      console.log('waitForDriverResponse Timeout');
 
       if (!isResolved) {
         isResolved = true;
@@ -115,11 +115,11 @@ function waitForDriverResponse(
       dropOffCoords: [number, number];
     }) => {
       if (isResolved) return;
-      console.log("waitForDriverResponse onAccept");
+      console.log('waitForDriverResponse onAccept');
 
       isResolved = true;
       clearTimeout(timeoutId);
-      console.log("Inside the on Accept");
+      console.log('Inside the on Accept');
 
       try {
         const driverId = driverSocket.data.driverId;
@@ -129,8 +129,8 @@ function waitForDriverResponse(
         const driver = await rideService.getDriverWithVehicle(driverId);
         if (!driver) {
           if (userSocketId) {
-            io.to(userSocketId).emit("ride-error", {
-              message: "Driver not found",
+            io.to(userSocketId).emit('ride-error', {
+              message: 'Driver not found',
             });
           }
           cleanup();
@@ -140,13 +140,13 @@ function waitForDriverResponse(
 
         // Generate OTP for ride verification
         const OTP = crypto.randomInt(1000, 10000).toString();
-        console.log("Best offer ", bestOffer);
+        console.log('Best offer ', bestOffer);
 
         // Create ride details
         const rideDetails: Partial<IRideHistory> = {
           userId: userId,
           driverId,
-          status: "ongoing",
+          status: 'ongoing',
           distance: distance,
           totalFare: finalFare, // after offer applied which user should pay
           baseFare: originalFare, // the original fare before offers
@@ -160,11 +160,11 @@ function waitForDriverResponse(
           pickupCoords: data.pickupCoords,
           dropOffCoords: data.dropOffCoords,
           OTP,
-          startedAt:Date.now()
+          startedAt: Date.now(),
         };
         if (bestOffer && bestOffer.id) {
-          console.log('passed the if statement ',bestOffer , bestOffer.id);
-          
+          console.log('passed the if statement ', bestOffer, bestOffer.id);
+
           rideDetails.appliedOffer = {
             offerId: bestOffer.id,
             discountAmount: bestDiscount ?? 0,
@@ -176,35 +176,32 @@ function waitForDriverResponse(
         // Create ride record in database
         const ride = await rideService.createNewRide(rideDetails);
         const rideId = ride.id;
-        
-        if (ride.appliedOffer) {
-          console.log("inside ride applied offer ", ride.appliedOffer);
 
-          await offerService.increaseOfferUsage(
-            userId,
-            ride?.appliedOffer.offerId
-          );
+        if (ride.appliedOffer) {
+          console.log('inside ride applied offer ', ride.appliedOffer);
+
+          await offerService.increaseOfferUsage(userId, ride?.appliedOffer.offerId);
         }
 
         // Update Redis and driver status
         await Promise.all([
           setToRedis(`DRID:${driverId}`, rideId),
           setToRedis(`URID:${userId}`, rideId),
-          updateDriverFelids(`driver:${driverId}`, "status", "onRide"),
+          updateDriverFelids(`driver:${driverId}`, 'status', 'onRide'),
         ]);
-        console.log("promise all");
+        console.log('promise all');
 
         // Create ride room for real-time updates
         driverSocket.join(`ride:${rideId}`);
 
         // Notify user about accepted ride
-        console.log("User socket id onAccept ", userSocketId);
+        console.log('User socket id onAccept ', userSocketId);
 
         if (userSocketId) {
           const userSocket = io.sockets.sockets.get(userSocketId);
           if (userSocket) {
             userSocket.join(`ride:${rideId}`);
-            io.to(userSocketId).emit("ride-accepted", {
+            io.to(userSocketId).emit('ride-accepted', {
               rideId,
               driver,
               distance: distance,
@@ -225,7 +222,7 @@ function waitForDriverResponse(
         cleanup();
         resolve(true);
       } catch (error) {
-        console.error("Error processing driver acceptance:", error);
+        console.error('Error processing driver acceptance:', error);
         cleanup();
         resolve(false);
       }
@@ -233,7 +230,7 @@ function waitForDriverResponse(
 
     const onReject = () => {
       if (isResolved) return;
-      console.log("waitForDriverResponse onReject");
+      console.log('waitForDriverResponse onReject');
 
       isResolved = true;
       clearTimeout(timeoutId);
@@ -242,11 +239,11 @@ function waitForDriverResponse(
     };
 
     const cleanup = () => {
-      driverSocket.off("driver-ride-accepted", onAccept);
-      driverSocket.off("reject-ride", onReject);
+      driverSocket.off('driver-ride-accepted', onAccept);
+      driverSocket.off('reject-ride', onReject);
     };
 
-    driverSocket.once("driver-ride-accepted", onAccept);
-    driverSocket.once("reject-ride", onReject);
+    driverSocket.once('driver-ride-accepted', onAccept);
+    driverSocket.once('reject-ride', onReject);
   });
 }

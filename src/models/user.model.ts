@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document } from 'mongoose';
 
 export interface IUser extends Document {
   googleId?: string;
@@ -22,10 +22,10 @@ const userSchema = new Schema<IUser>(
     softBlock: { type: Boolean, default: false },
     profilePic: { type: String },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-export default model<IUser>("User", userSchema);
+export default model<IUser>('User', userSchema);
 
 // export interface UFilterOptions {
 

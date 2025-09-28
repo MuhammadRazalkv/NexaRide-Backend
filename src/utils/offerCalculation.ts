@@ -1,9 +1,6 @@
-import { offerService } from "../bindings/offer.bindings";
-import { userService } from "../bindings/user.bindings";
-export async function calculateFareWithDiscount(
-  requestedFare: number,
-  userId: string
-) {
+import { offerService } from '../bindings/offer.bindings';
+import { userService } from '../bindings/user.bindings';
+export async function calculateFareWithDiscount(requestedFare: number, userId: string) {
   const MIN_FARE = 50;
   const APP_COMMISSION_RATE = 0.2; // 20 %
   const PREMIUM_DISCOUNT_RATE = 0.3; // 30 %
@@ -34,20 +31,15 @@ export async function calculateFareWithDiscount(
       if (offers && offers.length) {
         for (const offer of offers) {
           // Check if user has already exceeded the offer usage limit
-          const offerUsage = await offerService.findOfferUsage(
-            userId,
-            offer.id
-          );
+          const offerUsage = await offerService.findOfferUsage(userId, offer.id);
           if (offerUsage >= offer.usageLimitPerUser) {
             continue;
           }
 
           // Calculate potential discount
           let discount = 0;
-          if (offer.type === "percentage") {
-            discount = Math.round(
-              Math.min((fare * offer.value) / 100, offer.maxDiscount)
-            );
+          if (offer.type === 'percentage') {
+            discount = Math.round(Math.min((fare * offer.value) / 100, offer.maxDiscount));
           } else {
             discount = Math.min(offer.value, offer.maxDiscount);
           }
@@ -65,19 +57,13 @@ export async function calculateFareWithDiscount(
         }
       }
     } catch (error) {
-      console.error("Error finding valid offers:", error);
+      console.error('Error finding valid offers:', error);
     }
   }
 
   // Calculate final fare after discount
-  const appEarningAAfterPremiumDiscount = Math.max(
-    appCommission - premiumDiscount,
-    0
-  );
-  const appEarningAfterDiscount = Math.max(
-    appEarningAAfterPremiumDiscount - bestDiscount,
-    0
-  );
+  const appEarningAAfterPremiumDiscount = Math.max(appCommission - premiumDiscount, 0);
+  const appEarningAfterDiscount = Math.max(appEarningAAfterPremiumDiscount - bestDiscount, 0);
   let finalFare = Math.round(driverShare + appEarningAfterDiscount);
   finalFare = Math.max(finalFare, MIN_FARE);
 

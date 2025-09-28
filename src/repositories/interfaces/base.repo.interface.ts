@@ -1,10 +1,7 @@
-import { Document, FilterQuery, UpdateQuery } from "mongoose";
+import { Document, FilterQuery, UpdateQuery } from 'mongoose';
 
 export interface IBaseRepository<T extends Document> {
-  findOne(
-    filter: FilterQuery<T>,
-    projection?: Record<string, 1 | 0>
-  ): Promise<T | null>;
+  findOne(filter: FilterQuery<T>, projection?: Record<string, 1 | 0>): Promise<T | null>;
   findById(id: string, projection?: Record<string, 1 | 0>): Promise<T | null>;
   create(data: Partial<T>): Promise<T>;
   update(filter: FilterQuery<T>, update: UpdateQuery<T>): Promise<T | null>;
@@ -15,7 +12,7 @@ export interface IBaseRepository<T extends Document> {
     options?: {
       upsert?: boolean;
       new?: boolean;
-    }
+    },
   ): Promise<any>;
   findAll(
     filter?: FilterQuery<T>,
@@ -24,7 +21,7 @@ export interface IBaseRepository<T extends Document> {
       skip?: number;
       limit?: number;
     },
-    projection?: Record<string, 1 | 0>
+    projection?: Record<string, 1 | 0>,
   ): Promise<T[]>;
   countDocuments(filter?: FilterQuery<T>): Promise<number>;
 }

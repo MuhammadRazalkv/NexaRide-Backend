@@ -1,59 +1,57 @@
-import { IUser } from "../models/user.model";
-import OTPRepo from "../repositories/otp.repo";
-import crypto from "crypto";
-import { html, resetLinkBtn } from "../constants/OTP";
-import { hashPassword, comparePassword } from "../utils/passwordManager";
-import { z } from "zod";
+import { IUser } from '../models/user.model';
+import OTPRepo from '../repositories/otp.repo';
+import crypto from 'crypto';
+import { html, resetLinkBtn } from '../constants/OTP';
+import { hashPassword, comparePassword } from '../utils/passwordManager';
+import { z } from 'zod';
 import {
   generateAccessToken,
   generateRefreshToken,
   forgotPasswordToken,
   verifyRefreshToken,
   verifyForgotPasswordToken,
-} from "../utils/jwt";
-import sendEmail from "../utils/mailSender";
-import cloudinary from "../utils/cloudinary";
+} from '../utils/jwt';
+import sendEmail from '../utils/mailSender';
+import cloudinary from '../utils/cloudinary';
 
-import IUserService from "./interfaces/user.service.interface";
-import { IUserRepo } from "../repositories/interfaces/user.repo.interface";
-import { AppError } from "../utils/appError";
-import { messages } from "../constants/httpMessages";
-import { HttpStatus } from "../constants/httpStatusCodes";
-import { ISubscriptionRepo } from "../repositories/interfaces/subscription.repo.interface";
-import mongoose from "mongoose";
-import { ISubscription } from "../models/subscription.model";
-import { getFromRedis, setToRedis } from "../config/redis";
-import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from "../utils/env";
+import IUserService from './interfaces/user.service.interface';
+import { IUserRepo } from '../repositories/interfaces/user.repo.interface';
+import { AppError } from '../utils/appError';
+import { messages } from '../constants/httpMessages';
+import { HttpStatus } from '../constants/httpStatusCodes';
+import { ISubscriptionRepo } from '../repositories/interfaces/subscription.repo.interface';
+import mongoose from 'mongoose';
+import { ISubscription } from '../models/subscription.model';
+import { getFromRedis, setToRedis } from '../config/redis';
+import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
 
 const userSchema = z.object({
-  name: z.string().min(3, "Name must be at least 3 characters"),
-  email: z.string().email("Invalid email format"),
-  phone: z.number().min(1000000000, "Phone must be a 10-digit number"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  name: z.string().min(3, 'Name must be at least 3 characters'),
+  email: z.string().email('Invalid email format'),
+  phone: z.number().min(1000000000, 'Phone must be a 10-digit number'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
   profilePic: z.string().optional(),
   googleId: z.string().optional(),
 });
 
 const generateTokens = (userId: string) => ({
-  accessToken: generateAccessToken(userId, "user"),
-  refreshToken: generateRefreshToken(userId, "user"),
+  accessToken: generateAccessToken(userId, 'user'),
+  refreshToken: generateRefreshToken(userId, 'user'),
 });
 
 export class UserService implements IUserService {
   constructor(
     private userRepo: IUserRepo,
-    private subscriptionRepo: ISubscriptionRepo
+    private subscriptionRepo: ISubscriptionRepo,
   ) {}
 
   async emailVerification(email: string) {
-    if (!email)
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
+    if (!email) throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
     const existingUser = await this.userRepo.findOne({ email });
-    if (existingUser)
-      throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
+    if (existingUser) throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
     const OTP = crypto.randomInt(1000, 10000).toString();
     OTPRepo.setOTP(email, OTP);
-    OTPRepo.sendOTP(email, "Your NexaRide OTP", html(OTP)).catch(console.error);
+    OTPRepo.sendOTP(email, 'Your NexaRide OTP', html(OTP)).catch(console.error);
   }
 
   async verifyOTP(email: string, otp: string) {
@@ -75,13 +73,10 @@ export class UserService implements IUserService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
     }
     const existingUser = await this.userRepo.findOne({ email });
-    if (existingUser)
-      throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
+    if (existingUser) throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
     const OTP = crypto.randomInt(1000, 10000).toString();
     OTPRepo.setOTP(email, OTP);
-    OTPRepo.sendOTP(email, "Your new  NexaRide OTP", html(OTP)).catch(
-      console.error
-    );
+    OTPRepo.sendOTP(email, 'Your new  NexaRide OTP', html(OTP)).catch(console.error);
   }
 
   async addInfo(userData: IUser) {
@@ -89,8 +84,7 @@ export class UserService implements IUserService {
     if (!parsedData.success) {
       throw new AppError(
         HttpStatus.BAD_REQUEST,
-        messages.VALIDATION_ERROR +
-          parsedData.error.errors.map((err) => err.message).join(", ")
+        messages.VALIDATION_ERROR + parsedData.error.errors.map((err) => err.message).join(', '),
       );
     }
 
@@ -116,25 +110,20 @@ export class UserService implements IUserService {
           _id: newUser._id,
           name: newUser.name,
           email: newUser.email,
-          role: "User",
+          role: 'User',
           profilePic: newUser.profilePic,
         },
       };
     } catch (error: any) {
       if (error.code === 11000) {
         const field = Object.keys(error.keyPattern)[0];
-        const info = field === "phone" ? "number" : "address";
+        const info = field === 'phone' ? 'number' : 'address';
         throw new AppError(
           HttpStatus.CONFLICT,
-          `${
-            field.charAt(0).toUpperCase() + field.slice(1)
-          } ${info} already exists`
+          `${field.charAt(0).toUpperCase() + field.slice(1)} ${info} already exists`,
         );
       }
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 
@@ -154,10 +143,7 @@ export class UserService implements IUserService {
 
     // Verify password
     if (!user.password) {
-      throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        messages.GOOGLE_REGISTERED_ACCOUNT
-      );
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.GOOGLE_REGISTERED_ACCOUNT);
     }
     const success = await comparePassword(password, user.password);
     if (!success) {
@@ -168,7 +154,7 @@ export class UserService implements IUserService {
     if (activeUser) {
       throw new AppError(
         HttpStatus.BAD_REQUEST,
-        "User is already logged in from another device or session."
+        'User is already logged in from another device or session.',
       );
     }
 
@@ -179,7 +165,7 @@ export class UserService implements IUserService {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: "User",
+        role: 'User',
         profilePic: user.profilePic,
       },
     };
@@ -217,18 +203,13 @@ export class UserService implements IUserService {
       } catch (error: any) {
         if (error.code === 11000) {
           const field = Object.keys(error.keyPattern)[0];
-          const info = field === "phone" ? "number" : "address";
+          const info = field === 'phone' ? 'number' : 'address';
           throw new AppError(
             HttpStatus.CONFLICT,
-            `${
-              field.charAt(0).toUpperCase() + field.slice(1)
-            } ${info} already exists`
+            `${field.charAt(0).toUpperCase() + field.slice(1)} ${info} already exists`,
           );
         }
-        throw new AppError(
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          messages.DATABASE_OPERATION_FAILED
-        );
+        throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
       }
     }
 
@@ -242,7 +223,7 @@ export class UserService implements IUserService {
     if (activeUser) {
       throw new AppError(
         HttpStatus.BAD_REQUEST,
-        "User is already logged in from another device or session."
+        'User is already logged in from another device or session.',
       );
     }
 
@@ -269,11 +250,7 @@ export class UserService implements IUserService {
     const token = forgotPasswordToken(user.id, user.email);
     const resetUrl = `${process.env.FRONT_END_URL}/user/reset-password?id=${user._id}&token=${token}`;
 
-    await sendEmail(
-      user.email,
-      "Password Reset Request - Action Required",
-      resetLinkBtn(resetUrl)
-    );
+    await sendEmail(user.email, 'Password Reset Request - Action Required', resetLinkBtn(resetUrl));
   }
 
   async resetPassword(id: string, token: string, password: string) {
@@ -317,15 +294,15 @@ export class UserService implements IUserService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_INVALID);
     }
 
-    const newAccessToken = generateAccessToken(refresh.id, "user");
-    const newRefreshToken = generateRefreshToken(refresh.id, "user");
+    const newAccessToken = generateAccessToken(refresh.id, 'user');
+    const newRefreshToken = generateRefreshToken(refresh.id, 'user');
 
     return { newAccessToken, newRefreshToken };
   }
 
   async updateUserName(id: string, name: string) {
     if (!id || !name) {
-      throw new Error("Fields are missing");
+      throw new Error('Fields are missing');
     }
 
     const res = await this.userRepo.updateById(id, { $set: { name } });
@@ -351,10 +328,7 @@ export class UserService implements IUserService {
         throw new AppError(HttpStatus.CONFLICT, `Phone already exists`);
       }
 
-      throw new AppError(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        messages.DATABASE_OPERATION_FAILED
-      );
+      throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.DATABASE_OPERATION_FAILED);
     }
   }
 
@@ -364,7 +338,7 @@ export class UserService implements IUserService {
     }
 
     const res = await cloudinary.uploader.upload(image, {
-      folder: "/UserProfilePic",
+      folder: '/UserProfilePic',
       // type: "authenticated",
     });
     const user = await this.userRepo.updateById(id, {
@@ -402,7 +376,7 @@ export class UserService implements IUserService {
 
   async subscriptionHistory(
     userId: string,
-    page: number
+    page: number,
   ): Promise<{ history: ISubscription[]; total: number }> {
     if (!userId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
@@ -411,7 +385,7 @@ export class UserService implements IUserService {
     const skip = (page - 1) * limit;
     const history = await this.subscriptionRepo.findAll(
       { userId: userId },
-      { sort: { takenAt: -1 }, skip, limit }
+      { sort: { takenAt: -1 }, skip, limit },
     );
     const total = await this.subscriptionRepo.countDocuments({ userId });
     return { history, total };
@@ -420,7 +394,7 @@ export class UserService implements IUserService {
   async logout(refreshToken: string, accessToken: string): Promise<void> {
     const refreshEXP = (getRefreshTokenMaxAge() / 1000) | 0;
     const accessEXP = (getAccessTokenMaxAge() / 1000) | 0;
-    await setToRedis(refreshToken, "Blacklisted", refreshEXP);
-    await setToRedis(accessToken, "BlackListed", accessEXP);
+    await setToRedis(refreshToken, 'Blacklisted', refreshEXP);
+    await setToRedis(accessToken, 'BlackListed', accessEXP);
   }
 }

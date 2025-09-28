@@ -1,9 +1,9 @@
-import UserWallet, { IWallet } from "../models/user.wallet.model";
-import DriverWallet from "../models/driver.wallet.model";
-import CommissionModel, { ICommission } from "../models/commission.model";
-import { IWalletRepo } from "./interfaces/wallet.repo.interface";
-import { BaseRepository } from "./base.repo";
-import mongoose from "mongoose";
+import UserWallet, { IWallet } from '../models/user.wallet.model';
+import DriverWallet from '../models/driver.wallet.model';
+import CommissionModel, { ICommission } from '../models/commission.model';
+import { IWalletRepo } from './interfaces/wallet.repo.interface';
+import { BaseRepository } from './base.repo';
+import mongoose from 'mongoose';
 export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
   constructor() {
     super(UserWallet);
@@ -86,14 +86,14 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
         $inc: { balance: amount },
         $push: {
           transactions: {
-            type: "credit",
+            type: 'credit',
             rideId,
             amount,
             date: Date.now(),
           },
         },
       },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
   }
 
@@ -101,7 +101,7 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
     driverId: string,
     today: number,
     week: number,
-    month: number
+    month: number,
   ): Promise<{
     totalEarnings: number;
     Today: number;
@@ -113,18 +113,14 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
         $match: { driverId: new mongoose.Types.ObjectId(driverId) },
       },
       {
-        $unwind: "$transactions",
+        $unwind: '$transactions',
       },
       {
         $group: {
           _id: null,
           totalEarnings: {
             $sum: {
-              $cond: [
-                { $eq: ["$transactions.type", "credit"] },
-                "$transactions.amount",
-                0,
-              ],
+              $cond: [{ $eq: ['$transactions.type', 'credit'] }, '$transactions.amount', 0],
             },
           },
           Today: {
@@ -132,11 +128,11 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
               $cond: [
                 {
                   $and: [
-                    { $gte: ["$transactions.date", today] },
-                    { $eq: ["$transactions.type", "credit"] },
+                    { $gte: ['$transactions.date', today] },
+                    { $eq: ['$transactions.type', 'credit'] },
                   ],
                 },
-                "$transactions.amount",
+                '$transactions.amount',
                 0,
               ],
             },
@@ -146,11 +142,11 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
               $cond: [
                 {
                   $and: [
-                    { $gte: ["$transactions.date", week] },
-                    { $eq: ["$transactions.type", "credit"] },
+                    { $gte: ['$transactions.date', week] },
+                    { $eq: ['$transactions.type', 'credit'] },
                   ],
                 },
-                "$transactions.amount",
+                '$transactions.amount',
                 0,
               ],
             },
@@ -160,11 +156,11 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
               $cond: [
                 {
                   $and: [
-                    { $gte: ["$transactions.date", month] },
-                    { $eq: ["$transactions.type", "credit"] },
+                    { $gte: ['$transactions.date', month] },
+                    { $eq: ['$transactions.type', 'credit'] },
                   ],
                 },
-                "$transactions.amount",
+                '$transactions.amount',
                 0,
               ],
             },
@@ -197,23 +193,21 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
     return await CommissionModel.insertOne(data);
   }
 
-  async getMonthlyCommission(): Promise<
-    { month: string; totalCommission: number }[]
-  > {
+  async getMonthlyCommission(): Promise<{ month: string; totalCommission: number }[]> {
     const monthlyCommissions = await CommissionModel.aggregate([
       {
         $group: {
           _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
           },
-          totalCommission: { $sum: "$commission" },
+          totalCommission: { $sum: '$commission' },
         },
       },
       {
         $sort: {
-          "_id.year": 1,
-          "_id.month": 1,
+          '_id.year': 1,
+          '_id.month': 1,
         },
       },
       {
@@ -224,25 +218,25 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
               {
                 $arrayElemAt: [
                   [
-                    "",
-                    "Jan",
-                    "Feb",
-                    "Mar",
-                    "Apr",
-                    "May",
-                    "Jun",
-                    "Jul",
-                    "Aug",
-                    "Sep",
-                    "Oct",
-                    "Nov",
-                    "Dec",
+                    '',
+                    'Jan',
+                    'Feb',
+                    'Mar',
+                    'Apr',
+                    'May',
+                    'Jun',
+                    'Jul',
+                    'Aug',
+                    'Sep',
+                    'Oct',
+                    'Nov',
+                    'Dec',
                   ],
-                  "$_id.month",
+                  '$_id.month',
                 ],
               },
-              " ",
-              { $toString: "$_id.year" },
+              ' ',
+              { $toString: '$_id.year' },
             ],
           },
           totalCommission: 1,

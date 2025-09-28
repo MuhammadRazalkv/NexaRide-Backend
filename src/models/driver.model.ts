@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, ObjectId } from "mongoose";
+import mongoose, { Schema, Document, ObjectId } from 'mongoose';
 
 export interface IDrivers extends Document {
   googleId?: string;
@@ -38,7 +38,7 @@ const DriversSchema: Schema = new Schema(
     phone: { type: Number, required: true, unique: true },
     license_number: { type: String, required: true, unique: true },
     // isAvailable: { type: String ,enum:['online','offline','onRide'] , default: "offline" },
-    vehicleId: { type: Schema.Types.ObjectId, ref: "Vehicle" },
+    vehicleId: { type: Schema.Types.ObjectId, ref: 'Vehicle' },
     address: {
       street: { type: String, required: true },
       city: { type: String, required: true },
@@ -50,8 +50,8 @@ const DriversSchema: Schema = new Schema(
     verified: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
     },
     rejectionReason: { type: String },
     isBlocked: { type: Boolean, default: false },
@@ -60,18 +60,18 @@ const DriversSchema: Schema = new Schema(
     location: {
       type: {
         type: String,
-        enum: ["Point"], 
+        enum: ['Point'],
         required: true,
       },
       coordinates: {
         type: [Number],
         required: true,
       },
-    }
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Driver = mongoose.model<IDrivers>("Drivers", DriversSchema);
+const Driver = mongoose.model<IDrivers>('Drivers', DriversSchema);
 
-export default Driver; 
+export default Driver;

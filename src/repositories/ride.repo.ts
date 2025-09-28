@@ -1,23 +1,20 @@
-import RideHistory, { IRideHistory } from "../models/ride.history.model";
+import RideHistory, { IRideHistory } from '../models/ride.history.model';
 import {
   IRideWithDriver,
   IRideWithUser,
   IRideWithUserAndDriver,
-} from "../services/interfaces/ride.service.interface";
-import { BaseRepository } from "./base.repo";
+} from '../services/interfaces/ride.service.interface';
+import { BaseRepository } from './base.repo';
 import {
-  IComplaintsWithUserDriver,
   IRideRepo,
   PopulatedRideHistory,
-} from "./interfaces/ride.repo.interface";
-import Complaints, { IComplaints } from "../models/complaints.modal";
-import mongoose from "mongoose";
-import Feedback, { IFeedback } from "../models/feedbacks.model";
+} from './interfaces/ride.repo.interface';
+import Complaints, { IComplaints } from '../models/complaints.modal';
+import mongoose from 'mongoose';
+import Feedback, { IFeedback } from '../models/feedbacks.model';
+import { ComplaintsWithUserDriver } from '../dtos/response/complaint.res.dto';
 
-export class RideRepo
-  extends BaseRepository<IRideHistory>
-  implements IRideRepo
-{
+export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo {
   constructor() {
     super(RideHistory);
   }
@@ -115,10 +112,10 @@ export class RideRepo
   async getRideInfoWithDriver(rideId: string): Promise<IRideWithDriver | null> {
     return (await this.model
       .findById(rideId)
-      .select("-commission -driverEarnings -OTP")
+      .select('-commission -driverEarnings -OTP')
       .populate({
-        path: "driverId",
-        select: "name",
+        path: 'driverId',
+        select: 'name',
       })
       .lean()
       .exec()) as IRideWithDriver | null;
@@ -129,7 +126,7 @@ export class RideRepo
     filedById: string,
     filedByRole: string,
     reason: string,
-    description?: string
+    description?: string,
   ): Promise<IComplaints | null> {
     return await Complaints.create({
       rideId: new mongoose.Types.ObjectId(rideId),
@@ -140,10 +137,7 @@ export class RideRepo
     });
   }
 
-  async getComplaintInfo(
-    rideId: string,
-    filedById: string
-  ): Promise<IComplaints | null> {
+  async getComplaintInfo(rideId: string, filedById: string): Promise<IComplaints | null> {
     const rideObjectId = new mongoose.Types.ObjectId(rideId);
     const filedByObjectId = new mongoose.Types.ObjectId(filedById);
 
@@ -156,10 +150,10 @@ export class RideRepo
   async getRideInfoWithUser(rideId: string): Promise<IRideWithUser | null> {
     return (await this.model
       .findById(rideId)
-      .select("-OTP")
+      .select('-OTP')
       .populate({
-        path: "userId",
-        select: "name",
+        path: 'userId',
+        select: 'name',
       })
       .lean()
       .exec()) as IRideWithUser | null;
@@ -168,44 +162,42 @@ export class RideRepo
   async getAllComplaints(
     skip: number,
     limit: number,
-    filterBy: string
-  ): Promise<IComplaintsWithUserDriver[] | null> {
-    const matchStage = filterBy
-      ? { $match: { status: filterBy } }
-      : { $match: {} };
+    filterBy: string,
+  ): Promise<ComplaintsWithUserDriver[] | null> {
+    const matchStage = filterBy ? { $match: { status: filterBy } } : { $match: {} };
     return await Complaints.aggregate([
       matchStage,
       {
         $lookup: {
-          from: "ridehistories",
-          localField: "rideId",
-          foreignField: "_id",
-          as: "rideInfo",
+          from: 'ridehistories',
+          localField: 'rideId',
+          foreignField: '_id',
+          as: 'rideInfo',
         },
       },
-      { $unwind: "$rideInfo" },
+      { $unwind: '$rideInfo' },
       {
         $lookup: {
-          from: "users",
-          localField: "rideInfo.userId",
-          foreignField: "_id",
-          as: "user",
+          from: 'users',
+          localField: 'rideInfo.userId',
+          foreignField: '_id',
+          as: 'user',
         },
       },
-      { $unwind: { path: "$user" } },
+      { $unwind: { path: '$user' } },
       {
         $lookup: {
-          from: "drivers",
-          localField: "rideInfo.driverId",
-          foreignField: "_id",
-          as: "driver",
+          from: 'drivers',
+          localField: 'rideInfo.driverId',
+          foreignField: '_id',
+          as: 'driver',
         },
       },
-      { $unwind: "$driver" },
+      { $unwind: '$driver' },
       {
         $addFields: {
-          user: "$user.name",
-          driver: "$driver.name",
+          user: '$user.name',
+          driver: '$driver.name',
         },
       },
       {
@@ -236,22 +228,15 @@ export class RideRepo
 
   async getPopulatedRideInfo(id: string): Promise<PopulatedRideHistory | null> {
     const ride = await RideHistory.findById(id)
-      .populate("userId", "name email phone profilePic")
-      .populate("driverId", "name email phone profilePic")
+      .populate('userId', 'name email phone profilePic')
+      .populate('driverId', 'name email phone profilePic')
       .lean();
 
     return ride as unknown as PopulatedRideHistory | null;
   }
 
-  async updateComplaintStatus(
-    id: string,
-    type: string
-  ): Promise<IComplaints | null> {
-    return await Complaints.findOneAndUpdate(
-      { _id: id },
-      { status: type },
-      { new: true }
-    );
+  async updateComplaintStatus(id: string, type: string): Promise<IComplaints | null> {
+    return await Complaints.findOneAndUpdate({ _id: id }, { status: type }, { new: true });
   }
 
   async setWarningMailSentTrue(id: string): Promise<void> {
@@ -262,10 +247,10 @@ export class RideRepo
     rideId: mongoose.Types.ObjectId,
     ratedById: mongoose.Types.ObjectId,
     ratedAgainstId: mongoose.Types.ObjectId,
-    ratedByRole: "user" | "driver",
-    ratedAgainstRole: "user" | "driver",
+    ratedByRole: 'user' | 'driver',
+    ratedAgainstRole: 'user' | 'driver',
     rating: number,
-    feedback?: string
+    feedback?: string,
   ): Promise<IFeedback | null> {
     return await Feedback.create({
       rideId,
@@ -280,7 +265,7 @@ export class RideRepo
 
   async getAvgRating(
     ratedAgainstId: mongoose.Types.ObjectId,
-    ratedAgainstRole: "user" | "driver"
+    ratedAgainstRole: 'user' | 'driver',
   ): Promise<{ totalRatings: number; avgRating: number }> {
     const result = await Feedback.aggregate([
       {
@@ -291,8 +276,8 @@ export class RideRepo
       },
       {
         $group: {
-          _id: "$ratedToId",
-          avgRating: { $avg: "$rating" },
+          _id: '$ratedToId',
+          avgRating: { $avg: '$rating' },
           totalRatings: { $sum: 1 },
         },
       },
@@ -310,13 +295,13 @@ export class RideRepo
 
   async rideCounts(
     id: string,
-    requestedBy: "driver" | "user"
+    requestedBy: 'driver' | 'user',
   ): Promise<{
     totalRides: number;
     completedRides: number;
     cancelledRides: number;
   }> {
-    const matchField = requestedBy === "driver" ? "driverId" : "userId";
+    const matchField = requestedBy === 'driver' ? 'driverId' : 'userId';
 
     const result = await RideHistory.aggregate([
       {
@@ -329,10 +314,10 @@ export class RideRepo
           _id: null,
           totalRides: { $sum: 1 },
           completedRides: {
-            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+            $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] },
           },
           cancelledRides: {
-            $sum: { $cond: [{ $eq: ["$status", "canceled"] }, 1, 0] },
+            $sum: { $cond: [{ $eq: ['$status', 'canceled'] }, 1, 0] },
           },
         },
       },
@@ -356,32 +341,32 @@ export class RideRepo
 
   async paymentInfos(
     id: string,
-    requestedBy: "driver" | "user"
+    requestedBy: 'driver' | 'user',
   ): Promise<{
     totalTransaction: number;
     usingWallet: number;
     usingStripe: number;
   }> {
-    const matchField = requestedBy === "driver" ? "driverId" : "userId";
+    const matchField = requestedBy === 'driver' ? 'driverId' : 'userId';
     const result = await RideHistory.aggregate([
       {
         $match: {
           [matchField]: new mongoose.Types.ObjectId(id),
-          status: "completed",
+          status: 'completed',
         },
       },
       {
         $group: {
           _id: null,
-          totalTransaction: { $sum: "$totalFare" },
+          totalTransaction: { $sum: '$totalFare' },
           usingWallet: {
             $sum: {
-              $cond: [{ $eq: ["$paymentMethod", "wallet"] }, "$totalFare", 0],
+              $cond: [{ $eq: ['$paymentMethod', 'wallet'] }, '$totalFare', 0],
             },
           },
           usingStripe: {
             $sum: {
-              $cond: [{ $eq: ["$paymentMethod", "stripe"] }, "$totalFare", 0],
+              $cond: [{ $eq: ['$paymentMethod', 'stripe'] }, '$totalFare', 0],
             },
           },
         },
@@ -404,19 +389,17 @@ export class RideRepo
     );
   }
 
-  async getRideInfoWithDriverAndUser(
-    rideId: string
-  ): Promise<IRideWithUserAndDriver | null> {
+  async getRideInfoWithDriverAndUser(rideId: string): Promise<IRideWithUserAndDriver | null> {
     return (await this.model
       .findById(rideId)
-      .select("-OTP")
+      .select('-OTP')
       .populate({
-        path: "userId",
-        select: "name",
+        path: 'userId',
+        select: 'name',
       })
       .populate({
-        path: "driverId",
-        select: "name",
+        path: 'driverId',
+        select: 'name',
       })
       .lean()
       .exec()) as IRideWithUserAndDriver | null;

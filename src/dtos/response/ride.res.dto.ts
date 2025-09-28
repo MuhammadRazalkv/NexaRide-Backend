@@ -37,6 +37,7 @@ export interface PopulatedRideResDTO {
 export interface RideListView {}
 
 export interface FullRideListView {
+  _id:string,
   driverId: string;
   pickupLocation: string;
   dropOffLocation: string;

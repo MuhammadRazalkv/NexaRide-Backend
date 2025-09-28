@@ -5,7 +5,7 @@ import { IUser } from '../models/user.model';
 export class UserMapper {
   static toUser(user: IUser): UserResDTO {
     return {
-      _id: user.id, // or user._id.toString()
+      _id: user.id, 
       name: user.name,
       email: user.email,
       phone: user.phone || 0,
@@ -24,7 +24,7 @@ export class UserMapper {
       name: user.name,
       email: user.email,
       isBlocked: user.isBlocked,
-      softBlock: user.isBlocked,
+      softBlock: user.softBlock,
       phone:user.phone || 0
     };
   }

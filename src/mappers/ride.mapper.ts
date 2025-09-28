@@ -50,6 +50,7 @@ export class RideMapper {
   }
   static toFullListView(data: IRideHistory): FullRideListView {
     return {
+      _id:data.id,
       driverId: data.driverId.toString(),
       canceledAt: data.cancelledAt,
       commission: data.commission,

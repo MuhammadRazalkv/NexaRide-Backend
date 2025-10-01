@@ -35,7 +35,7 @@ export class DriverRepo extends BaseRepository<IDrivers> implements IDriverRepo 
     return result[0]?.count || 0;
   }
 
-  async getPendingDriversWithVehicle():Promise<IDriverWithVehicleInfo[]> {
+  async getPendingDriversWithVehicle(): Promise<IDriverWithVehicleInfo[]> {
     return this.model.aggregate([
       {
         $lookup: {

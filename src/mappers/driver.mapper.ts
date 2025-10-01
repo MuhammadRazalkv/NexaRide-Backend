@@ -36,7 +36,7 @@ export class DriverMapper {
       email: driver.email,
       isBlocked: driver.isBlocked,
       softBlock: driver.isBlocked,
-      phone:Number(driver.phone)
+      phone: Number(driver.phone),
     };
   }
 
@@ -45,7 +45,7 @@ export class DriverMapper {
       _id: data._id.toString(),
       name: data.name,
       email: data.email,
-      phone:Number(data.phone),
+      phone: Number(data.phone),
       license_number: data.license_number,
       address: data.address,
       dob: data.dob.toISOString(),

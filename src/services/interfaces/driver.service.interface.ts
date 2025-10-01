@@ -1,5 +1,6 @@
-import { LoginDTO } from '../../dtos/request/auth.req.dto';
+import { DriverSchemaDTO, LoginDTO } from '../../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../../dtos/response/auth.res.dto';
+import { DriverResDTO } from '../../dtos/response/driver.res.dto';
 import { IDrivers } from '../../models/driver.model';
 
 export interface IDriverWithVehicle extends Omit<Partial<IDrivers>, 'vehicleId'> {
@@ -15,27 +16,24 @@ export interface IDriverService {
   emailVerification(email: string): Promise<void>;
   verifyOTP(email: string, otp: string): Promise<void>;
   reSendOTP(email: string): Promise<void>;
-  addInfo(data: IDrivers): Promise<{
+  addInfo(data: DriverSchemaDTO): Promise<{
     driverId: string;
   }>;
   login(driverData: LoginDTO): Promise<LoginResDTO>;
   getStatus(driverId: string): Promise<{
-    driverStatus: string | undefined;
-    vehicleStatus: string | undefined;
-    // isAvailable: String;
+    driverStatus: string;
+    vehicleStatus: string;
   }>;
   rejectReason(driverId: string): Promise<string | undefined>;
-  reApplyDriver(id: string, data: IDrivers): Promise<IDrivers | null>;
-  checkGoogleAuth(id: string, email: string): Promise<string | undefined>;
+  reApplyDriver(id: string, data: DriverSchemaDTO): Promise<DriverResDTO>;
+  checkGoogleAuth(id: string, email: string): Promise<string>;
   googleLogin(googleId: string, email: string, profilePic?: string): Promise<LoginResDTO>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(id: string, token: string, password: string): Promise<void>;
-  getDriverInfo(id: string): Promise<Partial<IDrivers>>;
-  updateDriverInfo(id: string, field: keyof IDrivers, value: string): Promise<string>;
+  getDriverInfo(id: string): Promise<DriverResDTO>;
+  updateDriverInfo(id: string, field: keyof DriverSchemaDTO, value: string): Promise<string>;
   toggleAvailability(id: string): Promise<void>;
-  // statusOnRide(id: string): Promise<void>;
   getCurrentLocation(id: string): Promise<[number, number]>;
-  // goBackToOnline(id: string): Promise<void>;
   refreshToken(token: string): Promise<{
     newAccessToken: string;
     newRefreshToken: string;

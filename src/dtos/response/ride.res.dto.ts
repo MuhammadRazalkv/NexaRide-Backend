@@ -79,8 +79,8 @@ export interface RideInfoWithUserAndDriverNameDTO {
   cancelledAt?: number;
   paymentStatus: string;
   paymentMethod?: string;
-//   pickupCoords: [number, number];
-//   dropOffCoords: [number, number];
+  //   pickupCoords: [number, number];
+  //   dropOffCoords: [number, number];
   cancelledBy?: string;
   appliedOffer?: {
     offerId: string;

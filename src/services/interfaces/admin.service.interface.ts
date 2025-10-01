@@ -2,9 +2,17 @@ import { LoginResponseAdminDTO } from '../../dtos/response/auth.res.dto';
 import { BaseAccountDTO } from '../../dtos/response/base.res.dto';
 import { CommissionResDTO } from '../../dtos/response/commission.res.dto';
 import { ComplaintResDTO, ComplaintsWithUserDriver } from '../../dtos/response/complaint.res.dto';
-import { DriverResDTO, DriverWithVehicleResDTO, VehicleResDTO } from '../../dtos/response/driver.res.dto';
+import {
+  DriverResDTO,
+  DriverWithVehicleResDTO,
+  VehicleResDTO,
+} from '../../dtos/response/driver.res.dto';
 import { PremiumUsersResDTO } from '../../dtos/response/premium.user.res.dto';
-import { FullRideListView, PopulatedRideResDTO, RideInfoWithUserAndDriverNameDTO } from '../../dtos/response/ride.res.dto';
+import {
+  FullRideListView,
+  PopulatedRideResDTO,
+  RideInfoWithUserAndDriverNameDTO,
+} from '../../dtos/response/ride.res.dto';
 import { UserResDTO } from '../../dtos/response/user.dto';
 import { ICommission } from '../../models/commission.model';
 import { IComplaints } from '../../models/complaints.modal';
@@ -13,9 +21,7 @@ import { IRideHistory } from '../../models/ride.history.model';
 import { ISubscription } from '../../models/subscription.model';
 import { IUser } from '../../models/user.model';
 import { IVehicle } from '../../models/vehicle.model';
-import {
-  PopulatedRideHistory,
-} from '../../repositories/interfaces/ride.repo.interface';
+import { PopulatedRideHistory } from '../../repositories/interfaces/ride.repo.interface';
 import { IRideWithUserAndDriver } from './ride.service.interface';
 
 interface IFare {
@@ -24,7 +30,7 @@ interface IFare {
   luxury: number;
 }
 export interface IPremiumUsers extends Omit<ISubscription, 'userId'> {
-  userId: string
+  userId: string;
 }
 
 export interface IAdminService {

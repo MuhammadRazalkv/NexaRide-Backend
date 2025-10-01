@@ -5,10 +5,7 @@ import {
   IRideWithUserAndDriver,
 } from '../services/interfaces/ride.service.interface';
 import { BaseRepository } from './base.repo';
-import {
-  IRideRepo,
-  PopulatedRideHistory,
-} from './interfaces/ride.repo.interface';
+import { IRideRepo, PopulatedRideHistory } from './interfaces/ride.repo.interface';
 import Complaints, { IComplaints } from '../models/complaints.modal';
 import mongoose from 'mongoose';
 import Feedback, { IFeedback } from '../models/feedbacks.model';

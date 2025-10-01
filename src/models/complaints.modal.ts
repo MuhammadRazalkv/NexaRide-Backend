@@ -1,14 +1,14 @@
 import mongoose, { Schema, Document, ObjectId } from 'mongoose';
 
 export interface IComplaints extends Document {
-    rideId: string;
-    filedById: string;
-    filedByRole: 'user' | 'driver';
-    complaintReason: string;
-    description?: string;
-    status?: 'pending' | 'resolved' | 'rejected';
-    warningMailSend?: boolean;
-    createdAt: string;
+  rideId: string;
+  filedById: string;
+  filedByRole: 'user' | 'driver';
+  complaintReason: string;
+  description?: string;
+  status?: 'pending' | 'resolved' | 'rejected';
+  warningMailSend?: boolean;
+  createdAt: string;
 }
 
 const ComplaintSchema: Schema = new Schema(

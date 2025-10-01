@@ -1,4 +1,3 @@
-import { IDrivers } from '../models/driver.model';
 import { IDriverService } from './interfaces/driver.service.interface';
 import OTPRepo from '../repositories/otp.repo';
 import { html } from '../constants/OTP';
@@ -10,6 +9,7 @@ import {
   forgotPasswordToken,
   verifyForgotPasswordToken,
   verifyRefreshToken,
+  generateBothTokens,
 } from '../utils/jwt';
 import { comparePassword } from '../utils/passwordManager';
 import sendEmail from '../utils/mailSender';
@@ -22,26 +22,20 @@ import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
 import cloudinary from '../utils/cloudinary';
 import { getDriverInfoRedis, getFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
-import {
-  validateDriverReApplySchema,
-  validateDriverSchema,
-} from '../utils/validators/driverSchemaValidators';
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
-
-const generateTokens = (driverId: string) => ({
-  accessToken: generateAccessToken(driverId, 'driver'),
-  refreshToken: generateRefreshToken(driverId, 'driver'),
-});
+import { DriverSchemaDTO, LoginDTO } from '../dtos/request/auth.req.dto';
+import { LoginResDTO } from '../dtos/response/auth.res.dto';
+import { DriverMapper } from '../mappers/driver.mapper';
+import { DriverResDTO } from '../dtos/response/driver.res.dto';
 
 export class DriverService implements IDriverService {
   constructor(
-    private driverRepo: IDriverRepo,
-    private vehicleRepo: IVehicleRepo,
+    private _driverRepo: IDriverRepo,
+    private _vehicleRepo: IVehicleRepo,
   ) {}
 
-  async emailVerification(email: string) {
-    if (!email) throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    const existingDriver = await this.driverRepo.findOne({ email });
+  async emailVerification(email: string): Promise<void> {
+    const existingDriver = await this._driverRepo.findOne({ email });
     if (existingDriver) throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
 
     const OTP = crypto.randomInt(1000, 10000).toString();
@@ -52,10 +46,7 @@ export class DriverService implements IDriverService {
     });
   }
 
-  async verifyOTP(email: string, otp: string) {
-    if (!email || !otp) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
+  async verifyOTP(email: string, otp: string): Promise<void> {
     const SOTP = await OTPRepo.getOTP(email);
 
     if (!SOTP || otp !== SOTP) {
@@ -66,12 +57,8 @@ export class DriverService implements IDriverService {
     OTPRepo.deleteOTP(email);
   }
 
-  async reSendOTP(email: string) {
-    if (!email) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    }
-
-    const existingUser = await this.driverRepo.findOne({ email });
+  async reSendOTP(email: string): Promise<void> {
+    const existingUser = await this._driverRepo.findOne({ email });
     if (existingUser) throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_ALREADY_EXISTS);
 
     const OTP = crypto.randomInt(1000, 10000).toString();
@@ -82,31 +69,13 @@ export class DriverService implements IDriverService {
     });
   }
 
-  async addInfo(data: IDrivers) {
-    if (!data) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
-    const parsedData = validateDriverSchema(data);
-    // const parsedData = driverSchema.safeParse(data);
-
-    if (!parsedData.success) {
-      // Extracting error messages correctly
-      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors).flat().join(', ');
-
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + ':' + errorMessages);
-    }
-    if (!parsedData.data.email) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    }
-
-    if (!(await OTPRepo.isEmailVerified(parsedData.data.email))) {
+  async addInfo(data: DriverSchemaDTO): Promise<{ driverId: string }> {
+    if (!(await OTPRepo.isEmailVerified(data.email))) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_VERIFIED);
     }
 
-    if (!parsedData.data.password)
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
-    parsedData.data.password = await hashPassword(parsedData.data.password);
+    if (!data.password) throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
+    data.password = await hashPassword(data.password);
 
     const randomLocations: [number, number][] = [
       [77.5946, 12.9716],
@@ -123,16 +92,16 @@ export class DriverService implements IDriverService {
 
     const randomCoordinate: [number, number] =
       randomLocations[Math.floor(Math.random() * randomLocations.length)];
-    
-    const { state, city, street, pin_code, ...rest } = parsedData.data;
+
+    const { state, city, street, pin_code, ...rest } = data;
     const updatedData = {
       ...rest,
       address: { state, city, street, pin_code },
       location: { type: 'Point', coordinates: randomCoordinate },
     };
     try {
-      const newDriver = await this.driverRepo.create(updatedData);
-      await OTPRepo.deleteVerifiedEmail(parsedData.data.email);
+      const newDriver = await this._driverRepo.create(updatedData);
+      await OTPRepo.deleteVerifiedEmail(data.email);
 
       return { driverId: newDriver._id as string };
     } catch (error: any) {
@@ -153,13 +122,9 @@ export class DriverService implements IDriverService {
     }
   }
 
-  async login(driverData: IDrivers) {
-    if (!driverData.email || !driverData.password) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
+  async login(driverData: LoginDTO): Promise<LoginResDTO> {
     // Check if user exists
-    const driver = await this.driverRepo.findOne({ email: driverData.email });
+    const driver = await this._driverRepo.findOne({ email: driverData.email });
     if (!driver) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
     }
@@ -190,7 +155,7 @@ export class DriverService implements IDriverService {
 
     // Generate tokens
     return {
-      ...generateTokens(driver._id as string),
+      ...generateBothTokens(driver.id, 'driver'),
       user: {
         _id: driver._id,
         name: driver.name,
@@ -199,26 +164,25 @@ export class DriverService implements IDriverService {
     };
   }
 
-  async getStatus(driverId: string) {
-    // const id = new mongoose.Types.ObjectId(driverId);
-    const driver = await this.driverRepo.findById(driverId);
-    if (!driver) throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+  async getStatus(driverId: string): Promise<{ driverStatus: string; vehicleStatus: string }> {
+    const driver = await this._driverRepo.findById(driverId);
+    if (!driver || !driver.status)
+      throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
 
     const vehicleId = driver.vehicleId ? driver.vehicleId.toString() : '';
-    const vehicle = await this.vehicleRepo.findById(vehicleId);
-    if (!vehicle) {
+    const vehicle = await this._vehicleRepo.findById(vehicleId);
+    if (!vehicle || !vehicle.status) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
 
     return {
       driverStatus: driver.status,
       vehicleStatus: vehicle?.status,
-      // isAvailable: driver.isAvailable,
     };
   }
 
-  async rejectReason(driverId: string) {
-    const driver = await this.driverRepo.findById(driverId);
+  async rejectReason(driverId: string): Promise<string | undefined> {
+    const driver = await this._driverRepo.findById(driverId);
 
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
@@ -233,35 +197,18 @@ export class DriverService implements IDriverService {
     return reason;
   }
 
-  async reApplyDriver(id: string, data: IDrivers) {
+  async reApplyDriver(id: string, data: DriverSchemaDTO): Promise<DriverResDTO> {
     try {
-      if (!data) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
+      if (!data.password) throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
+      data.password = await hashPassword(data.password);
 
-      // const parsedData = driverReApplySchema.safeParse(data);
-      const parsedData = validateDriverReApplySchema(data);
-      if (!parsedData.success) {
-        // Extracting error messages correctly
-        const errorMessages = Object.values(parsedData.error.flatten().fieldErrors)
-          .flat()
-          .join(', ');
-
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + errorMessages);
-      }
-
-      if (!parsedData.data.password)
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
-      parsedData.data.password = await hashPassword(parsedData.data.password);
-
-      const updatedData = await this.driverRepo.updateById(id, {
-        $set: { ...parsedData.data, status: 'pending' },
+      const updatedData = await this._driverRepo.updateById(id, {
+        $set: { ...data, status: 'pending' },
       });
-
-      return updatedData;
+      if (!updatedData) {
+        throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
+      }
+      return DriverMapper.toDriver(updatedData);
     } catch (error: any) {
       if (error instanceof mongoose.Error.CastError) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
@@ -280,28 +227,25 @@ export class DriverService implements IDriverService {
     }
   }
 
-  async checkGoogleAuth(id: string, email: string) {
-    const existingDriver = await this.driverRepo.findOne({ email });
+  async checkGoogleAuth(id: string, email: string): Promise<string> {
+    const existingDriver = await this._driverRepo.findOne({ email });
 
     if (existingDriver) {
       if (!existingDriver.googleId) {
-        await this.driverRepo.updateById(existingDriver.id, {
+        await this._driverRepo.updateById(existingDriver.id, {
           $set: { googleId: id },
         });
       }
 
-      const message = 'Driver already exists , please log in instead';
-      return message;
+      return 'Driver already exists , please log in instead';
+    } else {
+      OTPRepo.markEmailVerified(email);
+      throw new AppError(HttpStatus.BAD_REQUEST, messages.DRIVER_NOT_FOUND);
     }
-    OTPRepo.markEmailVerified(email);
   }
 
-  async googleLogin(googleId: string, email: string, profilePic?: string) {
-    if (!email || !googleId) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
-    const driver = await this.driverRepo.findOne({ email });
+  async googleLogin(googleId: string, email: string, profilePic?: string): Promise<LoginResDTO> {
+    const driver = await this._driverRepo.findOne({ email });
 
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
@@ -312,12 +256,12 @@ export class DriverService implements IDriverService {
     }
 
     if (!driver.profilePic && profilePic) {
-      await this.driverRepo.updateById(driver.id, { $set: { profilePic } });
+      await this._driverRepo.updateById(driver.id, { $set: { profilePic } });
     }
 
     // If user exists, only update googleId if it's missing
     if (!driver.googleId) {
-      await this.driverRepo.updateOne({ email }, { $set: { googleId } });
+      await this._driverRepo.updateOne({ email }, { $set: { googleId } });
     }
 
     const activeUser = await getFromRedis(`OD:${driver.id}`);
@@ -330,7 +274,7 @@ export class DriverService implements IDriverService {
     }
 
     return {
-      ...generateTokens(driver._id as string),
+      ...generateBothTokens(driver.id, 'driver'),
       user: {
         _id: driver._id,
         name: driver.name,
@@ -340,11 +284,8 @@ export class DriverService implements IDriverService {
     };
   }
 
-  async requestPasswordReset(email: string) {
-    if (!email) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    }
-    const driver = await this.driverRepo.findOne({ email });
+  async requestPasswordReset(email: string): Promise<void> {
+    const driver = await this._driverRepo.findOne({ email });
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -359,14 +300,8 @@ export class DriverService implements IDriverService {
     );
   }
 
-  async resetPassword(id: string, token: string, password: string) {
-    if (!id || !token) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-    if (!password) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
-    }
-    const user = await this.driverRepo.findById(id);
+  async resetPassword(id: string, token: string, password: string): Promise<void> {
+    const user = await this._driverRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -377,55 +312,44 @@ export class DriverService implements IDriverService {
     }
 
     const encryptedPassword = await hashPassword(password);
-    await this.driverRepo.updateById(id, {
+    await this._driverRepo.updateById(id, {
       $set: { password: encryptedPassword },
     });
   }
 
-  async getDriverInfo(id: string) {
-    const driver = await this.driverRepo.findById(id);
+  async getDriverInfo(id: string): Promise<DriverResDTO> {
+    const driver = await this._driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.DRIVER_NOT_FOUND);
     }
-    return {
-      name: driver.name,
-      email: driver.email,
-      phone: driver.phone,
-      address: driver.address,
-      dob: driver.dob,
-      license_exp: driver.license_exp,
-      profilePic: driver.profilePic,
-      status: driver.status,
-      license_number: driver.license_number,
-    };
+    return DriverMapper.toDriver(driver);
   }
 
-  async updateDriverInfo(id: string, field: keyof IDrivers | string, value: string) {
-    if (!id || !field || !value) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
-    // Handle nested address fields
+  async updateDriverInfo(
+    id: string,
+    field: keyof DriverSchemaDTO | string,
+    value: string,
+  ): Promise<string> {
     const addressFields = ['street', 'city', 'state', 'pin_code'];
     if (addressFields.includes(field)) {
       field = `address.${field}`;
     }
 
-    const response = await this.driverRepo.updateById(id, {
+    const response = await this._driverRepo.updateById(id, {
       $set: { [field]: value, status: 'pending' },
     });
     if (!response) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    // Safely get the nested value
+    //  get the nested value
     const updatedValue = field.split('.').reduce((acc: any, key) => acc?.[key], response);
 
     return updatedValue;
   }
 
-  async toggleAvailability(id: string) {
-    const driver = await this.driverRepo.findById(id);
+  async toggleAvailability(id: string): Promise<void> {
+    const driver = await this._driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -438,15 +362,18 @@ export class DriverService implements IDriverService {
     await updateDriverFelids(`driver:${id}`, 'status', newDriverStatus);
   }
 
-  async getCurrentLocation(id: string) {
-    const driver = await this.driverRepo.findById(id);
+  async getCurrentLocation(id: string): Promise<[number, number]> {
+    const driver = await this._driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
     return driver.location.coordinates;
   }
 
-  async refreshToken(token: string) {
+  async refreshToken(token: string): Promise<{
+    newAccessToken: string;
+    newRefreshToken: string;
+  }> {
     if (!token) {
       throw new AppError(HttpStatus.UNAUTHORIZED, messages.TOKEN_NOT_PROVIDED);
     }
@@ -470,7 +397,7 @@ export class DriverService implements IDriverService {
     const res = await cloudinary.uploader.upload(image, {
       folder: '/DriverProfilePic',
     });
-    const driver = await this.driverRepo.updateById(id, {
+    const driver = await this._driverRepo.updateById(id, {
       $set: { profilePic: res.secure_url },
     });
     return driver?.profilePic;
@@ -482,8 +409,7 @@ export class DriverService implements IDriverService {
     }
 
     const updatedCategory = category.charAt(0).toUpperCase() + category.slice(1);
-    const vehicleCategory = await this.driverRepo.getPriceByCategory(updatedCategory);
-    console.log('vehicle category info', vehicleCategory);
+    const vehicleCategory = await this._driverRepo.getPriceByCategory(updatedCategory);
 
     return vehicleCategory.farePerKm;
   }

@@ -17,7 +17,7 @@ export interface IRideWithUser extends Omit<IRideHistory, 'userId'> {
 }
 export interface IRideWithUserAndDriver extends Omit<IRideHistory, 'userId' | 'driverId'> {
   userId: IDriverMinimal;
-  driverId:IDriverMinimal
+  driverId: IDriverMinimal;
 }
 
 export interface IRideService {

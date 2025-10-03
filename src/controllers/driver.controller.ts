@@ -9,6 +9,8 @@ import { messages } from '../constants/httpMessages';
 import { AppError } from '../utils/appError';
 import { validate } from '../utils/validators/validateZod';
 import {
+  DriverReApplyDTO,
+  driverReApplyDTO,
   DriverSchemaDTO,
   driverSchemaDTO,
   emailDTO,
@@ -144,13 +146,16 @@ export class DriverController implements IDriverController {
   async reApplyDriver(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = validate(objectIdSchema, req.id);
-      const data = validate(driverSchemaDTO, req.body.data);
-      const typedData = data as DriverSchemaDTO;
+      console.log('ReApply Driver', req.body);
+
+      const data = validate(driverReApplyDTO, req.body);
+
+      const typedData = data as DriverReApplyDTO;
       const updatedData = await this._driverService.reApplyDriver(id, typedData);
       sendSuccess(
         res,
         HttpStatus.OK,
-        { river: updatedData },
+        { driver: updatedData },
         messages.SUBMITTED_FOR_REVERIFICATION,
       );
     } catch (error) {

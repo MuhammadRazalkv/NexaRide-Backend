@@ -9,6 +9,7 @@ import {
   updateDriverFelids,
   removeDriverFromGeoIndex,
   changeExpInRedis,
+  DriverCategory,
 } from '../config/redis';
 import { extractUserIdFromToken } from './jwt';
 import { AppError } from './appError';
@@ -66,7 +67,7 @@ export const initializeSocket = (server: any) => {
         if (driver) {
           await saveDriverStatusToRedis(`driver:${decodedId}`, {
             socketId: socket.id,
-            category: driver.vehicleDetails.category,
+            category: driver.vehicleDetails.category as DriverCategory,
             status: 'online',
             latitude: driver.location?.coordinates[1] || 0,
             longitude: driver.location?.coordinates[0] || 0,

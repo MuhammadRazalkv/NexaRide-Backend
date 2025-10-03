@@ -4,6 +4,7 @@ import userController, { userRepo } from '../bindings/user.bindings';
 import { authenticateWithRoles } from '../middlewares/auth.middleware';
 import rideController from '../bindings/ride.bindings';
 import paymentController from '../bindings/payment.binding';
+import { complaintsController } from '../bindings/complaints.bindings';
 
 const userRoute = Router();
 const userAuthMiddleware = authenticateWithRoles('user', userRepo);
@@ -44,11 +45,11 @@ userRoute.get('/getRideHistory', userAuthMiddleware, rideController.getRideHisto
 
 userRoute.post('/checkCabs', userAuthMiddleware, rideController.checkCabs);
 userRoute.get('/getRideInfo', userAuthMiddleware, rideController.getRIdeInfoForUser);
-userRoute.post('/submitComplaint', userAuthMiddleware, rideController.fileComplaint);
 userRoute.post('/giveFeedBack', userAuthMiddleware, rideController.giveFeedBack);
 userRoute.get('/ride-summary', userAuthMiddleware, rideController.rideSummary);
 userRoute.get('/feedback-summary', userAuthMiddleware, rideController.feedBackSummary);
 
+userRoute.post('/submitComplaint', userAuthMiddleware, complaintsController.fileComplaint);
 userRoute.get('/logout', userAuthMiddleware, userController.logout);
 
 export default userRoute;

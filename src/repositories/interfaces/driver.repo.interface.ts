@@ -4,6 +4,7 @@ import { IPricing } from '../../models/pricing.model';
 import { IDriverWithVehicle } from '../../services/interfaces/driver.service.interface';
 import { BaseRepository } from '../base.repo';
 import { IDriverWithVehicleInfo } from '../../interface/driver.vehicle.interface';
+import { RideAcceptedDriverDTO } from '../../dtos/response/driver.res.dto';
 
 export interface IDriverRepo extends BaseRepository<IDrivers> {
   // findDriverById(id: mongoose.Types.ObjectId| string):Promise<IDrivers | null>
@@ -21,7 +22,7 @@ export interface IDriverRepo extends BaseRepository<IDrivers> {
   // changePassword(id: string, password: string):Promise<IDrivers | null>
   // findAndUpdate(id: string, field: string, value: string):Promise<IDrivers | null>
   // getAvailableDriversNearby(pickupCoords: [number, number]): Promise<any[]>
-  getDriverWithVehicleInfo(id: string): Promise<IDriverWithVehicle>;
+  getDriverWithVehicleInfo(id: string): Promise<RideAcceptedDriverDTO>;
   // toggleAvailability(id: string, availability: string):Promise<IDrivers | null>
   // assignRandomLocation(id: string, coordinates: number[]):Promise<IDrivers | null>
   // goOnRide(id: string): Promise<IDrivers | null>

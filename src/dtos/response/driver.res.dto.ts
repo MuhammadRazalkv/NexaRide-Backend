@@ -43,3 +43,17 @@ export interface VehicleResDTO {
 export interface DriverWithVehicleResDTO extends Omit<DriverResDTO, 'vehicleId' | 'verified'> {
   vehicleDetails: VehicleResDTO;
 }
+
+export interface RideAcceptedDriverDTO {
+  name: string;
+  location: {
+    type: string;
+    coordinates: [number, number]; // [longitude, latitude]
+  };
+  vehicleDetails: {
+    brand: string;
+    vehicleModel: string;
+    color: string;
+    category: string;
+  };
+}

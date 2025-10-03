@@ -1,30 +1,36 @@
 import { ObjectId } from 'mongoose';
-import { CheckCabs } from '../../interface/ride.interface';
+import { CheckCabs, RideCreateDTO } from '../../interface/ride.interface';
 import { IRideHistory } from '../../models/ride.history.model';
-import { IComplaints } from '../../models/complaints.modal';
-import { IDriverWithVehicle } from './driver.service.interface';
-interface IDriverMinimal {
-  _id: string | ObjectId;
-  name: string;
-  rating: number;
-}
+import { ComplaintResDTO } from '../../dtos/response/complaint.res.dto';
+import {
+  AvailableCabs,
+  DriverRideHistoryDTO,
+  RideHistoryDTO,
+  UserRideHistoryDTO,
+} from '../../dtos/response/ride.res.dto';
+import { RideAcceptedDriverDTO } from '../../dtos/response/driver.res.dto';
+// interface IDriverMinimal {
+//   _id: string | ObjectId;
+//   name: string;
+//   rating: number;
+// }
 
-export interface IRideWithDriver extends Omit<IRideHistory, 'driverId'> {
-  driverId: IDriverMinimal;
-}
-export interface IRideWithUser extends Omit<IRideHistory, 'userId'> {
-  userId: IDriverMinimal;
-}
-export interface IRideWithUserAndDriver extends Omit<IRideHistory, 'userId' | 'driverId'> {
-  userId: IDriverMinimal;
-  driverId: IDriverMinimal;
-}
+// export interface IRideWithDriver extends Omit<IRideHistory, 'driverId'> {
+//   driverId: IDriverMinimal;
+// }
+// export interface IRideWithUser extends Omit<IRideHistory, 'userId'> {
+//   userId: IDriverMinimal;
+// }
+// export interface IRideWithUserAndDriver extends Omit<IRideHistory, 'userId' | 'driverId'> {
+//   userId: IDriverMinimal;
+//   driverId: IDriverMinimal;
+// }
 
 export interface IRideService {
-  checkCabs(id: string, data: CheckCabs): Promise<any>;
+  checkCabs(id: string, data: CheckCabs): Promise<AvailableCabs[]>;
   assignRandomLocation(id: string): Promise<number[]>;
-  getDriverWithVehicle(id: string): Promise<IDriverWithVehicle>;
-  createNewRide(data: Partial<IRideHistory>): Promise<IRideHistory>;
+  getDriverWithVehicle(id: string): Promise<RideAcceptedDriverDTO>;
+  createNewRide(data: RideCreateDTO): Promise<RideHistoryDTO>;
   getUserIdByDriverId(driverId: string): Promise<string | undefined>;
   getDriverByUserId(userId: string): Promise<string>;
   verifyRideOTP(driverId: string, OTP: string): Promise<{ rideId: string; date: number }>;
@@ -33,7 +39,7 @@ export interface IRideService {
     driverId: string,
     userId: string,
   ): Promise<{
-    rideId: any;
+    rideId: string;
     fare: number | undefined;
   }>;
   getRideHistory(
@@ -52,20 +58,13 @@ export interface IRideService {
     rideId: string,
     userId: string,
   ): Promise<{
-    ride: IRideWithDriver | null;
-    complaintInfo: IComplaints | null;
+    ride: UserRideHistoryDTO | null;
+    complaintInfo: ComplaintResDTO | null;
   }>;
-  fileComplaint(
-    id: string,
-    rideId: string,
-    reason: string,
-    by: string,
-    description?: string,
-  ): Promise<IComplaints | null>;
   findDriverRideInfo(
     rideId: string,
     driverId: string,
-  ): Promise<{ ride: IRideWithUser | null; complaintInfo: IComplaints | null }>;
+  ): Promise<{ ride: DriverRideHistoryDTO | null; complaintInfo: ComplaintResDTO | null }>;
   giveFeedBack(
     rideId: string,
     submittedBy: string,

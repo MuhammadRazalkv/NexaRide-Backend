@@ -90,6 +90,12 @@ export const driverSchemaDTO = z.object({
 
 export type DriverSchemaDTO = z.infer<typeof driverSchemaDTO>;
 
+export const driverReApplyDTO = driverSchemaDTO.omit({
+  password: true,
+  email: true,
+});
+export type DriverReApplyDTO = z.infer<typeof driverReApplyDTO>;
+
 export function validateLicensePlate(value: string): boolean {
   const licensePlateRegex = /^[A-Z]{2}[ -]?[0-9]{1,2}[ -]?[A-Z]{1,2}[ -]?[0-9]{1,4}$/;
   return licensePlateRegex.test(value);

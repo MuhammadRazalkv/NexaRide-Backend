@@ -1,4 +1,4 @@
-type DriverCategory = 'Basic' | 'Premium' | 'Luxury';
+export type DriverCategory = 'basic' | 'premium' | 'luxury';
 
 interface DriverStatus {
   socketId: string;

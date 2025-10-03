@@ -8,6 +8,7 @@ import { bindMethods } from '../utils/bindController';
 import { RideRepo } from '../repositories/ride.repo';
 import { SubscriptionRepo } from '../repositories/subscription.repo';
 import { CommissionRepo } from '../repositories/commission.repo';
+import { ComplaintsRepo } from '../repositories/complaints.repo';
 
 const adminRepo = new AdminRepo();
 const userRepo = new UserRepository();
@@ -16,6 +17,7 @@ const vehicleRepo = new VehicleRepo();
 const rideRepo = new RideRepo();
 const subscriptionRepo = new SubscriptionRepo();
 const commissionRepo = new CommissionRepo();
+const complaintsRepo = new ComplaintsRepo();
 const adminService = new AdminService(
   userRepo,
   driverRepo,
@@ -24,5 +26,6 @@ const adminService = new AdminService(
   rideRepo,
   subscriptionRepo,
   commissionRepo,
+  complaintsRepo,
 );
 export const adminController = bindMethods(new AdminController(adminService));

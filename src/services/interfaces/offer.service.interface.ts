@@ -1,11 +1,13 @@
+import { OfferSchemaDTO } from '../../dtos/request/offer.req.dto';
+import { OfferResDTO } from '../../dtos/response/offer.res.dto';
 import { IOffer } from '../../models/offer.modal';
 
 export interface IOfferService {
-  addOffer(data: IOffer): Promise<IOffer>;
-  getOffers(): Promise<IOffer[]>;
-  changeOfferStatus(offerId: string): Promise<IOffer>;
-  findValidOffers(now: number, rideFare: number): Promise<IOffer[] | null>;
-  findOfferById(offerId: string): Promise<IOffer | null>;
+  addOffer(data: OfferSchemaDTO): Promise<OfferResDTO>;
+  getOffers(): Promise<OfferResDTO[]>;
+  changeOfferStatus(offerId: string): Promise<OfferResDTO>;
+  findValidOffers(now: number, rideFare: number): Promise<OfferResDTO[] | null>;
+  // findOfferById(offerId: string): Promise<OfferResDTO | null>;
   findOfferUsage(userId: string, offerId: string): Promise<number>;
   increaseOfferUsage(userId: string, offerId: string): Promise<void>;
 }

@@ -1,8 +1,11 @@
 import { BaseAccountDTO } from '../dtos/response/base.res.dto';
-import { DriverResDTO, DriverWithVehicleResDTO } from '../dtos/response/driver.res.dto';
+import {
+  DriverResDTO,
+  DriverWithVehicleResDTO,
+  RideAcceptedDriverDTO,
+} from '../dtos/response/driver.res.dto';
 import { IDriverWithVehicleInfo } from '../interface/driver.vehicle.interface';
 import { IDrivers } from '../models/driver.model';
-import { IDriverWithVehicle } from '../services/interfaces/driver.service.interface';
 
 export class DriverMapper {
   static toDriver(driver: IDrivers): DriverResDTO {
@@ -75,5 +78,13 @@ export class DriverMapper {
 
   static toDriverWithVehicleList(data: IDriverWithVehicleInfo[]): DriverWithVehicleResDTO[] {
     return data.map((d) => this.toDriverWithVehicleRes(d));
+  }
+
+  static toRideAcceptedDriver(data: RideAcceptedDriverDTO): RideAcceptedDriverDTO {
+    return {
+      name: data.name,
+      location: data.location,
+      vehicleDetails: data.vehicleDetails,
+    };
   }
 }

@@ -23,7 +23,12 @@ import { messages } from '../constants/httpMessages';
 import cloudinary from '../utils/cloudinary';
 import { getDriverInfoRedis, getFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
-import { DriverSchemaDTO, LoginDTO } from '../dtos/request/auth.req.dto';
+import {
+  DriverReApplyDTO,
+  driverReApplyDTO,
+  DriverSchemaDTO,
+  LoginDTO,
+} from '../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../dtos/response/auth.res.dto';
 import { DriverMapper } from '../mappers/driver.mapper';
 import { DriverResDTO } from '../dtos/response/driver.res.dto';
@@ -197,11 +202,8 @@ export class DriverService implements IDriverService {
     return reason;
   }
 
-  async reApplyDriver(id: string, data: DriverSchemaDTO): Promise<DriverResDTO> {
+  async reApplyDriver(id: string, data: DriverReApplyDTO): Promise<DriverResDTO> {
     try {
-      if (!data.password) throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
-      data.password = await hashPassword(data.password);
-
       const updatedData = await this._driverRepo.updateById(id, {
         $set: { ...data, status: 'pending' },
       });

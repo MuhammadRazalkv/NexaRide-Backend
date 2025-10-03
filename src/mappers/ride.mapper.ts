@@ -1,11 +1,15 @@
 import {
+  DriverRideHistoryDTO,
   FullRideListView,
   PopulatedRideResDTO,
+  RideHistoryDTO,
+  RideHistoryWithDriverAndUser,
   RideInfoWithUserAndDriverNameDTO,
+  UserRideHistoryDTO,
 } from '../dtos/response/ride.res.dto';
 import { IRideHistory } from '../models/ride.history.model';
 import { PopulatedRideHistory } from '../repositories/interfaces/ride.repo.interface';
-import { IRideWithUserAndDriver } from '../services/interfaces/ride.service.interface';
+// import { IRideWithUserAndDriver } from '../services/interfaces/ride.service.interface';
 
 export class RideMapper {
   static toPopulatedRide(data: PopulatedRideHistory): PopulatedRideResDTO {
@@ -70,7 +74,7 @@ export class RideMapper {
     return data.map((d) => this.toFullListView(d));
   }
   static toRideInfoWithDriverAndUser(
-    data: IRideWithUserAndDriver,
+    data: RideHistoryWithDriverAndUser,
   ): RideInfoWithUserAndDriverNameDTO {
     return {
       userId: {
@@ -100,6 +104,91 @@ export class RideMapper {
       paymentMethod: data.paymentMethod,
       startedAt: data.startedAt,
       timeTaken: data.timeTaken,
+    };
+  }
+
+  static toFullRide(data: IRideHistory): RideHistoryDTO {
+    return {
+      id: data.id,
+      userId: String(data.userId),
+      driverId: String(data.driverId),
+      pickupLocation: data.pickupLocation,
+      dropOffLocation: data.dropOffLocation,
+      totalFare: data.totalFare,
+      baseFare: data.baseFare,
+      premiumDiscount: data.premiumDiscount,
+      offerDiscountAmount: data.offerDiscountAmount,
+      commission: data.commission,
+      driverEarnings: data.driverEarnings,
+      distance: data.distance,
+      estTime: data.estTime,
+      timeTaken: data.timeTaken,
+      status: data.status,
+      startedAt: data.startedAt,
+      endedAt: data.endedAt,
+      cancelledAt: data.cancelledAt,
+      paymentStatus: data.paymentStatus,
+      paymentMethod: data.paymentMethod,
+      pickupCoords: data.pickupCoords,
+      dropOffCoords: data.dropOffCoords,
+      OTP: data.OTP,
+      cancelledBy: data.cancelledBy,
+      appliedOffer: data.appliedOffer,
+    };
+  }
+
+  static toUserRideHistory(data: UserRideHistoryDTO): UserRideHistoryDTO {
+    return {
+      id: data.id,
+      userId: data.userId,
+      pickupCoords: data.pickupCoords,
+      baseFare: data.baseFare,
+      distance: data.distance,
+      dropOffLocation: data.dropOffLocation,
+      estTime: data.estTime,
+      offerDiscountAmount: data.offerDiscountAmount,
+      paymentStatus: data.paymentStatus,
+      pickupLocation: data.pickupLocation,
+      premiumDiscount: data.premiumDiscount,
+      status: data.status,
+      totalFare: data.totalFare,
+      appliedOffer: data.appliedOffer,
+      cancelledAt: data.cancelledAt,
+      cancelledBy: data.cancelledBy,
+      endedAt: data.endedAt,
+      paymentMethod: data.paymentMethod,
+      startedAt: data.startedAt,
+      timeTaken: data.timeTaken,
+      driverId: data.driverId,
+      dropOffCoords: data.dropOffCoords,
+    };
+  }
+  static toDriverRideHistory(data: DriverRideHistoryDTO): DriverRideHistoryDTO {
+    return {
+      id: data.id,
+      userId: data.userId,
+      pickupCoords: data.pickupCoords,
+      baseFare: data.baseFare,
+      distance: data.distance,
+      dropOffLocation: data.dropOffLocation,
+      estTime: data.estTime,
+      offerDiscountAmount: data.offerDiscountAmount,
+      paymentStatus: data.paymentStatus,
+      pickupLocation: data.pickupLocation,
+      premiumDiscount: data.premiumDiscount,
+      status: data.status,
+      totalFare: data.totalFare,
+      appliedOffer: data.appliedOffer,
+      cancelledAt: data.cancelledAt,
+      cancelledBy: data.cancelledBy,
+      endedAt: data.endedAt,
+      paymentMethod: data.paymentMethod,
+      startedAt: data.startedAt,
+      timeTaken: data.timeTaken,
+      driverId: data.driverId,
+      dropOffCoords: data.dropOffCoords,
+      commission: data.commission,
+      driverEarnings: data.driverEarnings,
     };
   }
 }

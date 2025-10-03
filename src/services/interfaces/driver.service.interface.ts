@@ -1,4 +1,4 @@
-import { DriverSchemaDTO, LoginDTO } from '../../dtos/request/auth.req.dto';
+import { DriverReApplyDTO, DriverSchemaDTO, LoginDTO } from '../../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../../dtos/response/auth.res.dto';
 import { DriverResDTO } from '../../dtos/response/driver.res.dto';
 import { IDrivers } from '../../models/driver.model';
@@ -25,7 +25,7 @@ export interface IDriverService {
     vehicleStatus: string;
   }>;
   rejectReason(driverId: string): Promise<string | undefined>;
-  reApplyDriver(id: string, data: DriverSchemaDTO): Promise<DriverResDTO>;
+  reApplyDriver(id: string, data: DriverReApplyDTO): Promise<DriverResDTO>;
   checkGoogleAuth(id: string, email: string): Promise<string>;
   googleLogin(googleId: string, email: string, profilePic?: string): Promise<LoginResDTO>;
   requestPasswordReset(email: string): Promise<void>;

@@ -3,6 +3,7 @@ import driverController, { driverRepo } from '../bindings/driver.bindings';
 import { authenticateWithRoles } from '../middlewares/auth.middleware';
 import rideController from '../bindings/ride.bindings';
 import paymentController from '../bindings/payment.binding';
+import { complaintsController } from '../bindings/complaints.bindings';
 
 const driverRoutes = Router();
 const authMiddleware = authenticateWithRoles('driver', driverRepo);
@@ -46,7 +47,7 @@ driverRoutes.get('/getRideHistory', authMiddleware, rideController.getRideHistor
 
 driverRoutes.get('/getRideInfo', authMiddleware, rideController.getRIdeInfoForDriver);
 
-driverRoutes.post('/submitComplaint', authMiddleware, rideController.fileComplaint);
+driverRoutes.post('/submitComplaint', authMiddleware, complaintsController.fileComplaint);
 
 //! This only need in dev stage
 driverRoutes.get('/getCurrentLoc', authMiddleware, driverController.getCurrentLocation);

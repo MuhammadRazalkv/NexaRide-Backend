@@ -6,6 +6,8 @@ import { getFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
 import { rideService } from '../bindings/ride.bindings';
 import { offerService } from '../bindings/offer.bindings';
 import { IRideHistory } from '../models/ride.history.model';
+import { OfferResDTO } from '../dtos/response/offer.res.dto';
+import { RideCreateDTO } from '../interface/ride.interface';
 
 interface INearestDrivers {
   id: string;
@@ -19,7 +21,7 @@ export async function findDriverForRide(
   dropOffCoords: [number, number],
   driverShare: number,
   finalFare: number,
-  bestOffer: IOffer | null,
+  bestOffer: OfferResDTO | null,
   bestDiscount: number,
   originalFare: number,
   distance: number,
@@ -84,7 +86,7 @@ function waitForDriverResponse(
   pickupCoords: [number, number],
   dropOffCoords: [number, number],
   finalFare: number,
-  bestOffer: IOffer | null,
+  bestOffer: OfferResDTO | null,
   bestDiscount: number,
   originalFare: number,
   distance: number,
@@ -143,7 +145,7 @@ function waitForDriverResponse(
         console.log('Best offer ', bestOffer);
 
         // Create ride details
-        const rideDetails: Partial<IRideHistory> = {
+        const rideDetails: RideCreateDTO = {
           userId: userId,
           driverId,
           status: 'ongoing',
@@ -162,11 +164,11 @@ function waitForDriverResponse(
           OTP,
           startedAt: Date.now(),
         };
-        if (bestOffer && bestOffer.id) {
-          console.log('passed the if statement ', bestOffer, bestOffer.id);
+        if (bestOffer && bestOffer._id) {
+          console.log('passed the if statement ', bestOffer, bestOffer._id);
 
           rideDetails.appliedOffer = {
-            offerId: bestOffer.id,
+            offerId: bestOffer._id,
             discountAmount: bestDiscount ?? 0,
             offerType: bestOffer.type,
             originalCommission: originalFare * 0.2,

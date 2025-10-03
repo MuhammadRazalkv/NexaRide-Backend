@@ -5,19 +5,19 @@ import { IRideService } from '../services/interfaces/ride.service.interface';
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
+import { validate } from '../utils/validators/validateZod';
+import { objectIdSchema } from '../dtos/request/common.req.dto';
+import { checkCabsDTO, otpDTO, requestedByDTO } from '../dtos/request/ride.req.dto';
+import { sendSuccess } from '../utils/response.util';
 
 export class RideController implements IRideController {
-  constructor(private rideService: IRideService) {}
+  constructor(private _rideService: IRideService) {}
   async checkCabs(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.id;
-      if (!userId) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
-      const data = req.body.data;
-
-      const response = await this.rideService.checkCabs(userId, data);
-      res.status(HttpStatus.OK).json({ success: true, availableCabs: response });
+      const userId = validate(objectIdSchema, req.id);
+      const data = validate(checkCabsDTO, req.body.data);
+      const availableCabs = await this._rideService.checkCabs(userId, data);
+      sendSuccess(res, HttpStatus.OK, { availableCabs });
     } catch (error) {
       next(error);
     }
@@ -29,11 +29,9 @@ export class RideController implements IRideController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      if (!req.id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
-      const response = await this.rideService.assignRandomLocation(req.id);
-      res.status(HttpStatus.OK).json({ success: true, coordinates: response });
+      const id = validate(objectIdSchema, req.id);
+      const coordinates = await this._rideService.assignRandomLocation(id);
+      sendSuccess(res, HttpStatus.OK, { coordinates });
     } catch (error) {
       next(error);
     }
@@ -41,18 +39,11 @@ export class RideController implements IRideController {
 
   async verifyRideOTP(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const driverId = req.id;
-      if (!driverId) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
-      const OTP = req.body.otp;
+      const driverId = validate(objectIdSchema, req.id);
+      const OTP = validate(otpDTO, req.body.otp);
+      const response = await this._rideService.verifyRideOTP(driverId, OTP);
 
-      const response = await this.rideService.verifyRideOTP(driverId, OTP);
-      res.status(200).json({
-        success: true,
-        startedAt: response.date,
-        rideId: response.rideId,
-      });
+      sendSuccess(res, HttpStatus.OK, { startedAt: response.date, rideId: response.rideId });
     } catch (error) {
       next(error);
     }
@@ -60,18 +51,12 @@ export class RideController implements IRideController {
 
   async getRideHistory(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
+      const id = validate(objectIdSchema, req.id);
       const page = parseInt(req.query.page as string);
       const sort = req.query.sort;
-      const response = await this.rideService.getRideHistory(id, page, sort as string);
-      res.status(HttpStatus.OK).json({
-        success: true,
-        history: response.history,
-        total: response.total,
-      });
+      const { history, total } = await this._rideService.getRideHistory(id, page, sort as string);
+
+      sendSuccess(res, HttpStatus.OK, { history, total });
     } catch (error) {
       next(error);
     }
@@ -83,18 +68,15 @@ export class RideController implements IRideController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const id = req.id;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
+      const id = validate(objectIdSchema, req.id);
       const page = parseInt(req.query.page as string);
       const sort = req.query.sort;
-      const response = await this.rideService.getRideHistoryDriver(id, page, sort as string);
-      res.status(HttpStatus.OK).json({
-        success: true,
-        history: response.history,
-        total: response.total,
-      });
+      const { history, total } = await this._rideService.getRideHistoryDriver(
+        id,
+        page,
+        sort as string,
+      );
+      sendSuccess(res, HttpStatus.OK, { history, total });
     } catch (error) {
       next(error);
     }
@@ -102,13 +84,9 @@ export class RideController implements IRideController {
 
   async checkPaymentStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
-      const rideId = req.params.rideId;
-      const paymentStatus = await this.rideService.checkPaymentStatus(rideId);
-      res.status(200).json({ success: true, paymentStatus });
+      const rideId = validate(objectIdSchema, req.params.rideId);
+      const paymentStatus = await this._rideService.checkPaymentStatus(rideId);
+      sendSuccess(res, HttpStatus.OK, { paymentStatus });
     } catch (error) {
       next(error);
     }
@@ -116,37 +94,11 @@ export class RideController implements IRideController {
 
   async getRIdeInfoForUser(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      const rideId = req.query.rideId;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
-      if (!rideId || rideId === 'null' || String(rideId).trim() === '') {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
-      }
+      const id = validate(objectIdSchema, req.id);
+      const rideId = validate(objectIdSchema, req.query.rideId);
 
-      const { ride, complaintInfo } = await this.rideService.findUserRideInfo(rideId as string, id);
-      res.status(HttpStatus.OK).json({ ride, complaintInfo });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async fileComplaint(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const id = req.id;
-      const { rideId, reason, by, description } = req.body;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
-      if (!rideId || rideId === 'null' || String(rideId).trim() === '') {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
-      }
-      if (!reason) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const complaint = await this.rideService.fileComplaint(id, rideId, reason, by, description);
-      res.status(HttpStatus.CREATED).json({ success: true, complaint });
+      const { ride, complaintInfo } = await this._rideService.findUserRideInfo(rideId, id);
+      sendSuccess(res, HttpStatus.OK, { ride, complaintInfo });
     } catch (error) {
       next(error);
     }
@@ -158,22 +110,11 @@ export class RideController implements IRideController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const id = req.id;
-      const rideId = req.query.rideId;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
-      if (!rideId || rideId === 'null' || String(rideId).trim() === '') {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
-      }
+      const id = validate(objectIdSchema, req.id);
+      const rideId = validate(objectIdSchema, req.query.rideId);
+      const { ride, complaintInfo } = await this._rideService.findDriverRideInfo(rideId, id);
 
-      const { ride, complaintInfo } = await this.rideService.findDriverRideInfo(
-        rideId as string,
-        id,
-      );
-      console.log('complaint info  ', complaintInfo);
-
-      res.status(HttpStatus.OK).json({ success: true, ride, complaintInfo });
+      sendSuccess(res, HttpStatus.OK, { ride, complaintInfo });
     } catch (error) {
       next(error);
     }
@@ -185,9 +126,9 @@ export class RideController implements IRideController {
       if (!rideId || !submittedBy || !rating) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
       }
-      await this.rideService.giveFeedBack(rideId, submittedBy, Number(rating), feedback);
+      await this._rideService.giveFeedBack(rideId, submittedBy, Number(rating), feedback);
 
-      res.status(HttpStatus.CREATED).json({ success: true });
+      sendSuccess(res, HttpStatus.CREATED, {});
     } catch (error) {
       next(error);
     }
@@ -195,17 +136,12 @@ export class RideController implements IRideController {
 
   async rideSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
+      const id = validate(objectIdSchema, req.id);
 
-      const requestedBy = req.query.requestedBy;
-      if (requestedBy !== 'user' && requestedBy !== 'driver') {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
-      }
+      const requestedBy = validate(requestedByDTO, req.query.requestedBy);
 
-      const data = await this.rideService.rideSummary(req.id, requestedBy);
-      res.status(HttpStatus.OK).json({ success: true, data });
+      const data = await this._rideService.rideSummary(id, requestedBy);
+      sendSuccess(res, HttpStatus.OK, { data });
     } catch (error) {
       next(error);
     }
@@ -213,24 +149,19 @@ export class RideController implements IRideController {
 
   async feedBackSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-      }
+      const id = validate(objectIdSchema, req.id);
 
-      const requestedBy = req.query.requestedBy;
-      if (requestedBy !== 'user' && requestedBy !== 'driver') {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
-      }
-      const data = await this.rideService.feedBackSummary(req.id, requestedBy);
-      res.status(HttpStatus.OK).json({ success: true, data });
+      const requestedBy = validate(requestedByDTO, req.query.requestedBy);
+      const data = await this._rideService.feedBackSummary(id, requestedBy);
+      sendSuccess(res, HttpStatus.OK, { data });
     } catch (error) {
       next(error);
     }
   }
 
-  async earningsSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
-    if (!req.id) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-    }
-  }
+  // async earningsSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  //   if (!req.id) {
+  //     throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
+  //   }
+  // }
 }

@@ -31,7 +31,7 @@ export async function calculateFareWithDiscount(requestedFare: number, userId: s
       if (offers && offers.length) {
         for (const offer of offers) {
           // Check if user has already exceeded the offer usage limit
-          const offerUsage = await offerService.findOfferUsage(userId, offer.id);
+          const offerUsage = await offerService.findOfferUsage(userId, offer._id);
           if (offerUsage >= offer.usageLimitPerUser) {
             continue;
           }

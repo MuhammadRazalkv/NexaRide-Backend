@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 
 export interface IDriverWithVehicleInfo {
-  _id: ObjectId;
+  _id: string | ObjectId;
   name: string;
   email: string;
   phone: string;

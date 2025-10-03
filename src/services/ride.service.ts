@@ -1,30 +1,39 @@
-import { CheckCabs } from '../interface/ride.interface';
+import { CheckCabs, RideCreateDTO } from '../interface/ride.interface';
 import { IRideHistory } from '../models/ride.history.model';
-import { IRideService, IRideWithDriver, IRideWithUser } from './interfaces/ride.service.interface';
+import { IRideService } from './interfaces/ride.service.interface';
 import { IDriverRepo } from '../repositories/interfaces/driver.repo.interface';
 import { IRideRepo } from '../repositories/interfaces/ride.repo.interface';
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
-import { IComplaints } from '../models/complaints.modal';
 import mongoose from 'mongoose';
 import { getAvailableDriversByGeo } from '../config/redis';
-import { IOfferRepo } from '../repositories/interfaces/offer.repo.interface';
-import { IOffer } from '../models/offer.modal';
 import { calculateFareWithDiscount } from '../utils/offerCalculation';
-type VehicleCategory = 'luxury' | 'premium' | 'basic';
+import { IComplaintsRepo } from '../repositories/interfaces/complaints.repo.interface';
+import { ComplaintResDTO } from '../dtos/response/complaint.res.dto';
+import { ComplaintsMapper } from '../mappers/complaints.mapper';
+import {
+  AvailableCabs,
+  DriverRideHistoryDTO,
+  RideHistoryDTO,
+  UserRideHistoryDTO,
+  VehicleCategory,
+} from '../dtos/response/ride.res.dto';
+import { DriverWithVehicleResDTO, RideAcceptedDriverDTO } from '../dtos/response/driver.res.dto';
+import { DriverMapper } from '../mappers/driver.mapper';
+import { RideMapper } from '../mappers/ride.mapper';
 
 export class RideService implements IRideService {
   constructor(
-    private driverRepo: IDriverRepo,
-    private rideRepo: IRideRepo,
-    private offerRepo: IOfferRepo,
+    private _driverRepo: IDriverRepo,
+    private _rideRepo: IRideRepo,
+    private _complaintRepo: IComplaintsRepo,
   ) {}
 
-  async checkCabs(id: string, data: CheckCabs) {
+  async checkCabs(id: string, data: CheckCabs): Promise<AvailableCabs[]> {
     const pickupCoords: [number, number] = [data.pickUpPoint.lat, data.pickUpPoint.lng];
 
-    const fares = await this.driverRepo.findPrices();
+    const fares = await this._driverRepo.findPrices();
     const km = data.distance / 1000;
 
     const vehicleCategories: VehicleCategory[] = ['luxury', 'premium', 'basic'];
@@ -56,7 +65,7 @@ export class RideService implements IRideService {
         baseFare: originalFare,
         discountApplied: bestDiscount,
         offerTitle: bestOffer?.title ?? null,
-        offerId: bestOffer?.id ?? null,
+        offerId: bestOffer?._id ?? null,
         isPremiumUser,
         premiumDiscount,
         finalFare,
@@ -66,7 +75,7 @@ export class RideService implements IRideService {
     return updatedCabInfo;
   }
 
-  async assignRandomLocation(id: string) {
+  async assignRandomLocation(id: string): Promise<number[]> {
     const randomLocations = [
       [77.5946, 12.9716], // MG Road (Central Hub)
       [77.6074, 12.9746], // Brigade Road (Shopping & Dining)
@@ -81,7 +90,7 @@ export class RideService implements IRideService {
     ];
 
     const randomCoordinate = randomLocations[Math.floor(Math.random() * randomLocations.length)];
-    await this.driverRepo.updateById(id, {
+    await this._driverRepo.updateById(id, {
       $set: {
         location: {
           type: 'Point',
@@ -92,35 +101,32 @@ export class RideService implements IRideService {
     return randomCoordinate;
   }
 
-  async getDriverWithVehicle(id: string) {
-    if (!id) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-    const driver = await this.driverRepo.getDriverWithVehicleInfo(id);
+  async getDriverWithVehicle(id: string): Promise<RideAcceptedDriverDTO> {
+    const driver = await this._driverRepo.getDriverWithVehicleInfo(id);
 
     return driver;
   }
 
-  async createNewRide(data: Partial<IRideHistory>) {
-    const ride = await this.rideRepo.create(data);
-    return ride;
+  async createNewRide(data: RideCreateDTO): Promise<RideHistoryDTO> {
+    const ride = await this._rideRepo.create(data);
+    return RideMapper.toFullRide(ride);
   }
-  async getUserIdByDriverId(driverId: string) {
-    const ride = await this.rideRepo.findOne({ driverId, status: 'ongoing' });
+  async getUserIdByDriverId(driverId: string): Promise<string> {
+    const ride = await this._rideRepo.findOne({ driverId, status: 'ongoing' });
     return ride?.userId as string;
   }
 
-  async getDriverByUserId(userId: string) {
-    const ride = await this.rideRepo.findOne({ userId, status: 'ongoing' });
+  async getDriverByUserId(userId: string): Promise<string> {
+    const ride = await this._rideRepo.findOne({ userId, status: 'ongoing' });
 
     return ride?.driverId as string;
   }
 
-  async verifyRideOTP(driverId: string, OTP: string) {
+  async verifyRideOTP(driverId: string, OTP: string): Promise<{ rideId: string; date: number }> {
     if (!driverId || !OTP) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findOne({ driverId, status: 'ongoing' });
+    const ride = await this._rideRepo.findOne({ driverId, status: 'ongoing' });
 
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
@@ -130,15 +136,15 @@ export class RideService implements IRideService {
 
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_OTP);
     }
-    // await this.rideRepo.updateRideStartedAt(ride.id);
-    await this.rideRepo.updateById(ride.id, {
+    // await this._rideRepo.updateRideStartedAt(ride.id);
+    await this._rideRepo.updateById(ride.id, {
       $set: { startedAt: Date.now() },
     });
     return { rideId: ride.id, date: Date.now() };
   }
 
   async cancelRide(driverId: string, userId: string, cancelledBy: 'User' | 'Driver') {
-    await this.rideRepo.updateOne(
+    await this._rideRepo.updateOne(
       { driverId, userId, status: 'ongoing' },
       {
         $set: {
@@ -151,15 +157,18 @@ export class RideService implements IRideService {
     );
   }
 
-  async getRideIdByUserAndDriver(driverId: string, userId: string) {
-    const ride = await this.rideRepo.findOne({ driverId, userId, status: 'ongoing' });
+  async getRideIdByUserAndDriver(
+    driverId: string,
+    userId: string,
+  ): Promise<{ rideId: string; fare: number | undefined }> {
+    const ride = await this._rideRepo.findOne({ driverId, userId, status: 'ongoing' });
     return { rideId: ride?.id, fare: ride?.totalFare };
   }
 
   async getRideHistory(id: string, page: number, sort: string) {
     const limit = 8;
     const skip = (page - 1) * limit;
-    const history = await this.rideRepo.findAll(
+    const history = await this._rideRepo.findAll(
       { userId: id },
       { sort: { startedAt: sort == 'new' ? -1 : 1 }, skip, limit },
       {
@@ -177,14 +186,14 @@ export class RideService implements IRideService {
         paymentStatus: 1,
       },
     );
-    const total = await this.rideRepo.countDocuments({ userId: id });
+    const total = await this._rideRepo.countDocuments({ userId: id });
     return { history, total };
   }
 
   async getRideHistoryDriver(id: string, page: number, sort: string) {
     const limit = 8;
     const skip = (page - 1) * limit;
-    const history = await this.rideRepo.findAll(
+    const history = await this._rideRepo.findAll(
       { driverId: id },
       { skip, limit, sort: { createdAt: sort == 'new' ? -1 : 1 } },
       {
@@ -204,7 +213,7 @@ export class RideService implements IRideService {
         paymentStatus: 1,
       },
     );
-    const total = await this.rideRepo.countDocuments({ driverId: id });
+    const total = await this._rideRepo.countDocuments({ driverId: id });
     return { history, total };
   }
 
@@ -212,7 +221,7 @@ export class RideService implements IRideService {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findById(rideId);
+    const ride = await this._rideRepo.findById(rideId);
     return ride?.paymentStatus;
   }
 
@@ -220,7 +229,7 @@ export class RideService implements IRideService {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findById(rideId);
+    const ride = await this._rideRepo.findById(rideId);
     return ride;
   }
 
@@ -228,64 +237,43 @@ export class RideService implements IRideService {
     rideId: string,
     userId: string,
   ): Promise<{
-    ride: IRideWithDriver | null;
-    complaintInfo: IComplaints | null;
+    ride: UserRideHistoryDTO | null;
+    complaintInfo: ComplaintResDTO | null;
   }> {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.getRideInfoWithDriver(rideId);
+    const ride = await this._rideRepo.getRideInfoWithDriver(rideId);
 
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
-    const complaintInfo = await this.rideRepo.getComplaintInfo(rideId, userId);
+    const complaintInfo = await this._complaintRepo.findOne({ rideId, userId });
 
-    return { ride, complaintInfo };
-  }
-
-  async fileComplaint(
-    id: string,
-    rideId: string,
-    reason: string,
-    by: string,
-    description?: string,
-  ): Promise<IComplaints | null> {
-    if (!rideId || rideId === 'null' || String(rideId).trim() === '') {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
-    }
-    if (!reason || (reason == 'other' && !description)) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-    const ride = await this.rideRepo.findById(rideId);
-    if (!ride) {
-      throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
-    }
-
-    const complaint = await this.rideRepo.createComplaint(rideId, id, by, reason, description);
-    return complaint;
+    return {
+      ride: RideMapper.toUserRideHistory(ride),
+      complaintInfo: complaintInfo ? ComplaintsMapper.toComplaint(complaintInfo) : null,
+    };
   }
 
   async findDriverRideInfo(
     rideId: string,
     driverId: string,
   ): Promise<{
-    ride: IRideWithUser | null;
-    complaintInfo: IComplaints | null;
+    ride: DriverRideHistoryDTO | null;
+    complaintInfo: ComplaintResDTO | null;
   }> {
-    if (!rideId) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
-    const ride = await this.rideRepo.getRideInfoWithUser(rideId);
+    const ride = await this._rideRepo.getRideInfoWithUser(rideId);
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
-    console.log('rideId', rideId, 'driverId', driverId);
 
-    const complaintInfo = await this.rideRepo.getComplaintInfo(rideId, driverId);
+    const complaintInfo = await this._complaintRepo.findOne({ rideId, driverId });
 
-    return { ride, complaintInfo };
+    return {
+      ride: RideMapper.toDriverRideHistory(ride),
+      complaintInfo: complaintInfo ? ComplaintsMapper.toComplaint(complaintInfo) : null,
+    };
   }
 
   async giveFeedBack(
@@ -294,7 +282,7 @@ export class RideService implements IRideService {
     rating: number,
     feedback?: string,
   ): Promise<void> {
-    const ride = await this.rideRepo.findById(rideId);
+    const ride = await this._rideRepo.findById(rideId);
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
@@ -313,7 +301,7 @@ export class RideService implements IRideService {
       ratedAgainstId = new mongoose.Types.ObjectId(ride.userId);
       ratedAgainstRole = 'user';
     }
-    await this.rideRepo.createFeedBack(
+    await this._rideRepo.createFeedBack(
       ride.id,
       ratedById,
       ratedAgainstId,
@@ -336,7 +324,7 @@ export class RideService implements IRideService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
-    const data = await this.rideRepo.rideCounts(id, requestedBy);
+    const data = await this._rideRepo.rideCounts(id, requestedBy);
 
     return data;
   }
@@ -351,7 +339,7 @@ export class RideService implements IRideService {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const data = await this.rideRepo.getAvgRating(new mongoose.Types.ObjectId(id), requestedBy);
+    const data = await this._rideRepo.getAvgRating(new mongoose.Types.ObjectId(id), requestedBy);
     return data;
   }
 }

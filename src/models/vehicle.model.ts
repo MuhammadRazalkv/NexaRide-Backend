@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, ObjectId } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IVehicle extends Document {
   driverId: mongoose.Types.ObjectId;

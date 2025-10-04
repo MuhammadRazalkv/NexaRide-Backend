@@ -1,5 +1,4 @@
 import { IRideHistory } from '../../models/ride.history.model';
-import { UpdateResult } from 'mongodb';
 // import {
 //   IRideWithDriver,
 //   IRideWithUser,
@@ -11,7 +10,6 @@ import { IUser } from '../../models/user.model';
 import { IDrivers } from '../../models/driver.model';
 import { IFeedback } from '../../models/feedbacks.model';
 import { IBaseRepository } from './base.repo.interface';
-import { ComplaintsWithUserDriver } from '../../dtos/response/complaint.res.dto';
 import {
   DriverRideHistoryDTO,
   RideHistoryWithDriverAndUser,

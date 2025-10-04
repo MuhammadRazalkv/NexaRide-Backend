@@ -1,15 +1,15 @@
-import { IUser } from '../models/user.model';
 import OTPRepo from '../repositories/otp.repo';
 import crypto from 'crypto';
 import { html, resetLinkBtn } from '../constants/OTP';
 import { hashPassword, comparePassword } from '../utils/passwordManager';
-import { z } from 'zod';
+
 import {
   generateAccessToken,
   generateRefreshToken,
   forgotPasswordToken,
   verifyRefreshToken,
   verifyForgotPasswordToken,
+  generateBothTokens,
 } from '../utils/jwt';
 import sendEmail from '../utils/mailSender';
 import cloudinary from '../utils/cloudinary';
@@ -21,43 +21,30 @@ import { messages } from '../constants/httpMessages';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { ISubscriptionRepo } from '../repositories/interfaces/subscription.repo.interface';
 import mongoose from 'mongoose';
-import { ISubscription } from '../models/subscription.model';
 import { getFromRedis, setToRedis } from '../config/redis';
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
-
-const userSchema = z.object({
-  name: z.string().min(3, 'Name must be at least 3 characters'),
-  email: z.string().email('Invalid email format'),
-  phone: z.number().min(1000000000, 'Phone must be a 10-digit number'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  profilePic: z.string().optional(),
-  googleId: z.string().optional(),
-});
-
-const generateTokens = (userId: string) => ({
-  accessToken: generateAccessToken(userId, 'user'),
-  refreshToken: generateRefreshToken(userId, 'user'),
-});
+import { UserSchemaDTO } from '../dtos/request/auth.req.dto';
+import { LoginResDTO } from '../dtos/response/auth.res.dto';
+import { UserResDTO } from '../dtos/response/user.dto';
+import { UserMapper } from '../mappers/user.mapper';
+import { SubscriptionResDTO } from '../dtos/response/subscription.res.dto';
+import { PremiumUser } from '../mappers/premium.mapper';
 
 export class UserService implements IUserService {
   constructor(
-    private userRepo: IUserRepo,
-    private subscriptionRepo: ISubscriptionRepo,
+    private _userRepo: IUserRepo,
+    private _subscriptionRepo: ISubscriptionRepo,
   ) {}
 
-  async emailVerification(email: string) {
-    if (!email) throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    const existingUser = await this.userRepo.findOne({ email });
+  async emailVerification(email: string): Promise<void> {
+    const existingUser = await this._userRepo.findOne({ email });
     if (existingUser) throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
     const OTP = crypto.randomInt(1000, 10000).toString();
     OTPRepo.setOTP(email, OTP);
     OTPRepo.sendOTP(email, 'Your NexaRide OTP', html(OTP)).catch(console.error);
   }
 
-  async verifyOTP(email: string, otp: string) {
-    if (!email || !otp) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
+  async verifyOTP(email: string, otp: string): Promise<void> {
     const SOTP = await OTPRepo.getOTP(email);
 
     if (!SOTP || otp !== SOTP) {
@@ -68,49 +55,35 @@ export class UserService implements IUserService {
     OTPRepo.deleteOTP(email);
   }
 
-  async reSendOTP(email: string) {
-    if (!email) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    }
-    const existingUser = await this.userRepo.findOne({ email });
+  async reSendOTP(email: string): Promise<void> {
+    const existingUser = await this._userRepo.findOne({ email });
     if (existingUser) throw new AppError(HttpStatus.CONFLICT, messages.EMAIL_ALREADY_EXISTS);
     const OTP = crypto.randomInt(1000, 10000).toString();
     OTPRepo.setOTP(email, OTP);
     OTPRepo.sendOTP(email, 'Your new  NexaRide OTP', html(OTP)).catch(console.error);
   }
 
-  async addInfo(userData: IUser) {
-    const parsedData = userSchema.safeParse(userData);
-    if (!parsedData.success) {
-      throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        messages.VALIDATION_ERROR + parsedData.error.errors.map((err) => err.message).join(', '),
-      );
-    }
-
-    // Check if email is verified
-    if (!(await OTPRepo.isEmailVerified(parsedData.data.email))) {
+  async addInfo(data: UserSchemaDTO): Promise<LoginResDTO> {
+    if (!(await OTPRepo.isEmailVerified(data.email))) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_VERIFIED);
     }
 
     // Ensure password exists and hash it
-    if (!parsedData.data.password)
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
-    parsedData.data.password = await hashPassword(parsedData.data.password);
+    if (!data.password) throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
+    data.password = await hashPassword(data.password);
 
     // Register user
     try {
-      const newUser = await this.userRepo.create(parsedData.data);
-      await OTPRepo.deleteVerifiedEmail(parsedData.data.email);
+      const newUser = await this._userRepo.create(data);
+      await OTPRepo.deleteVerifiedEmail(data.email);
 
       // Generate tokens
       return {
-        ...generateTokens(newUser._id as string),
+        ...generateBothTokens(newUser._id as string, 'user'),
         user: {
           _id: newUser._id,
           name: newUser.name,
           email: newUser.email,
-          role: 'User',
           profilePic: newUser.profilePic,
         },
       };
@@ -127,13 +100,9 @@ export class UserService implements IUserService {
     }
   }
 
-  async login(email: string, password: string) {
-    if (!email || !password) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
-    }
-
+  async login(email: string, password: string): Promise<LoginResDTO> {
     // Check if user exists
-    const user = await this.userRepo.findOne({ email });
+    const user = await this._userRepo.findOne({ email });
     if (!user) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
     }
@@ -160,23 +129,22 @@ export class UserService implements IUserService {
 
     // Generate tokens
     return {
-      ...generateTokens(user._id as string),
+      ...generateBothTokens(user._id as string, 'user'),
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
-        role: 'User',
         profilePic: user.profilePic,
       },
     };
   }
 
-  async googleLogin(email: string, googleId: string, name: string) {
-    if (!email || !googleId) {
+  async googleLogin(email: string, googleId: string, name: string): Promise<LoginResDTO> {
+    if (!googleId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
 
-    const user = await this.userRepo.findOne({ email });
+    const user = await this._userRepo.findOne({ email });
 
     if (user?.isBlocked) {
       throw new AppError(HttpStatus.FORBIDDEN, messages.ACCOUNT_BLOCKED);
@@ -190,9 +158,9 @@ export class UserService implements IUserService {
           googleId,
           name,
         };
-        const newUser = await this.userRepo.create(userData);
+        const newUser = await this._userRepo.create(userData);
         return {
-          ...generateTokens(newUser._id as string),
+          ...generateBothTokens(newUser.id, 'user'),
           user: {
             _id: newUser._id,
             name: newUser.name,
@@ -215,7 +183,7 @@ export class UserService implements IUserService {
 
     // If user exists, only update googleId if it's missing
     if (!user.googleId) {
-      await this.userRepo.updateById(user.id, { $set: { googleId } });
+      await this._userRepo.updateById(user.id, { $set: { googleId } });
     }
 
     const activeUser = await getFromRedis(`RU:${user.id}`);
@@ -228,7 +196,7 @@ export class UserService implements IUserService {
     }
 
     return {
-      ...generateTokens(user._id as string),
+      ...generateBothTokens(user.id, 'user'),
       user: {
         _id: user._id,
         name: user.name,
@@ -238,11 +206,8 @@ export class UserService implements IUserService {
     };
   }
 
-  async requestPasswordReset(email: string) {
-    if (!email) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_FOUND);
-    }
-    const user = await this.userRepo.findOne({ email });
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this._userRepo.findOne({ email });
     if (!user) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.USER_NOT_FOUND);
     }
@@ -253,14 +218,14 @@ export class UserService implements IUserService {
     await sendEmail(user.email, 'Password Reset Request - Action Required', resetLinkBtn(resetUrl));
   }
 
-  async resetPassword(id: string, token: string, password: string) {
+  async resetPassword(id: string, token: string, password: string): Promise<void> {
     if (!id || !token) {
       throw new AppError(HttpStatus.BAD_GATEWAY, messages.MISSING_FIELDS);
     }
     if (!password) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.PASSWORD_NOT_FOUND);
     }
-    const user = await this.userRepo.findById(id);
+    const user = await this._userRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.USER_NOT_FOUND);
     }
@@ -271,20 +236,26 @@ export class UserService implements IUserService {
     }
 
     const encryptedPassword = await hashPassword(password);
-    await this.userRepo.updateById(id, {
+    await this._userRepo.updateById(id, {
       $set: { password: encryptedPassword },
     });
   }
 
-  async getUserInfo(id: string) {
+  async getUserInfo(id: string): Promise<UserResDTO | null> {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const user = await this.userRepo.findById(id);
-    return user;
+    const user = await this._userRepo.findById(id);
+    if (!user) {
+      throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
+    }
+    return UserMapper.toUser(user);
   }
 
-  async refreshToken(token: string) {
+  async refreshToken(token: string): Promise<{
+    newAccessToken: string;
+    newRefreshToken: string;
+  }> {
     if (!token) {
       throw new AppError(HttpStatus.UNAUTHORIZED, messages.TOKEN_NOT_PROVIDED);
     }
@@ -300,22 +271,14 @@ export class UserService implements IUserService {
     return { newAccessToken, newRefreshToken };
   }
 
-  async updateUserName(id: string, name: string) {
-    if (!id || !name) {
-      throw new Error('Fields are missing');
-    }
-
-    const res = await this.userRepo.updateById(id, { $set: { name } });
+  async updateUserName(id: string, name: string): Promise<string | undefined> {
+    const res = await this._userRepo.updateById(id, { $set: { name } });
     return res?.name;
   }
 
-  async updateUserPhone(id: string, phone: number) {
-    if (!id || !phone) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
+  async updateUserPhone(id: string, phone: number): Promise<number | undefined> {
     try {
-      const res = await this.userRepo.updateById(id, { $set: { phone } });
+      const res = await this._userRepo.updateById(id, { $set: { phone } });
       return res?.phone;
     } catch (error: any) {
       if (error instanceof mongoose.Error.CastError) {
@@ -323,8 +286,6 @@ export class UserService implements IUserService {
       }
 
       if (error.code === 11000) {
-        const field = Object.keys(error.keyPattern)[0];
-
         throw new AppError(HttpStatus.CONFLICT, `Phone already exists`);
       }
 
@@ -332,7 +293,7 @@ export class UserService implements IUserService {
     }
   }
 
-  async updateUserPfp(id: string, image: string) {
+  async updateUserPfp(id: string, image: string): Promise<string | undefined> {
     if (!id || !image) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
@@ -341,10 +302,10 @@ export class UserService implements IUserService {
       folder: '/UserProfilePic',
       // type: "authenticated",
     });
-    const user = await this.userRepo.updateById(id, {
+    const user = await this._userRepo.updateById(id, {
       $set: { profilePic: res.secure_url },
     });
-    // const user = await this.userRepo.updatePfp(id, res.public_id);
+    // const user = await this._userRepo.updatePfp(id, res.public_id);
     // const profilePicUrl = generateSignedCloudinaryUrl(user?.profilePic)
     return user?.profilePic;
   }
@@ -357,12 +318,12 @@ export class UserService implements IUserService {
     if (!userId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const user = await this.userRepo.findById(userId);
+    const user = await this._userRepo.findById(userId);
     if (!user) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
     }
 
-    const subInfo = await this.subscriptionRepo.findOne({
+    const subInfo = await this._subscriptionRepo.findOne({
       userId,
       expiresAt: { $gt: Date.now() },
     });
@@ -377,18 +338,18 @@ export class UserService implements IUserService {
   async subscriptionHistory(
     userId: string,
     page: number,
-  ): Promise<{ history: ISubscription[]; total: number }> {
+  ): Promise<{ history: SubscriptionResDTO[]; total: number }> {
     if (!userId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
     const limit = 8;
     const skip = (page - 1) * limit;
-    const history = await this.subscriptionRepo.findAll(
+    const history = await this._subscriptionRepo.findAll(
       { userId: userId },
       { sort: { takenAt: -1 }, skip, limit },
     );
-    const total = await this.subscriptionRepo.countDocuments({ userId });
-    return { history, total };
+    const total = await this._subscriptionRepo.countDocuments({ userId });
+    return { history: PremiumUser.toSubscriptionList(history), total };
   }
 
   async logout(refreshToken: string, accessToken: string): Promise<void> {

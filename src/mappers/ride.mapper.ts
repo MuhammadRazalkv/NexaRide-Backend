@@ -6,6 +6,7 @@ import {
   RideHistoryWithDriverAndUser,
   RideInfoWithUserAndDriverNameDTO,
   UserRideHistoryDTO,
+  UserRideListDTO,
 } from '../dtos/response/ride.res.dto';
 import { IRideHistory } from '../models/ride.history.model';
 import { PopulatedRideHistory } from '../repositories/interfaces/ride.repo.interface';
@@ -54,6 +55,7 @@ export class RideMapper {
   }
   static toFullListView(data: IRideHistory): FullRideListView {
     return {
+      _id: data.id,
       driverId: data.driverId.toString(),
       canceledAt: data.cancelledAt,
       commission: data.commission,
@@ -190,5 +192,25 @@ export class RideMapper {
       commission: data.commission,
       driverEarnings: data.driverEarnings,
     };
+  }
+  static toUserRideListView(data: IRideHistory): UserRideListDTO {
+    return {
+      _id: data.id,
+      driverId: data.driverId.toString(),
+      canceledAt: data.cancelledAt,
+      distance: data.distance,
+      dropOffLocation: data.dropOffLocation,
+      endedAt: data.endedAt,
+      estTime: data.estTime,
+      paymentStatus: data.paymentStatus,
+      pickupLocation: data.pickupLocation,
+      startedAt: data.startedAt,
+      status: data.status,
+      timeTaken: data.timeTaken,
+      totalFare: data.totalFare,
+    };
+  }
+  static toUserRideList(data: IRideHistory[]): UserRideListDTO[] {
+    return data.map((d) => this.toUserRideListView(d));
   }
 }

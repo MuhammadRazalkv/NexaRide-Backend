@@ -9,7 +9,6 @@ import { IRideRepo, PopulatedRideHistory } from './interfaces/ride.repo.interfac
 import Complaints, { IComplaints } from '../models/complaints.modal';
 import mongoose from 'mongoose';
 import Feedback, { IFeedback } from '../models/feedbacks.model';
-import { ComplaintsWithUserDriver } from '../dtos/response/complaint.res.dto';
 import {
   DriverRideHistoryDTO,
   RideHistoryWithDriverAndUser,

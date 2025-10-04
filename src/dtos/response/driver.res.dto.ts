@@ -1,4 +1,3 @@
-import { ObjectId } from 'mongoose';
 import { BaseAccountDTO } from './base.res.dto';
 
 export interface DriverResDTO extends BaseAccountDTO {

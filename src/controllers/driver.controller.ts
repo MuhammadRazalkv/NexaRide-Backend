@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import IDriverController from './interfaces/driver.controller.interface';
 import { ExtendedRequest } from '../middlewares/auth.middleware';
-import cloudinary from '../utils/cloudinary';
 import { IDriverService } from '../services/interfaces/driver.service.interface';
 import { IVehicleService } from '../services/interfaces/vehicle.interface';
 import { HttpStatus } from '../constants/httpStatusCodes';
@@ -172,7 +171,7 @@ export class DriverController implements IDriverController {
       const id = validate(objectIdSchema, req.id);
       const response = await this._vehicleService.rejectReason(id);
 
-      sendSuccess(res, HttpStatus.OK, { response: response.reason });
+      sendSuccess(res, HttpStatus.OK, { response });
     } catch (error) {
       next(error);
     }
@@ -192,19 +191,6 @@ export class DriverController implements IDriverController {
       );
     } catch (error) {
       next(error);
-    }
-  }
-
-  //!Not need
-  async upload(req: Request, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const img = req.body.imgUrl;
-      const res = await cloudinary.uploader.upload(img, {
-        folder: '/demo',
-      });
-      console.log(res);
-    } catch (error) {
-      console.log(error);
     }
   }
 

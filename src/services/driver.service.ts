@@ -23,12 +23,7 @@ import { messages } from '../constants/httpMessages';
 import cloudinary from '../utils/cloudinary';
 import { getDriverInfoRedis, getFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
-import {
-  DriverReApplyDTO,
-  driverReApplyDTO,
-  DriverSchemaDTO,
-  LoginDTO,
-} from '../dtos/request/auth.req.dto';
+import { DriverReApplyDTO, DriverSchemaDTO, LoginDTO } from '../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../dtos/response/auth.res.dto';
 import { DriverMapper } from '../mappers/driver.mapper';
 import { DriverResDTO } from '../dtos/response/driver.res.dto';

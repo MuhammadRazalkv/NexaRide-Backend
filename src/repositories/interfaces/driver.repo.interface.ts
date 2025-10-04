@@ -1,7 +1,6 @@
 import { IDrivers } from '../../models/driver.model';
 
 import { IPricing } from '../../models/pricing.model';
-import { IDriverWithVehicle } from '../../services/interfaces/driver.service.interface';
 import { BaseRepository } from '../base.repo';
 import { IDriverWithVehicleInfo } from '../../interface/driver.vehicle.interface';
 import { RideAcceptedDriverDTO } from '../../dtos/response/driver.res.dto';

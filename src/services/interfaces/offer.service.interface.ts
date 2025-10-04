@@ -1,6 +1,5 @@
 import { OfferSchemaDTO } from '../../dtos/request/offer.req.dto';
 import { OfferResDTO } from '../../dtos/response/offer.res.dto';
-import { IOffer } from '../../models/offer.modal';
 
 export interface IOfferService {
   addOffer(data: OfferSchemaDTO): Promise<OfferResDTO>;

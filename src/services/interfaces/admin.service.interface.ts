@@ -14,15 +14,7 @@ import {
   RideInfoWithUserAndDriverNameDTO,
 } from '../../dtos/response/ride.res.dto';
 import { UserResDTO } from '../../dtos/response/user.dto';
-import { ICommission } from '../../models/commission.model';
-import { IComplaints } from '../../models/complaints.modal';
-import { IDrivers } from '../../models/driver.model';
-import { IRideHistory } from '../../models/ride.history.model';
 import { ISubscription } from '../../models/subscription.model';
-import { IUser } from '../../models/user.model';
-import { IVehicle } from '../../models/vehicle.model';
-import { PopulatedRideHistory } from '../../repositories/interfaces/ride.repo.interface';
-import { IRideWithUserAndDriver } from './ride.service.interface';
 
 interface IFare {
   basic: number;

@@ -1,12 +1,13 @@
-import { ObjectId } from 'mongoose';
 import { CheckCabs, RideCreateDTO } from '../../interface/ride.interface';
 import { IRideHistory } from '../../models/ride.history.model';
 import { ComplaintResDTO } from '../../dtos/response/complaint.res.dto';
 import {
   AvailableCabs,
   DriverRideHistoryDTO,
+  FullRideListView,
   RideHistoryDTO,
   UserRideHistoryDTO,
+  UserRideListDTO,
 } from '../../dtos/response/ride.res.dto';
 import { RideAcceptedDriverDTO } from '../../dtos/response/driver.res.dto';
 // interface IDriverMinimal {
@@ -46,14 +47,14 @@ export interface IRideService {
     id: string,
     page: number,
     sort: string,
-  ): Promise<{ history: IRideHistory[] | null; total: number }>;
+  ): Promise<{ history: UserRideListDTO[] | null; total: number }>;
   getRideHistoryDriver(
     id: string,
     page: number,
     sort: string,
-  ): Promise<{ history: IRideHistory[] | null; total: number }>;
+  ): Promise<{ history: FullRideListView[] | null; total: number }>;
   checkPaymentStatus(rideId: string): Promise<string | undefined>;
-  findRideById(rideId: string): Promise<IRideHistory | null>;
+  findRideById(rideId: string): Promise<RideHistoryDTO | null>;
   findUserRideInfo(
     rideId: string,
     userId: string,

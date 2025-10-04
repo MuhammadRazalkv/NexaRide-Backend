@@ -1,5 +1,4 @@
 import { CheckCabs, RideCreateDTO } from '../interface/ride.interface';
-import { IRideHistory } from '../models/ride.history.model';
 import { IRideService } from './interfaces/ride.service.interface';
 import { IDriverRepo } from '../repositories/interfaces/driver.repo.interface';
 import { IRideRepo } from '../repositories/interfaces/ride.repo.interface';
@@ -15,12 +14,13 @@ import { ComplaintsMapper } from '../mappers/complaints.mapper';
 import {
   AvailableCabs,
   DriverRideHistoryDTO,
+  FullRideListView,
   RideHistoryDTO,
   UserRideHistoryDTO,
+  UserRideListDTO,
   VehicleCategory,
 } from '../dtos/response/ride.res.dto';
-import { DriverWithVehicleResDTO, RideAcceptedDriverDTO } from '../dtos/response/driver.res.dto';
-import { DriverMapper } from '../mappers/driver.mapper';
+import { RideAcceptedDriverDTO } from '../dtos/response/driver.res.dto';
 import { RideMapper } from '../mappers/ride.mapper';
 
 export class RideService implements IRideService {
@@ -165,7 +165,11 @@ export class RideService implements IRideService {
     return { rideId: ride?.id, fare: ride?.totalFare };
   }
 
-  async getRideHistory(id: string, page: number, sort: string) {
+  async getRideHistory(
+    id: string,
+    page: number,
+    sort: string,
+  ): Promise<{ history: UserRideListDTO[]; total: number }> {
     const limit = 8;
     const skip = (page - 1) * limit;
     const history = await this._rideRepo.findAll(
@@ -187,10 +191,14 @@ export class RideService implements IRideService {
       },
     );
     const total = await this._rideRepo.countDocuments({ userId: id });
-    return { history, total };
+    return { history: RideMapper.toUserRideList(history), total };
   }
 
-  async getRideHistoryDriver(id: string, page: number, sort: string) {
+  async getRideHistoryDriver(
+    id: string,
+    page: number,
+    sort: string,
+  ): Promise<{ history: FullRideListView[]; total: number }> {
     const limit = 8;
     const skip = (page - 1) * limit;
     const history = await this._rideRepo.findAll(
@@ -214,10 +222,10 @@ export class RideService implements IRideService {
       },
     );
     const total = await this._rideRepo.countDocuments({ driverId: id });
-    return { history, total };
+    return { history: RideMapper.toFullListViewList(history), total };
   }
 
-  async checkPaymentStatus(rideId: string) {
+  async checkPaymentStatus(rideId: string): Promise<string | undefined> {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
@@ -225,12 +233,13 @@ export class RideService implements IRideService {
     return ride?.paymentStatus;
   }
 
-  async findRideById(rideId: string) {
+  async findRideById(rideId: string): Promise<RideHistoryDTO | null> {
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
     const ride = await this._rideRepo.findById(rideId);
-    return ride;
+
+    return ride ? RideMapper.toFullRide(ride) : null;
   }
 
   async findUserRideInfo(

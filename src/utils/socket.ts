@@ -8,7 +8,6 @@ import {
   getAvailableDriversByGeo,
   updateDriverFelids,
   removeDriverFromGeoIndex,
-  changeExpInRedis,
   DriverCategory,
 } from '../config/redis';
 import { extractUserIdFromToken } from './jwt';
@@ -161,15 +160,8 @@ export const initializeSocket = (server: any) => {
           return;
         }
 
-        const {
-          finalFare,
-          bestDiscount,
-          bestOffer,
-          driverShare,
-          originalFare,
-          isPremiumUser,
-          premiumDiscount,
-        } = fareData;
+        const { finalFare, bestDiscount, bestOffer, driverShare, originalFare, premiumDiscount } =
+          fareData;
 
         const rideResult = await findDriverForRide(
           nearestDrivers,
@@ -182,7 +174,6 @@ export const initializeSocket = (server: any) => {
           bestDiscount,
           originalFare,
           routeInfo.distance, //! this is in meter need to change to km
-          isPremiumUser,
           premiumDiscount,
           io,
         );

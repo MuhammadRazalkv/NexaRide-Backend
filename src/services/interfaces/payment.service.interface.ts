@@ -1,6 +1,4 @@
 import { DriverWalletResDTO, WalletResDTO } from '../../dtos/response/wallet.res.dto';
-import { IDriverWallet } from '../../models/driver.wallet.model';
-import { IWallet } from '../../models/user.wallet.model';
 export interface IPaymentService {
   addMoneyToWallet(id: string, amount: number): Promise<string | null>;
   getWalletInfo(id: string, page: number): Promise<{ wallet: WalletResDTO | null; total: number }>;

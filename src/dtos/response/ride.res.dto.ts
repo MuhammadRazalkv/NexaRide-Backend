@@ -32,9 +32,8 @@ export interface PopulatedRideResDTO {
   };
 }
 
-export interface RideListView {}
-
 export interface FullRideListView {
+  _id: string;
   driverId: string;
   pickupLocation: string;
   dropOffLocation: string;
@@ -154,3 +153,5 @@ export interface RideHistoryWithDriverAndUser
   driverId: { _id: string; name: string };
   userId: { _id: string; name: string };
 }
+
+export interface UserRideListDTO extends Omit<FullRideListView, 'commission' | 'driverEarnings'> {}

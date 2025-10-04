@@ -2,11 +2,10 @@
   "name": "nexaride-backend",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node dist/index.js",
-    "build": "rm -rf dist && tsc",
-    "dev": "concurrently \"stripe listen --forward-to localhost:3000/user/webhook\" \"nodemon",
+    "build": "rimraf dist && tsc",
+    "dev": "concurrently \"stripe listen --forward-to http://localhost:3000/user/webhook\" \"nodemon --watch src --ext ts --exec ts-node src/index.ts\"",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write ."

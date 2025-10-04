@@ -1,17 +1,17 @@
-import js from '@eslint/js';
-import tseslint from '@typescript-eslint/eslint-plugin';
-import tsparser from '@typescript-eslint/parser';
-import prettierConfig from 'eslint-config-prettier';
-import prettierPlugin from 'eslint-plugin-prettier';
-import unusedImports from 'eslint-plugin-unused-imports';
-
-export default [
+const js = require('@eslint/js');
+const tseslint = require('@typescript-eslint/eslint-plugin');
+const tsparser = require('@typescript-eslint/parser');
+const prettier = require('eslint-config-prettier');
+const prettierPlugin = require('eslint-plugin-prettier');
+const unusedImports = require('eslint-plugin-unused-imports');
+const globals = require('globals')
+module.exports = [
   {
     ignores: ['dist/**', 'node_modules/**'],
   },
 
   js.configs.recommended,
-  prettierConfig,
+  prettier,
 
   {
     files: ['**/*.ts'],
@@ -22,7 +22,7 @@ export default [
         sourceType: 'module',
       },
       globals: {
-        process: 'readonly',
+        ...globals.node
       },
     },
     plugins: {
@@ -31,17 +31,12 @@ export default [
       'unused-imports': unusedImports,
     },
     rules: {
-      // Prettier integration
       'prettier/prettier': 'error',
-
-      // Disable base no-unused-vars and enable TS version
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
-        'error',
+        'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
-
-      // Unused imports cleanup
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
         'warn',

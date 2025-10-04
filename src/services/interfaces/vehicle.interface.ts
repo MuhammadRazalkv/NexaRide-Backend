@@ -1,5 +1,4 @@
 import { VehicleSchemaDTO } from '../../dtos/request/auth.req.dto';
-import { IVehicle } from '../../models/vehicle.model';
 export interface IVehicleService {
   addVehicle(data: VehicleSchemaDTO): Promise<{
     driver: {
@@ -18,7 +17,5 @@ export interface IVehicleService {
       status: string;
     };
   }>;
-  rejectReason(driverId: string): Promise<{
-    reason: string | undefined;
-  }>;
+  rejectReason(driverId: string): Promise<string | undefined>;
 }

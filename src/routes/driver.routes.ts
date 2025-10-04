@@ -32,8 +32,6 @@ driverRoutes.patch('/updateDriverInfo', authMiddleware, driverController.updateD
 driverRoutes.patch('/updateProfilePic', authMiddleware, driverController.updateProfilePic);
 driverRoutes.patch('/updateAvailability', authMiddleware, driverController.updateAvailability);
 
-driverRoutes.post('/upload', driverController.upload);
-
 driverRoutes.post('/useRandomLocation', authMiddleware, rideController.assignRandomLocation);
 driverRoutes.post('/verifyRideOTP', authMiddleware, rideController.verifyRideOTP);
 

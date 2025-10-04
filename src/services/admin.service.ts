@@ -9,24 +9,18 @@ import {
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
-import { IAdminService, IPremiumUsers } from './interfaces/admin.service.interface';
+import { IAdminService } from './interfaces/admin.service.interface';
 import { IUserRepo } from '../repositories/interfaces/user.repo.interface';
 import { IDriverRepo } from '../repositories/interfaces/driver.repo.interface';
 import { IVehicleRepo } from '../repositories/interfaces/vehicle.repo.interface';
 import { IAdminRepo } from '../repositories/interfaces/admin.repo.interface';
-import { IRideRepo, PopulatedRideHistory } from '../repositories/interfaces/ride.repo.interface';
-import { IComplaints } from '../models/complaints.modal';
+import { IRideRepo } from '../repositories/interfaces/ride.repo.interface';
 import { ISubscriptionRepo } from '../repositories/interfaces/subscription.repo.interface';
 
-import { ICommission } from '../models/commission.model';
 import { ICommissionRepo } from '../repositories/interfaces/commission.repo.interface';
-import { IDrivers } from '../models/driver.model';
 import mongoose from 'mongoose';
-import { IVehicle } from '../models/vehicle.model';
-import { IUser } from '../models/user.model';
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
 import { setToRedis } from '../config/redis';
-import { IRideHistory } from '../models/ride.history.model';
 import { LoginResponseAdminDTO } from '../dtos/response/auth.res.dto';
 import { UserMapper } from '../mappers/user.mapper';
 import { UserResDTO } from '../dtos/response/user.dto';

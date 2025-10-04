@@ -1,5 +1,4 @@
 import { IUser } from '../../models/user.model';
-import { UpdateResult } from 'mongodb';
 import { IBaseRepository } from './base.repo.interface';
 
 export interface IUserRepo extends IBaseRepository<IUser> {

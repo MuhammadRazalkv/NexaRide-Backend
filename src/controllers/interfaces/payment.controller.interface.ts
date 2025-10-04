@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { ExtendedRequest } from '../../middlewares/auth.middleware';
 export interface IPaymentController {
   addMoneyToWallet(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;

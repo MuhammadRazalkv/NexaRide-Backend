@@ -5,7 +5,6 @@ import { ObjectId } from 'mongodb';
 import { IDriverRepo } from './interfaces/driver.repo.interface';
 import { BaseRepository } from './base.repo';
 import { AppError } from '../utils/appError';
-import { IDriverWithVehicle } from '../services/interfaces/driver.service.interface';
 import { IDriverWithVehicleInfo } from '../interface/driver.vehicle.interface';
 import { RideAcceptedDriverDTO } from '../dtos/response/driver.res.dto';
 

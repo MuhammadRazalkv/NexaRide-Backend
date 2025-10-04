@@ -1,4 +1,3 @@
-import { UpdateResult } from 'mongoose';
 import User, { IUser } from '../models/user.model';
 import { BaseRepository } from './base.repo';
 import { IUserRepo } from './interfaces/user.repo.interface';

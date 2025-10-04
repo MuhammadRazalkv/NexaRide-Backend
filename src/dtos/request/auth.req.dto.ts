@@ -101,6 +101,7 @@ export function validateLicensePlate(value: string): boolean {
   return licensePlateRegex.test(value);
 }
 export const vehicleSchemaDTO = z.object({
+  driverId: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
   nameOfOwner: z.string().min(1, 'Name of owner is required').trim(),
 
   addressOfOwner: z.string().min(1, 'Street address is required').trim(),
@@ -167,3 +168,22 @@ export const updateDriverInfoDTO = z.discriminatedUnion(
 );
 
 export type UpdateDriverInfoDTO = z.infer<typeof updateDriverInfoDTO>;
+
+export const userSchemaDTO = z.object({
+  name: z
+    .string()
+    .min(3, 'Name must be at least 3 characters')
+    .max(15, 'Name cannot exceed 15 characters '),
+  email: z.string().email('Invalid email format'),
+  phone: z.number().min(1000000000, 'Phone must be a 10-digit number'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  profilePic: z.string().optional(),
+  googleId: z.string().optional(),
+});
+export const nameDTO = z
+  .string()
+  .min(3, 'Name must be at least 3 characters')
+  .max(15, 'Name cannot exceed 15 characters ');
+export type UserSchemaDTO = z.infer<typeof userSchemaDTO>;
+
+export const phoneDTO = z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number');

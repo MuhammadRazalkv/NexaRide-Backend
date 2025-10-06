@@ -10,8 +10,8 @@ import { VehicleSchemaDTO } from '../dtos/request/auth.req.dto';
 
 export class VehicleService implements IVehicleService {
   constructor(
-    private vehicleRepo: IVehicleRepo,
-    private driverRepo: IDriverRepo,
+    private _vehicleRepo: IVehicleRepo,
+    private _driverRepo: IDriverRepo,
   ) {}
   async addVehicle(data: VehicleSchemaDTO): Promise<{
     driver: {
@@ -24,7 +24,7 @@ export class VehicleService implements IVehicleService {
     const driverId = data.driverId.toString();
 
     // Check if driver exists
-    const driver = await this.driverRepo.findById(driverId);
+    const driver = await this._driverRepo.findById(driverId);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -54,8 +54,8 @@ export class VehicleService implements IVehicleService {
       vehicleImages,
     };
     try {
-      const vehicle = await this.vehicleRepo.create(vehicleData);
-      await this.driverRepo.updateById(driverId, {
+      const vehicle = await this._vehicleRepo.create(vehicleData);
+      await this._driverRepo.updateById(driverId, {
         $set: { vehicleId: vehicle._id },
       });
       return {
@@ -89,7 +89,7 @@ export class VehicleService implements IVehicleService {
     };
   }> {
     // Check if driver exists
-    const driver = await this.driverRepo.findById(id);
+    const driver = await this._driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -97,7 +97,7 @@ export class VehicleService implements IVehicleService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
     const vehicleId = String(driver.vehicleId);
-    const vehicleDetails = await this.vehicleRepo.findById(vehicleId);
+    const vehicleDetails = await this._vehicleRepo.findById(vehicleId);
     if (!vehicleDetails) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
@@ -122,7 +122,7 @@ export class VehicleService implements IVehicleService {
       // Register the vehicle with updated images
       const vehicleData = { ...data, vehicleImages };
 
-      await this.vehicleRepo.updateById(vehicleId, {
+      await this._vehicleRepo.updateById(vehicleId, {
         $set: { ...vehicleData, status: 'pending' },
       });
 
@@ -152,7 +152,7 @@ export class VehicleService implements IVehicleService {
   }
 
   async rejectReason(driverId: string): Promise<string | undefined> {
-    const driver = await this.driverRepo.findById(driverId);
+    const driver = await this._driverRepo.findById(driverId);
 
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
@@ -161,7 +161,7 @@ export class VehicleService implements IVehicleService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
     const vehicleId = String(driver.vehicleId);
-    const vehicle = await this.vehicleRepo.findById(vehicleId);
+    const vehicle = await this._vehicleRepo.findById(vehicleId);
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }

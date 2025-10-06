@@ -21,7 +21,7 @@ export async function calculateFareWithDiscount(requestedFare: number, userId: s
       if (premiumUser.isSubscribed && fare > MIN_FARE) {
         premiumDiscount = Math.round(appCommission * PREMIUM_DISCOUNT_RATE);
       }
-    } catch (error) {
+    } catch {
       premiumDiscount = 0;
     }
 

@@ -2,7 +2,6 @@ import { UserSchemaDTO } from '../../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../../dtos/response/auth.res.dto';
 import { SubscriptionResDTO } from '../../dtos/response/subscription.res.dto';
 import { UserResDTO } from '../../dtos/response/user.dto';
-import { ISubscription } from '../../models/subscription.model';
 export default interface IUserService {
   emailVerification(email: string): Promise<void>;
   verifyOTP(email: string, otp: string): Promise<void>;
@@ -29,6 +28,6 @@ export default interface IUserService {
     userId: string,
     page: number,
   ): Promise<{ history: SubscriptionResDTO[]; total: number }>;
-  logout(refreshToken: string, accessToken: string): Promise<void>;
+  logout(id: string, refreshToken: string, accessToken: string): Promise<void>;
   // dashboard(userId:string):Promise<{totalRides:number,completedRides:number,cancelledRides:number}>
 }

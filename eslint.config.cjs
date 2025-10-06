@@ -4,7 +4,7 @@ const tsparser = require('@typescript-eslint/parser');
 const prettier = require('eslint-config-prettier');
 const prettierPlugin = require('eslint-plugin-prettier');
 const unusedImports = require('eslint-plugin-unused-imports');
-const globals = require('globals')
+const globals = require('globals');
 module.exports = [
   {
     ignores: ['dist/**', 'node_modules/**'],
@@ -22,7 +22,7 @@ module.exports = [
         sourceType: 'module',
       },
       globals: {
-        ...globals.node
+        ...globals.node,
       },
     },
     plugins: {

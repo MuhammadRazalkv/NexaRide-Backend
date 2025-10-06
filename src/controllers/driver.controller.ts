@@ -327,15 +327,16 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async logout(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      const id = validate(objectIdSchema, req.id);
       const refreshToken = req.cookies.userRefreshToken as string;
       const authHeader = req.headers.authorization;
       const accessToken = authHeader && authHeader.split(' ')[1];
       if (!accessToken) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
-      await this._driverService.logout(refreshToken, accessToken);
+      await this._driverService.logout(id, refreshToken, accessToken);
       res.clearCookie('driverRefreshToken', {
         httpOnly: true,
         secure: true,

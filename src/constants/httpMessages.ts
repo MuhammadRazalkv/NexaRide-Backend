@@ -57,7 +57,9 @@ export const messages = {
   INVALID_TRANSACTION: 'Invalid transaction details. Please check and try again.',
   WALLET_MINIMUM_AMOUNT: 'You must add at least ₹50 to your wallet.',
   WALLET_MAX_AMOUNT: 'You can only add up to ₹3000 at a time to your wallet.',
-
+  PAYMENT_ALREADY_DONE: 'Payment has already been completed for this ride.',
+  PAYMENT_INITIATED:
+    'You already have an active payment in progress. Please complete it or wait for it to expire before starting a new one.',
   // Ride Booking
   NO_AVAILABLE_RIDES: 'No rides are currently available. Please try again later.',
   OTP_VERIFICATION_FAILED:

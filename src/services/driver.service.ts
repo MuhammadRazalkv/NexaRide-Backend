@@ -21,7 +21,13 @@ import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
 import cloudinary from '../utils/cloudinary';
-import { getDriverInfoRedis, getFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
+import {
+  getDriverInfoRedis,
+  getFromRedis,
+  removeFromRedis,
+  setToRedis,
+  updateDriverFelids,
+} from '../config/redis';
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
 import { DriverReApplyDTO, DriverSchemaDTO, LoginDTO } from '../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../dtos/response/auth.res.dto';
@@ -411,10 +417,11 @@ export class DriverService implements IDriverService {
     return vehicleCategory.farePerKm;
   }
 
-  async logout(refreshToken: string, accessToken: string): Promise<void> {
+  async logout(driverId: string, refreshToken: string, accessToken: string): Promise<void> {
     const refreshEXP = (getRefreshTokenMaxAge() / 1000) | 0;
     const accessEXP = (getAccessTokenMaxAge() / 1000) | 0;
     await setToRedis(refreshToken, 'Blacklisted', refreshEXP);
     await setToRedis(accessToken, 'BlackListed', accessEXP);
+    await removeFromRedis(`OD:${driverId}`);
   }
 }

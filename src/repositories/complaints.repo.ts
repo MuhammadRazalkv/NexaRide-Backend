@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { ComplaintsWithUserDriver } from '../dtos/response/complaint.res.dto';
 import Complaints, { IComplaints } from '../models/complaints.modal';
 import { BaseRepository } from './base.repo';
@@ -11,10 +12,13 @@ export class ComplaintsRepo extends BaseRepository<IComplaints> implements IComp
     skip: number,
     limit: number,
     filterBy: string,
-  ): Promise<ComplaintsWithUserDriver[] | null> {
-    const matchStage = filterBy ? { $match: { status: filterBy } } : { $match: {} };
-    return await Complaints.aggregate([
-      matchStage,
+    search: string,
+  ): Promise<{ complaints: ComplaintsWithUserDriver[]; count: number }> {
+    const match: Record<string, any> = {};
+    if (filterBy) match.status = filterBy;
+
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: match },
       {
         $lookup: {
           from: 'ridehistories',
@@ -32,7 +36,7 @@ export class ComplaintsRepo extends BaseRepository<IComplaints> implements IComp
           as: 'user',
         },
       },
-      { $unwind: { path: '$user' } },
+      { $unwind: '$user' },
       {
         $lookup: {
           from: 'drivers',
@@ -48,15 +52,41 @@ export class ComplaintsRepo extends BaseRepository<IComplaints> implements IComp
           driver: '$driver.name',
         },
       },
-      {
-        $project: {
-          __v: 0,
-          rideInfo: 0,
+    ];
+
+    if (search && search.trim()) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { user: { $regex: search, $options: 'i' } },
+            { driver: { $regex: search, $options: 'i' } },
+          ],
         },
+      });
+    }
+
+    pipeline.push({
+      $facet: {
+        complaints: [
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $project: {
+              __v: 0,
+              rideInfo: 0,
+            },
+          },
+        ],
+        count: [{ $count: 'total' }],
       },
-      { $skip: skip },
-      { $limit: limit },
-      { $sort: { createdAt: -1 } },
-    ]);
+    });
+
+    const [result] = await Complaints.aggregate(pipeline);
+    console.log(result);
+
+    return {
+      complaints: result.complaints,
+      count: result.count[0]?.total ?? 0,
+    };
   }
 }

@@ -44,6 +44,7 @@ export const initializeSocket = (server: any) => {
       next();
     } catch (error) {
       // console.log("Invalid token");
+      if (error instanceof Error) next(new AppError(HttpStatus.UNAUTHORIZED, error.message));
       next(new AppError(HttpStatus.UNAUTHORIZED, messages.INVALID_ID));
     }
   });

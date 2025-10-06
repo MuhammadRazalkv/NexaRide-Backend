@@ -1,5 +1,4 @@
 import { CheckCabs, RideCreateDTO } from '../../interface/ride.interface';
-import { IRideHistory } from '../../models/ride.history.model';
 import { ComplaintResDTO } from '../../dtos/response/complaint.res.dto';
 import {
   AvailableCabs,

@@ -7,5 +7,6 @@ export interface IComplaintsRepo extends IBaseRepository<IComplaints> {
     skip: number,
     limit: number,
     filterBy: string,
-  ): Promise<ComplaintsWithUserDriver[] | null>;
+    search: string,
+  ): Promise<{ complaints: ComplaintsWithUserDriver[] | null; count: number }>;
 }

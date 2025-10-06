@@ -4,7 +4,7 @@ import { IWalletRepo } from '../repositories/interfaces/wallet.repo.interface';
 import { IPaymentService } from './interfaces/payment.service.interface';
 import Stripe from 'stripe';
 import { getIO } from '../utils/socket';
-import { getFromRedis, removeFromRedis, updateDriverFelids } from '../config/redis';
+import { getFromRedis, removeFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
 import { IRideRepo } from '../repositories/interfaces/ride.repo.interface';
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
@@ -133,6 +133,7 @@ export class PaymentService implements IPaymentService {
         if (!ride) {
           throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
         }
+        await removeFromRedis(`ride:payment:${ride.userId}`);
         await this._handlePostPayment(ride, 'stripe');
       } else if (session.metadata && session.metadata.action == 'upgrade_to_plus') {
         console.log('Upgrade to plus');
@@ -165,6 +166,7 @@ export class PaymentService implements IPaymentService {
             subscriptionType: type,
           },
         });
+        await removeFromRedis(`sub:payment:${user.id}`);
       }
     }
   }
@@ -176,7 +178,12 @@ export class PaymentService implements IPaymentService {
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
-
+    if (ride.paymentStatus == 'completed') {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_ALREADY_DONE);
+    }
+    if (await getFromRedis(`ride:payment:${userId}`)) {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_INITIATED);
+    }
     const userWallet = await this._walletRepo.findOne({ userId });
 
     if (!userWallet || userWallet.balance === undefined || userWallet.balance == 0) {
@@ -212,6 +219,12 @@ export class PaymentService implements IPaymentService {
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
+    if (ride.paymentStatus == 'completed') {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_ALREADY_DONE);
+    }
+    if (await getFromRedis(`ride:payment:${userId}`)) {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_INITIATED);
+    }
 
     const totalFare = ride.totalFare;
 
@@ -238,6 +251,7 @@ export class PaymentService implements IPaymentService {
         action: 'ride_payment',
       },
     });
+    await setToRedis(`ride:payment:${userId}`, 'true', 180);
     return session.url;
   }
 
@@ -275,6 +289,9 @@ export class PaymentService implements IPaymentService {
   }
 
   async upgradeToPlus(id: string, type: string): Promise<string | null> {
+    if (await getFromRedis(`sub:payment:${id}`)) {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_INITIATED);
+    }
     if (type == 'yearly' || type == 'monthly') {
       const price = getPlusAmount(type);
       if (!price) throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.MISSING_FIELDS);
@@ -315,6 +332,7 @@ export class PaymentService implements IPaymentService {
           amount,
         },
       });
+      await setToRedis(`sub:payment:${id}`, 'true', 180);
 
       return session.url;
     }

@@ -231,15 +231,16 @@ export class UserController implements IUserController {
     }
   }
 
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async logout(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      const id = validate(objectIdSchema, req.id);
       const refreshToken = req.cookies.userRefreshToken as string;
       const authHeader = req.headers.authorization;
       const accessToken = authHeader && authHeader.split(' ')[1];
       if (!accessToken) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
-      await this._userService.logout(refreshToken, accessToken);
+      await this._userService.logout(id, refreshToken, accessToken);
       res.clearCookie('userRefreshToken', {
         httpOnly: true,
         secure: true,

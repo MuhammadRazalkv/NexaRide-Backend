@@ -1,3 +1,4 @@
+import { FareSchemaDTO } from '../../dtos/request/fare.req.dto';
 import { LoginResponseAdminDTO } from '../../dtos/response/auth.res.dto';
 import { BaseAccountDTO } from '../../dtos/response/base.res.dto';
 import { CommissionResDTO } from '../../dtos/response/commission.res.dto';
@@ -7,6 +8,7 @@ import {
   DriverWithVehicleResDTO,
   VehicleResDTO,
 } from '../../dtos/response/driver.res.dto';
+import { FareResDTO } from '../../dtos/response/fare.res.dto';
 import { PremiumUsersResDTO } from '../../dtos/response/premium.user.res.dto';
 import {
   FullRideListView,
@@ -16,13 +18,8 @@ import {
 import { UserResDTO } from '../../dtos/response/user.dto';
 import { ISubscription } from '../../models/subscription.model';
 
-interface IFare {
-  basic: number;
-  premium: number;
-  luxury: number;
-}
 export interface IPremiumUsers extends Omit<ISubscription, 'userId'> {
-  userId: string;
+  user: { name: string };
 }
 
 export interface IAdminService {
@@ -81,8 +78,8 @@ export interface IAdminService {
     message: string;
     vehicle: VehicleResDTO;
   }>;
-  updateFare(fare: IFare): Promise<IFare>;
-  getFares(): Promise<IFare>;
+  updateFare(fare: FareSchemaDTO): Promise<FareResDTO>;
+  getFares(): Promise<FareResDTO>;
   refreshToken(token: string): Promise<{
     newAccessToken: string;
     newRefreshToken: string;
@@ -91,6 +88,7 @@ export interface IAdminService {
   getAllComplaints(
     page: number,
     filter: string,
+    search: string,
   ): Promise<{ complaints: ComplaintsWithUserDriver[] | null; total: number }>;
   getComplaintInDetail(complaintId: string): Promise<{
     complaint: ComplaintResDTO | null;
@@ -115,6 +113,8 @@ export interface IAdminService {
   premiumUsers(
     page: number,
     filterBy: string,
+    search: string,
+    sort: string,
   ): Promise<{
     premiumUsers: PremiumUsersResDTO[];
     total: number;
@@ -136,6 +136,7 @@ export interface IAdminService {
     page: number,
     sort: string,
     filter: 'all' | 'ongoing' | 'canceled' | 'completed',
+    search: string,
   ): Promise<{ history: FullRideListView[] | null; total: number }>;
   rideInfo(rideId: string): Promise<RideInfoWithUserAndDriverNameDTO>;
   logout(refreshToken: string, accessToken: string): Promise<void>;

@@ -40,5 +40,5 @@ export interface IDriverService {
   }>;
   updateProfilePic(id: string, image: string): Promise<string | undefined>;
   getPriceByCategory(category: string): Promise<number>;
-  logout(refreshToken: string, accessToken: string): Promise<void>;
+  logout(id: string, refreshToken: string, accessToken: string): Promise<void>;
 }

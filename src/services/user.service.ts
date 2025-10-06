@@ -21,7 +21,7 @@ import { messages } from '../constants/httpMessages';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { ISubscriptionRepo } from '../repositories/interfaces/subscription.repo.interface';
 import mongoose from 'mongoose';
-import { getFromRedis, setToRedis } from '../config/redis';
+import { getFromRedis, removeFromRedis, setToRedis } from '../config/redis';
 import { getAccessTokenMaxAge, getRefreshTokenMaxAge } from '../utils/env';
 import { UserSchemaDTO } from '../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../dtos/response/auth.res.dto';
@@ -352,10 +352,11 @@ export class UserService implements IUserService {
     return { history: PremiumUser.toSubscriptionList(history), total };
   }
 
-  async logout(refreshToken: string, accessToken: string): Promise<void> {
+  async logout(id: string, refreshToken: string, accessToken: string): Promise<void> {
     const refreshEXP = (getRefreshTokenMaxAge() / 1000) | 0;
     const accessEXP = (getAccessTokenMaxAge() / 1000) | 0;
     await setToRedis(refreshToken, 'Blacklisted', refreshEXP);
     await setToRedis(accessToken, 'BlackListed', accessEXP);
+    await removeFromRedis(`RU:${id}`);
   }
 }

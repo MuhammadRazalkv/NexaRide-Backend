@@ -24,12 +24,7 @@ export const sendSuccess = <T extends object>(
   return res.status(statusCode).json(response);
 };
 
-export const sendError = (
-  res: Response,
-  statusCode: number,
-  message: string,
-  errors?: string[],
-) => {
+export const sendError = (res: Response, statusCode: number, message: string) => {
   const response: ErrorResponse = { success: false, message };
   return res.status(statusCode).json(response);
 };

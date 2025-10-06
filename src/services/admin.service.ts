@@ -45,17 +45,14 @@ import { CommissionMapper } from '../mappers/commission.mapper';
 import { PremiumUser } from '../mappers/premium.mapper';
 import { PremiumUsersResDTO } from '../dtos/response/premium.user.res.dto';
 import { IComplaintsRepo } from '../repositories/interfaces/complaints.repo.interface';
+import { FareSchemaDTO } from '../dtos/request/fare.req.dto';
+import { FareResDTO } from '../dtos/response/fare.res.dto';
 
 const generateTokens = () => ({
   accessToken: generateAccessToken(process.env.ADMIN_EMAIL as string, 'admin'),
   refreshToken: generateRefreshToken(process.env.ADMIN_EMAIL as string, 'admin'),
 });
 
-interface IFare {
-  basic: number;
-  premium: number;
-  luxury: number;
-}
 interface IUpdateFare {
   vehicleClass: 'Basic' | 'Premium' | 'Luxury';
   farePerKm: number;
@@ -366,7 +363,7 @@ export class AdminService implements IAdminService {
     throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.SERVER_ERROR);
   }
 
-  async updateFare(fare: IFare) {
+  async updateFare(fare: FareSchemaDTO) {
     if (!fare) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
@@ -377,21 +374,21 @@ export class AdminService implements IAdminService {
     ];
 
     const fares = await this._adminRepo.updateFare(updates);
-    const res: IFare = fares.reduce((acc, fare) => {
-      const key = fare.vehicleClass.toLowerCase() as keyof IFare;
+    const res: FareResDTO = fares.reduce((acc, fare) => {
+      const key = fare.vehicleClass.toLowerCase() as keyof FareResDTO;
       acc[key] = fare.farePerKm;
       return acc;
-    }, {} as IFare);
+    }, {} as FareResDTO);
     return res;
   }
 
-  async getFares() {
+  async getFares(): Promise<FareResDTO> {
     const fares = await this._adminRepo.getFares();
-    const res: IFare = fares.reduce((acc, fare) => {
-      const key = fare.vehicleClass.toLowerCase() as keyof IFare;
+    const res: FareResDTO = fares.reduce((acc, fare) => {
+      const key = fare.vehicleClass.toLowerCase() as keyof FareResDTO;
       acc[key] = fare.farePerKm;
       return acc;
-    }, {} as IFare);
+    }, {} as FareResDTO);
 
     return res;
   }
@@ -414,16 +411,21 @@ export class AdminService implements IAdminService {
   async getAllComplaints(
     page: number,
     filterBy: string,
+    search: string,
   ): Promise<{
     complaints: ComplaintsWithUserDriver[] | null;
     total: number;
   }> {
     const limit = 5;
     const skip = (page - 1) * 5;
-    const complaints = await this._complaintsRepo.getAllComplaints(skip, limit, filterBy);
-    const total = await this._complaintsRepo.countDocuments();
+    const { complaints, count } = await this._complaintsRepo.getAllComplaints(
+      skip,
+      limit,
+      filterBy,
+      search,
+    );
 
-    return { complaints, total };
+    return { complaints, total: count };
   }
 
   async getComplaintInDetail(complaintId: string): Promise<{
@@ -542,6 +544,8 @@ export class AdminService implements IAdminService {
   async premiumUsers(
     page: number,
     filterBy: string,
+    search: string,
+    sort: string,
   ): Promise<{
     premiumUsers: PremiumUsersResDTO[];
     total: number;
@@ -549,15 +553,10 @@ export class AdminService implements IAdminService {
   }> {
     const limit = 5;
     const skip = (page - 1) * 5;
-    const premiumUsers = await this._subscriptionRepo.subscriptionInfoWithUser(
-      filterBy,
-      skip,
-      limit,
-    );
-    const totalEarnings = await this._subscriptionRepo.totalEarnings();
-    const total = await this._subscriptionRepo.countDocuments();
+    const { subscriptions, total, totalEarnings } =
+      await this._subscriptionRepo.subscriptionInfoWithUser(filterBy, search, sort, skip, limit);
 
-    return { premiumUsers: PremiumUser.toPremiumUserList(premiumUsers), totalEarnings, total };
+    return { premiumUsers: PremiumUser.toPremiumUserList(subscriptions), totalEarnings, total };
   }
 
   async diverInfo(driverId: string): Promise<DriverResDTO> {
@@ -638,12 +637,14 @@ export class AdminService implements IAdminService {
     page: number,
     sort: string,
     filter: 'all' | 'completed' | 'canceled' | 'ongoing',
+    search: string,
   ): Promise<{ history: FullRideListView[] | null; total: number }> {
     const limit = 8;
     const skip = (page - 1) * limit;
-    const filterBy = filter === 'all' ? {} : { status: filter };
-    console.log('Filer by ', filterBy);
-
+    const filterBy: Record<string, any> = filter === 'all' ? {} : { status: filter };
+    if (search && search.trim() !== '') {
+      filterBy.pickupLocation = { $regex: search, $options: 'i' };
+    }
     const history = await this._rideRepo.findAll(
       filterBy,
       { skip, limit, sort: { createdAt: sort == 'new' ? -1 : 1 } },
@@ -665,9 +666,6 @@ export class AdminService implements IAdminService {
       },
     );
     const total = await this._rideRepo.countDocuments(filterBy);
-    // console.log('Total ',total);
-    // console.log("History ", history);
-
     return { history: RideMapper.toFullListViewList(history), total };
   }
 

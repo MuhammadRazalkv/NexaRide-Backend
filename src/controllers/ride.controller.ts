@@ -158,10 +158,4 @@ export class RideController implements IRideController {
       next(error);
     }
   }
-
-  // async earningsSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
-  //   if (!req.id) {
-  //     throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
-  //   }
-  // }
 }

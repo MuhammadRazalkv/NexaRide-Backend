@@ -9,22 +9,6 @@ import {
   UserRideListDTO,
 } from '../../dtos/response/ride.res.dto';
 import { RideAcceptedDriverDTO } from '../../dtos/response/driver.res.dto';
-// interface IDriverMinimal {
-//   _id: string | ObjectId;
-//   name: string;
-//   rating: number;
-// }
-
-// export interface IRideWithDriver extends Omit<IRideHistory, 'driverId'> {
-//   driverId: IDriverMinimal;
-// }
-// export interface IRideWithUser extends Omit<IRideHistory, 'userId'> {
-//   userId: IDriverMinimal;
-// }
-// export interface IRideWithUserAndDriver extends Omit<IRideHistory, 'userId' | 'driverId'> {
-//   userId: IDriverMinimal;
-//   driverId: IDriverMinimal;
-// }
 
 export interface IRideService {
   checkCabs(id: string, data: CheckCabs): Promise<AvailableCabs[]>;

@@ -370,6 +370,11 @@ export class PaymentService implements IPaymentService {
     return data;
   }
 
+  async earningsBreakdown(id: string): Promise<{ day: string; totalEarnings: number }[]> {
+    const data = await this._walletRepo.getLastSevenDaysEarnings(id);
+    return data;
+  }
+
   private async _handlePostPayment(
     ride: IRideHistory,
     paymentMethod: 'wallet' | 'stripe',

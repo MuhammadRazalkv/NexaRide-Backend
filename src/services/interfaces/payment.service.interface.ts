@@ -24,4 +24,5 @@ export interface IPaymentService {
     Week: number;
     Month: number;
   }>;
+  earningsBreakdown(id: string): Promise<{ day: string; totalEarnings: number }[]>;
 }

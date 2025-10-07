@@ -520,20 +520,35 @@ export class AdminService implements IAdminService {
     return { users, drivers, completedRides, premiumUsers, monthlyCommissions };
   }
 
-  async rideEarnings(page: number): Promise<{
+  async rideEarnings(
+    page: number,
+    search: string,
+  ): Promise<{
     commissions: CommissionResDTO[];
     totalEarnings: number;
     totalCount: number;
   }> {
     const limit = 5;
     const skip = (page - 1) * 5;
+    const match: Record<string, any> = {};
+    if (search) {
+      match.$expr = {
+        $regexMatch: {
+          input: { $toString: '$rideId' },
+          regex: search,
+          options: 'i',
+        },
+      };
+    }
 
-    const commissions = await this._commissionRepo.findAll(
-      {},
-      { sort: { createdAt: -1 }, skip, limit },
-    );
-    const totalEarnings = await this._commissionRepo.totalEarnings();
-    const totalCount = await this._commissionRepo.countDocuments();
+    const commissions = await this._commissionRepo.findAll(match, {
+      sort: { createdAt: -1 },
+      skip,
+      limit,
+    });
+
+    const totalEarnings = await this._commissionRepo.totalEarnings(match);
+    const totalCount = await this._commissionRepo.countDocuments(match);
     return {
       commissions: CommissionMapper.toCommissionList(commissions),
       totalEarnings,

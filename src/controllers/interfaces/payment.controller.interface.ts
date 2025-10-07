@@ -9,4 +9,5 @@ export interface IPaymentController {
   upgradeToPlus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
   transactionSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
   earningsSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
+  earningsBreakDown(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
 }

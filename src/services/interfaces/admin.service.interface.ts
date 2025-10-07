@@ -105,7 +105,10 @@ export interface IAdminService {
     monthlyCommissions: { month: string; totalCommission: number }[];
   }>;
 
-  rideEarnings(page: number): Promise<{
+  rideEarnings(
+    page: number,
+    search: string,
+  ): Promise<{
     commissions: CommissionResDTO[];
     totalEarnings: number;
     totalCount: number;

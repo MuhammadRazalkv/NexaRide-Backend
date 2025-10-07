@@ -284,8 +284,8 @@ export class AdminController implements IAdminController {
   async rideEarnings(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const page = parseInt(req.query.page as string) || 1;
-
-      const data = await this._adminService.rideEarnings(page);
+      const search = String(req.query.search) || '';
+      const data = await this._adminService.rideEarnings(page, search);
       sendSuccess(res, HttpStatus.OK, data);
     } catch (error) {
       next(error);

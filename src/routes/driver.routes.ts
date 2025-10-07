@@ -37,6 +37,7 @@ driverRoutes.post('/verifyRideOTP', authMiddleware, rideController.verifyRideOTP
 
 driverRoutes.get('/getWalletInfo', authMiddleware, paymentController.getDriverWalletInfo);
 driverRoutes.get('/earnings-summary', authMiddleware, paymentController.earningsSummary);
+driverRoutes.get('/earnings-breakdown', authMiddleware, paymentController.earningsBreakDown);
 
 driverRoutes.get('/ride-summary', authMiddleware, rideController.rideSummary);
 driverRoutes.get('/feedback-summary', authMiddleware, rideController.feedBackSummary);
@@ -44,6 +45,7 @@ driverRoutes.get('/feedback-summary', authMiddleware, rideController.feedBackSum
 driverRoutes.get('/getRideHistory', authMiddleware, rideController.getRideHistoryDriver);
 
 driverRoutes.get('/getRideInfo', authMiddleware, rideController.getRIdeInfoForDriver);
+driverRoutes.get('/paymentStatus/:rideId', authMiddleware, rideController.checkPaymentStatus);
 
 driverRoutes.post('/submitComplaint', authMiddleware, complaintsController.fileComplaint);
 

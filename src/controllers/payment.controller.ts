@@ -121,4 +121,15 @@ export class PaymentController implements IPaymentController {
       next(error);
     }
   }
+
+  async earningsBreakDown(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = validate(objectIdSchema, req.id);
+      const data = await this._paymentService.earningsBreakdown(id);
+      console.log(data);
+      sendSuccess(res, HttpStatus.OK, { data });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

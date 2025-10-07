@@ -123,6 +123,39 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
     );
   }
 
+  async getLastSevenDaysEarnings(id: string): Promise<{ day: string; totalEarnings: number }[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
+
+    const result = await DriverWallet.aggregate([
+      { $match: { driverId: new mongoose.Types.ObjectId(id) } },
+      { $unwind: '$transactions' },
+      {
+        $match: {
+          'transactions.date': {
+            $gte: sevenDaysAgo.getTime(),
+            $lte: today.getTime() + 24 * 60 * 60 * 1000 - 1,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $toDate: '$transactions.date' },
+          totalEarned: { $sum: '$transactions.amount' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    return result.map((r) => ({
+      day: r._id as string,
+      totalEarnings: r.totalEarned as number,
+    }));
+  }
+
   //! Admin Commission
   async addToCommission(data: Partial<ICommission>) {
     return await CommissionModel.insertOne(data);

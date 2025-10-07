@@ -17,6 +17,7 @@ export interface IWalletRepo extends BaseRepository<IWallet> {
     Week: number;
     Month: number;
   }>;
+  getLastSevenDaysEarnings(id: string): Promise<{ day: string; totalEarnings: number }[]>;
   //! commission
   addToCommission(data: Partial<ICommission>): Promise<ICommission>;
   getMonthlyCommission(): Promise<{ month: string; totalCommission: number }[]>;

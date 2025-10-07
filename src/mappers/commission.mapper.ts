@@ -4,7 +4,7 @@ import { ICommission } from '../models/commission.model';
 export class CommissionMapper {
   static toCommission(data: ICommission): CommissionResDTO {
     return {
-      _id:data.id,
+      _id: data.id,
       driverId: data.driverId.toString(),
       rideId: data.rideId.toString(),
       commission: data.commission,

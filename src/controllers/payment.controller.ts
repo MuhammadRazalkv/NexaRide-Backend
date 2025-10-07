@@ -1,22 +1,24 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { IPaymentController } from './interfaces/payment.controller.interface';
 import { ExtendedRequest } from '../middlewares/auth.middleware';
 import { IPaymentService } from '../services/interfaces/payment.service.interface';
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
+import { validate } from '../utils/validators/validateZod';
+import { objectIdSchema } from '../dtos/request/common.req.dto';
+import { amountDTO, subTypeDTO } from '../dtos/request/payment.req.dto';
+import { sendSuccess } from '../utils/response.util';
 export class PaymentController implements IPaymentController {
-  constructor(private paymentService: IPaymentService) {}
+  constructor(private _paymentService: IPaymentService) {}
   async addMoneyToWallet(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      const amount = req.body.amount;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const url = await this.paymentService.addMoneyToWallet(id, amount);
+      const id = validate(objectIdSchema, req.id);
+      const amount = validate(amountDTO, req.body.amount);
 
-      res.status(HttpStatus.OK).json({ success: true, url });
+      const url = await this._paymentService.addMoneyToWallet(id, amount);
+
+      sendSuccess(res, HttpStatus.CREATED, { url });
     } catch (error) {
       next(error);
     }
@@ -24,27 +26,22 @@ export class PaymentController implements IPaymentController {
 
   async getWalletInfo(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
+      const id = validate(objectIdSchema, req.id);
       const page = parseInt(req.query.page as string) || 1;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const { wallet, total } = await this.paymentService.getWalletInfo(id, page);
-      res.status(HttpStatus.OK).json({ success: true, wallet, total });
+
+      const { wallet, total } = await this._paymentService.getWalletInfo(id, page);
+      sendSuccess(res, HttpStatus.OK, { wallet, total });
     } catch (error) {
       next(error);
     }
   }
 
   async webhook(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
-    console.log('web hook controller layer 1  ');
     const sig = req.headers['stripe-signature'] as string;
-    console.log('Web hook control layer 2');
-    console.log(sig);
 
     try {
-      await this.paymentService.webHook(req.body, sig);
-      res.status(HttpStatus.OK).json({ success: true });
+      await this._paymentService.webHook(req.body, sig);
+      sendSuccess(res, HttpStatus.OK, {});
     } catch (error) {
       next(error);
     }
@@ -52,14 +49,11 @@ export class PaymentController implements IPaymentController {
 
   async payUsingWallet(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const rideId = req.body.rideId;
+      const id = validate(objectIdSchema, req.id);
+      const rideId = validate(objectIdSchema, req.body.rideId);
 
-      await this.paymentService.payUsingWallet(id, rideId);
-      res.status(HttpStatus.OK).json({ success: true });
+      await this._paymentService.payUsingWallet(id, rideId);
+      sendSuccess(res, HttpStatus.OK, {});
     } catch (error) {
       next(error);
     }
@@ -67,14 +61,11 @@ export class PaymentController implements IPaymentController {
 
   async payUsingStripe(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      const rideId = req.body.rideId;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const url = await this.paymentService.payUsingStripe(id, rideId);
+      const id = validate(objectIdSchema, req.id);
+      const rideId = validate(objectIdSchema, req.body.rideId);
+      const url = await this._paymentService.payUsingStripe(id, rideId);
 
-      res.status(HttpStatus.OK).json({ success: true, url });
+      sendSuccess(res, HttpStatus.CREATED, { url });
     } catch (error) {
       next(error);
     }
@@ -86,13 +77,11 @@ export class PaymentController implements IPaymentController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const driverId = req.id;
+      const driverId = validate(objectIdSchema, req.id);
       const page = parseInt(req.query.page as string) || 1;
-      if (!driverId) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const { wallet, total } = await this.paymentService.getDriverWalletInfo(driverId, page);
-      res.status(200).json({ success: true, wallet, total });
+
+      const { wallet, total } = await this._paymentService.getDriverWalletInfo(driverId, page);
+      sendSuccess(res, HttpStatus.OK, { wallet, total });
     } catch (error) {
       next(error);
     }
@@ -100,16 +89,10 @@ export class PaymentController implements IPaymentController {
 
   async upgradeToPlus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.id;
-      const { type } = req.body;
-      if (!userId) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
-      }
-      if (!type) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const url = await this.paymentService.upgradeToPlus(userId, type);
-      res.status(HttpStatus.CREATED).json({ success: true, url });
+      const userId = validate(objectIdSchema, req.id);
+      const type = validate(subTypeDTO, req.body.type);
+      const url = await this._paymentService.upgradeToPlus(userId, type);
+      sendSuccess(res, HttpStatus.CREATED, { url });
     } catch (error) {
       next(error);
     }
@@ -117,15 +100,13 @@ export class PaymentController implements IPaymentController {
 
   async transactionSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
-      }
+      const id = validate(objectIdSchema, req.id);
       const requestedBy = req.query.requestedBy;
       if (requestedBy !== 'user' && requestedBy !== 'driver') {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
       }
-      const data = await this.paymentService.transactionSummary(req.id, requestedBy);
-      res.status(HttpStatus.OK).json({ success: true, data });
+      const data = await this._paymentService.transactionSummary(id, requestedBy);
+      sendSuccess(res, HttpStatus.OK, { data });
     } catch (error) {
       next(error);
     }
@@ -133,11 +114,20 @@ export class PaymentController implements IPaymentController {
 
   async earningsSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.ID_NOT_PROVIDED);
-      }
-      const data = await this.paymentService.earningsSummary(req.id);
-      res.status(HttpStatus.OK).json({ success: true, data });
+      const id = validate(objectIdSchema, req.id);
+      const data = await this._paymentService.earningsSummary(id);
+      sendSuccess(res, HttpStatus.OK, { data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async earningsBreakDown(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const id = validate(objectIdSchema, req.id);
+      const data = await this._paymentService.earningsBreakdown(id);
+      console.log(data);
+      sendSuccess(res, HttpStatus.OK, { data });
     } catch (error) {
       next(error);
     }

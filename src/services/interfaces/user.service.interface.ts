@@ -1,16 +1,17 @@
+import { UserSchemaDTO } from '../../dtos/request/auth.req.dto';
 import { LoginResDTO } from '../../dtos/response/auth.res.dto';
-import { ISubscription } from '../../models/subscription.model';
-import { IUser } from '../../models/user.model';
+import { SubscriptionResDTO } from '../../dtos/response/subscription.res.dto';
+import { UserResDTO } from '../../dtos/response/user.dto';
 export default interface IUserService {
   emailVerification(email: string): Promise<void>;
   verifyOTP(email: string, otp: string): Promise<void>;
   reSendOTP(email: string): Promise<void>;
-  addInfo(userData: IUser): Promise<LoginResDTO>;
+  addInfo(userData: UserSchemaDTO): Promise<LoginResDTO>;
   login(email: string, password: string): Promise<LoginResDTO>;
-  googleLogin(email: string, googleId: string, name: string): Promise<Partial<LoginResDTO>>;
+  googleLogin(email: string, googleId: string, name: string): Promise<LoginResDTO>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(id: string, token: string, password: string): Promise<void>;
-  getUserInfo(id: string): Promise<IUser | null>;
+  getUserInfo(id: string): Promise<UserResDTO | null>;
   refreshToken(token: string): Promise<{
     newAccessToken: string;
     newRefreshToken: string;
@@ -26,7 +27,7 @@ export default interface IUserService {
   subscriptionHistory(
     userId: string,
     page: number,
-  ): Promise<{ history: ISubscription[]; total: number }>;
-  logout(refreshToken: string, accessToken: string): Promise<void>;
+  ): Promise<{ history: SubscriptionResDTO[]; total: number }>;
+  logout(id: string, refreshToken: string, accessToken: string): Promise<void>;
   // dashboard(userId:string):Promise<{totalRides:number,completedRides:number,cancelledRides:number}>
 }

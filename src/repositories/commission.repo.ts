@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongoose';
 import commissionModel, { ICommission } from '../models/commission.model';
 import { BaseRepository } from './base.repo';
 import { ICommissionRepo } from './interfaces/commission.repo.interface';
@@ -60,8 +61,9 @@ export class CommissionRepo extends BaseRepository<ICommission> implements IComm
     return monthlyCommissions;
   }
 
-  async totalEarnings(): Promise<number> {
+  async totalEarnings(match: FilterQuery<ICommission>): Promise<number> {
     const result = await commissionModel.aggregate([
+      { $match: match },
       {
         $group: {
           _id: null,

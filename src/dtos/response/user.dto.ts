@@ -1,5 +1,3 @@
 import { BaseAccountDTO } from './base.res.dto';
 
-export interface UserResDTO extends BaseAccountDTO {
-  
-}
+export interface UserResDTO extends BaseAccountDTO {}

@@ -5,8 +5,8 @@ import { ObjectId } from 'mongodb';
 import { IDriverRepo } from './interfaces/driver.repo.interface';
 import { BaseRepository } from './base.repo';
 import { AppError } from '../utils/appError';
-import { IDriverWithVehicle } from '../services/interfaces/driver.service.interface';
 import { IDriverWithVehicleInfo } from '../interface/driver.vehicle.interface';
+import { RideAcceptedDriverDTO } from '../dtos/response/driver.res.dto';
 
 export class DriverRepo extends BaseRepository<IDrivers> implements IDriverRepo {
   constructor() {
@@ -35,7 +35,7 @@ export class DriverRepo extends BaseRepository<IDrivers> implements IDriverRepo 
     return result[0]?.count || 0;
   }
 
-  async getPendingDriversWithVehicle():Promise<IDriverWithVehicleInfo[]> {
+  async getPendingDriversWithVehicle(): Promise<IDriverWithVehicleInfo[]> {
     return this.model.aggregate([
       {
         $lookup: {
@@ -53,6 +53,7 @@ export class DriverRepo extends BaseRepository<IDrivers> implements IDriverRepo 
       },
       {
         $project: {
+          _id: 1,
           name: 1,
           email: 1,
           phone: 1,
@@ -82,7 +83,7 @@ export class DriverRepo extends BaseRepository<IDrivers> implements IDriverRepo 
     ]);
   }
 
-  async getDriverWithVehicleInfo(id: string): Promise<IDriverWithVehicle> {
+  async getDriverWithVehicleInfo(id: string): Promise<RideAcceptedDriverDTO> {
     const result = await this.model.aggregate([
       { $match: { _id: new ObjectId(id) } },
       {
@@ -110,7 +111,7 @@ export class DriverRepo extends BaseRepository<IDrivers> implements IDriverRepo 
     if (!result.length) {
       throw new AppError(404, 'Driver not found');
     }
-    return result[0] as IDriverWithVehicle;
+    return result[0] as RideAcceptedDriverDTO;
   }
 
   async findPrices() {

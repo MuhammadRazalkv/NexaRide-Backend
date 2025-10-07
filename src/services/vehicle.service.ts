@@ -1,4 +1,3 @@
-import { IVehicle } from '../models/vehicle.model';
 import cloudinary from '../utils/cloudinary';
 import mongoose from 'mongoose';
 import { IVehicleService } from './interfaces/vehicle.interface';
@@ -7,43 +6,31 @@ import { IDriverRepo } from '../repositories/interfaces/driver.repo.interface';
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
-import { validateVehicleSchema } from '../utils/validators/vehicleSchemaValidators';
+import { VehicleSchemaDTO } from '../dtos/request/auth.req.dto';
 
 export class VehicleService implements IVehicleService {
   constructor(
-    private vehicleRepo: IVehicleRepo,
-    private driverRepo: IDriverRepo,
+    private _vehicleRepo: IVehicleRepo,
+    private _driverRepo: IDriverRepo,
   ) {}
-  async addVehicle(data: IVehicle) {
-    if (!data) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
-    // Validate driverId before using it
-    if (!mongoose.Types.ObjectId.isValid(data.driverId)) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
-    }
-
-    // Validate input using Zod
-    // const parsedData = vehicleSchema.safeParse(data);
-    const parsedData = validateVehicleSchema(data);
-    if (!parsedData.success) {
-      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors).flat().join(', ');
-
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + errorMessages);
-    }
-
+  async addVehicle(data: VehicleSchemaDTO): Promise<{
+    driver: {
+      name: any;
+      email: any;
+      status: string;
+    };
+  }> {
     // Convert driverId to ObjectId
     const driverId = data.driverId.toString();
 
     // Check if driver exists
-    const driver = await this.driverRepo.findById(driverId);
+    const driver = await this._driverRepo.findById(driverId);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
     // Upload vehicle images
-    const vehicleImages = { ...parsedData.data.vehicleImages };
+    const vehicleImages = { ...data.vehicleImages };
     for (const key of ['frontView', 'rearView', 'interiorView'] as const) {
       try {
         const img = vehicleImages[key];
@@ -61,10 +48,14 @@ export class VehicleService implements IVehicleService {
     }
 
     // Register the vehicle with updated images
-    const vehicleData = { ...parsedData.data, vehicleImages };
+    const vehicleData = {
+      ...data,
+      driverId: new mongoose.Types.ObjectId(data.driverId),
+      vehicleImages,
+    };
     try {
-      const vehicle = await this.vehicleRepo.registerNewVehicle(vehicleData);
-      await this.driverRepo.updateById(driverId, {
+      const vehicle = await this._vehicleRepo.create(vehicleData);
+      await this._driverRepo.updateById(driverId, {
         $set: { vehicleId: vehicle._id },
       });
       return {
@@ -87,30 +78,18 @@ export class VehicleService implements IVehicleService {
     }
   }
 
-  async reApplyVehicle(id: string, data: IVehicle) {
-    if (!data) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-
-    // Validate driverId before using it
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
-    }
-
-    // Validate input using Zod
-    const parsedData = validateVehicleSchema(data);
-    // const parsedData = vehicleSchema.safeParse(data);
-    if (!parsedData.success) {
-      const errorMessages = Object.values(parsedData.error.flatten().fieldErrors).flat().join(', ');
-
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.VALIDATION_ERROR + errorMessages);
-    }
-
-    // Convert driverId to ObjectId
-    const driverId = id.toString();
-
+  async reApplyVehicle(
+    id: string,
+    data: VehicleSchemaDTO,
+  ): Promise<{
+    driver: {
+      name: any;
+      email: any;
+      status: string;
+    };
+  }> {
     // Check if driver exists
-    const driver = await this.driverRepo.findById(driverId);
+    const driver = await this._driverRepo.findById(id);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -118,13 +97,13 @@ export class VehicleService implements IVehicleService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
     const vehicleId = String(driver.vehicleId);
-    const vehicleDetails = await this.vehicleRepo.findById(vehicleId);
+    const vehicleDetails = await this._vehicleRepo.findById(vehicleId);
     if (!vehicleDetails) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
     // Upload vehicle images
     try {
-      const vehicleImages = { ...parsedData.data.vehicleImages };
+      const vehicleImages = { ...data.vehicleImages };
       for (const key of ['frontView', 'rearView', 'interiorView'] as const) {
         try {
           const img = vehicleImages[key];
@@ -141,9 +120,9 @@ export class VehicleService implements IVehicleService {
       }
 
       // Register the vehicle with updated images
-      const vehicleData = { ...parsedData.data, vehicleImages };
+      const vehicleData = { ...data, vehicleImages };
 
-      await this.vehicleRepo.updateById(vehicleId, {
+      await this._vehicleRepo.updateById(vehicleId, {
         $set: { ...vehicleData, status: 'pending' },
       });
 
@@ -155,8 +134,6 @@ export class VehicleService implements IVehicleService {
         },
       };
     } catch (error: any) {
-      console.log(error);
-
       if (error instanceof mongoose.Error.CastError) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);
       }
@@ -174,8 +151,8 @@ export class VehicleService implements IVehicleService {
     }
   }
 
-  async rejectReason(driverId: string) {
-    const driver = await this.driverRepo.findById(driverId);
+  async rejectReason(driverId: string): Promise<string | undefined> {
+    const driver = await this._driverRepo.findById(driverId);
 
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
@@ -184,7 +161,7 @@ export class VehicleService implements IVehicleService {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
     const vehicleId = String(driver.vehicleId);
-    const vehicle = await this.vehicleRepo.findById(vehicleId);
+    const vehicle = await this._vehicleRepo.findById(vehicleId);
     if (!vehicle) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.VEHICLE_NOT_FOUND);
     }
@@ -192,10 +169,6 @@ export class VehicleService implements IVehicleService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.DRIVER_NOT_REJECTED);
     }
 
-    const reason = vehicle.rejectionReason;
-
-    return {
-      reason,
-    };
+    return vehicle.rejectionReason;
   }
 }

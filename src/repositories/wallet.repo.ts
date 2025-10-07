@@ -9,71 +9,6 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
     super(UserWallet);
   }
 
-  //! For user
-  async getWalletInfo(userId: string) {
-    return this.findOne({ userId });
-  }
-
-  // async addMoneyToUserWallet(userId: string, amount: number) {
-  //   await this.model.findOneAndUpdate(
-  //     { userId },
-  //     {
-  //       $inc: { balance: amount },
-  //       $push: {
-  //         transactions: {
-  //           type: "credit",
-  //           date: Date.now(),
-  //           amount: amount,
-  //         },
-  //       },
-  //     },
-  //     { new: true, upsert: true }
-  //   );
-  // }
-
-  // async getUserWalletBalanceById(userId: string) {
-  //   return this.findOne({ userId });
-  // }
-
-  // async deductMoneyFromUser(userId: string, totalFare: number) {
-  //   return this.model.findOneAndUpdate(
-  //     { userId },
-  //     {
-  //       $inc: { balance: -totalFare },
-  //       $push: {
-  //         transactions: {
-  //           type: "debit",
-  //           date: Date.now(),
-  //           amount: totalFare,
-  //         },
-  //       },
-  //     }
-  //   );
-  // }
-
-  // async getWalletWithPaginatedTransactions(
-  //   userId: string,
-  //   skip: number,
-  //   limit: number
-  // ) {
-  //   const wallet = await this.model.findOne(
-  //     { userId },
-  //     {
-  //       transactions: { $slice: [skip, limit] },
-  //     }
-  //   );
-
-  //   const total = await this.model.aggregate([
-  //     { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-  //     { $project: { count: { $size: "$transactions" } } },
-  //   ]);
-
-  //   return {
-  //     transactions: wallet?.transactions || [],
-  //     total: total[0]?.count || 0,
-  //   };
-  // }
-
   //! For driver
   async getDriverWalletInfo(driverId: string) {
     return DriverWallet.findOne({ driverId });
@@ -186,6 +121,39 @@ export class WalletRepo extends BaseRepository<IWallet> implements IWalletRepo {
         Month: 0,
       }
     );
+  }
+
+  async getLastSevenDaysEarnings(id: string): Promise<{ day: string; totalEarnings: number }[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
+
+    const result = await DriverWallet.aggregate([
+      { $match: { driverId: new mongoose.Types.ObjectId(id) } },
+      { $unwind: '$transactions' },
+      {
+        $match: {
+          'transactions.date': {
+            $gte: sevenDaysAgo.getTime(),
+            $lte: today.getTime() + 24 * 60 * 60 * 1000 - 1,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $toDate: '$transactions.date' },
+          totalEarned: { $sum: '$transactions.amount' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    return result.map((r) => ({
+      day: r._id as string,
+      totalEarnings: r.totalEarned as number,
+    }));
   }
 
   //! Admin Commission

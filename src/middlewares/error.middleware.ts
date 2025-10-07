@@ -5,9 +5,9 @@ import { HttpStatus } from '../constants/httpStatusCodes';
 
 const errorHandler = async (
   err: AppError | Error,
-  req: Request,
+  _req: Request,
   res: Response,
-  next: NextFunction,
+  _next: NextFunction,
 ) => {
   let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
   let msg = messages.SERVER_ERROR;

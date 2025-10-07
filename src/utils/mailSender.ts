@@ -1,5 +1,3 @@
-import { AppError } from './appError';
-
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({

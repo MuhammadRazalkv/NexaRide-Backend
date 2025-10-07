@@ -1,115 +1,20 @@
 import RideHistory, { IRideHistory } from '../models/ride.history.model';
-import {
-  IRideWithDriver,
-  IRideWithUser,
-  IRideWithUserAndDriver,
-} from '../services/interfaces/ride.service.interface';
 import { BaseRepository } from './base.repo';
-import {
-  IRideRepo,
-  PopulatedRideHistory,
-} from './interfaces/ride.repo.interface';
+import { IRideRepo, PopulatedRideHistory } from './interfaces/ride.repo.interface';
 import Complaints, { IComplaints } from '../models/complaints.modal';
 import mongoose from 'mongoose';
 import Feedback, { IFeedback } from '../models/feedbacks.model';
-import { ComplaintsWithUserDriver } from '../dtos/response/complaint.res.dto';
+import {
+  DriverRideHistoryDTO,
+  RideHistoryWithDriverAndUser,
+  UserRideHistoryDTO,
+} from '../dtos/response/ride.res.dto';
 
 export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo {
   constructor() {
     super(RideHistory);
   }
-
-  // async createNewRide(data: Partial<IRideHistory>) {
-  //   return await RideHistory.insertOne(data);
-  // }
-
-  // async getUserIdByDriverId(id: string) {
-  //   return await this.model
-  //     .findOne({ driverId: id, status: "ongoing" })
-  //     .select("userId");
-  // }
-
-  // async getDriverByUserId(id: string) {
-  //   return await this.model
-  //     .findOne({ userId: id, status: "ongoing" })
-  //     .select("driverId");
-  // }
-
-  // async findOngoingRideByDriverId(id: string) {
-  //   return await this.model.findOne({ driverId: id, status: "ongoing" });
-  // }
-
-  // async cancelRide(driverId: string, userId: string, cancelledBy: string) {
-  //   return await this.model.updateOne(
-  //     { driverId, userId, status: "ongoing" },
-  //     {
-  //       $set: {
-  //         status: "canceled",
-  //         cancelledAt: Date.now(),
-  //         paymentStatus: "Not required",
-  //         cancelledBy,
-  //       },
-  //     }
-  //   );
-  // }
-
-  // async updateRideStartedAt(rideId: string) {
-  //   return await this.model.findByIdAndUpdate(rideId, {
-  //     startedAt: Date.now(),
-  //   });
-  // }
-
-  // async getRideIdByUserAndDriver(driverId: string, userId: string) {
-  //   return await this.model.findOne({
-  //     driverId,
-  //     userId,
-  //     status: "ongoing",
-  //   });
-  // }
-
-  // async findRideById(id: string) {
-  //   return await this.model.findOne({ _id: id });
-  // }
-
-  // async markCompletedWithData(id: string) {
-  //   return await this.model.findByIdAndUpdate(id, {
-  //     $set: {
-  //       paymentStatus: "completed",
-  //       status: "completed",
-  //       endedAt: Date.now(),
-  //     },
-  //   });
-  // }
-
-  // async findRideByUserId(userId: string, skip: number, limit: number) {
-  //   return await this.model
-  //     .find({ userId })
-  //     .skip(skip)
-  //     .limit(limit)
-  //     .sort({ startedAt: -1 })
-  //     .select(
-  //       "driverId pickupLocation dropOffLocation totalFare distance estTime timeTaken status startedAt endedAt canceledAt paymentStatus driverId"
-  //     );
-  // }
-  // async getUserRideCount(userId: string) {
-  //   return await this.model.find({ userId }).countDocuments();
-  // }
-  // async getDriverRideCount(driverId: string) {
-  //   return await this.model.find({ driverId }).countDocuments();
-  // }
-
-  // async findRideByDriver(driverId: string, skip: number, limit: number) {
-  //   return await this.model
-  //     .find({ driverId })
-  //     .skip(skip)
-  //     .limit(limit)
-  //     .sort({ startedAt: -1 })
-  //     .select(
-  //       "driverId pickupLocation dropOffLocation totalFare commission driverEarnings distance estTime timeTaken status startedAt endedAt canceledAt paymentStatus driverId"
-  //     );
-  // }
-
-  async getRideInfoWithDriver(rideId: string): Promise<IRideWithDriver | null> {
+  async getRideInfoWithDriver(rideId: string): Promise<UserRideHistoryDTO | null> {
     return (await this.model
       .findById(rideId)
       .select('-commission -driverEarnings -OTP')
@@ -118,23 +23,7 @@ export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo 
         select: 'name',
       })
       .lean()
-      .exec()) as IRideWithDriver | null;
-  }
-
-  async createComplaint(
-    rideId: string,
-    filedById: string,
-    filedByRole: string,
-    reason: string,
-    description?: string,
-  ): Promise<IComplaints | null> {
-    return await Complaints.create({
-      rideId: new mongoose.Types.ObjectId(rideId),
-      filedByRole,
-      filedById: new mongoose.Types.ObjectId(filedById),
-      complaintReason: reason,
-      description,
-    });
+      .exec()) as UserRideHistoryDTO | null;
   }
 
   async getComplaintInfo(rideId: string, filedById: string): Promise<IComplaints | null> {
@@ -147,7 +36,7 @@ export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo 
     });
   }
 
-  async getRideInfoWithUser(rideId: string): Promise<IRideWithUser | null> {
+  async getRideInfoWithUser(rideId: string): Promise<DriverRideHistoryDTO | null> {
     return (await this.model
       .findById(rideId)
       .select('-OTP')
@@ -156,75 +45,8 @@ export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo 
         select: 'name',
       })
       .lean()
-      .exec()) as IRideWithUser | null;
+      .exec()) as DriverRideHistoryDTO | null;
   }
-
-  async getAllComplaints(
-    skip: number,
-    limit: number,
-    filterBy: string,
-  ): Promise<ComplaintsWithUserDriver[] | null> {
-    const matchStage = filterBy ? { $match: { status: filterBy } } : { $match: {} };
-    return await Complaints.aggregate([
-      matchStage,
-      {
-        $lookup: {
-          from: 'ridehistories',
-          localField: 'rideId',
-          foreignField: '_id',
-          as: 'rideInfo',
-        },
-      },
-      { $unwind: '$rideInfo' },
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'rideInfo.userId',
-          foreignField: '_id',
-          as: 'user',
-        },
-      },
-      { $unwind: { path: '$user' } },
-      {
-        $lookup: {
-          from: 'drivers',
-          localField: 'rideInfo.driverId',
-          foreignField: '_id',
-          as: 'driver',
-        },
-      },
-      { $unwind: '$driver' },
-      {
-        $addFields: {
-          user: '$user.name',
-          driver: '$driver.name',
-        },
-      },
-      {
-        $project: {
-          __v: 0,
-          rideInfo: 0,
-        },
-      },
-      { $skip: skip },
-      { $limit: limit },
-      { $sort: { createdAt: -1 } },
-    ]);
-  }
-
-  async getComplainsLength(): Promise<number> {
-    return await Complaints.countDocuments();
-  }
-
-  async getComplaintById(id: string): Promise<IComplaints | null> {
-    return await Complaints.findById(id);
-  }
-
-  // async getPopulatedRideInfo(rideId:string){
-  //   return this.model.findById(rideId)
-  //   .populate('userId','name email')
-  //   .populate('driverId','name email')
-  // }
 
   async getPopulatedRideInfo(id: string): Promise<PopulatedRideHistory | null> {
     const ride = await RideHistory.findById(id)
@@ -233,14 +55,6 @@ export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo 
       .lean();
 
     return ride as unknown as PopulatedRideHistory | null;
-  }
-
-  async updateComplaintStatus(id: string, type: string): Promise<IComplaints | null> {
-    return await Complaints.findOneAndUpdate({ _id: id }, { status: type }, { new: true });
-  }
-
-  async setWarningMailSentTrue(id: string): Promise<void> {
-    await Complaints.findOneAndUpdate({ _id: id }, { warningMailSend: true });
   }
 
   async createFeedBack(
@@ -389,7 +203,7 @@ export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo 
     );
   }
 
-  async getRideInfoWithDriverAndUser(rideId: string): Promise<IRideWithUserAndDriver | null> {
+  async getRideInfoWithDriverAndUser(rideId: string): Promise<RideHistoryWithDriverAndUser | null> {
     return (await this.model
       .findById(rideId)
       .select('-OTP')
@@ -402,6 +216,6 @@ export class RideRepo extends BaseRepository<IRideHistory> implements IRideRepo 
         select: 'name',
       })
       .lean()
-      .exec()) as IRideWithUserAndDriver | null;
+      .exec()) as RideHistoryWithDriverAndUser | null;
   }
 }

@@ -57,3 +57,8 @@ export const extractUserIdFromToken = (token: string) => {
     throw error;
   }
 };
+
+export const generateBothTokens = (id: string, role: 'driver' | 'user' | 'admin') => ({
+  accessToken: generateAccessToken(id, role),
+  refreshToken: generateRefreshToken(id, role),
+});

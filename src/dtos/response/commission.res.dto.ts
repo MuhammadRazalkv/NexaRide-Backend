@@ -1,5 +1,5 @@
 export interface CommissionResDTO {
-  _id:string,
+  _id: string;
   rideId: string;
   driverId: string;
   originalFare: number;

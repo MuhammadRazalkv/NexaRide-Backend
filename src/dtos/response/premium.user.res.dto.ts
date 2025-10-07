@@ -1,4 +1,3 @@
-
 export interface PremiumUsersResDTO {
   user: string;
   amount: number;

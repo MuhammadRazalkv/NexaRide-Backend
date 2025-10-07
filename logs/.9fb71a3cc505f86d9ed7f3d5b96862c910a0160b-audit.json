@@ -1,8 +1,16 @@
 {
-    "keep": {
-        "days": true,
-        "amount": 7
+  "keep": {
+    "days": true,
+    "amount": 7
+  },
+  "auditLog": "logs\\.9fb71a3cc505f86d9ed7f3d5b96862c910a0160b-audit.json",
+  "files": [
+    {
+      "date": 1759211588197,
+      "name": "logs\\app-30-09-2025.log",
+      "hash": "037de59e550c26c0a7352f0ab3ea8fefb585139e9b02e5518b39a17c0950bcd1"
     },
+<<<<<<< HEAD
     "auditLog": "logs\\.9fb71a3cc505f86d9ed7f3d5b96862c910a0160b-audit.json",
     "files": [
         {
@@ -13,3 +21,43 @@
     ],
     "hashType": "sha256"
 }
+=======
+    {
+      "date": 1759296731172,
+      "name": "logs\\app-01-10-2025.log",
+      "hash": "3a393752a82d9272d9e0fdb68296c59e1249b7acf599c02f72f8b190cc9a1f9d"
+    },
+    {
+      "date": 1759381529935,
+      "name": "logs\\app-02-10-2025.log",
+      "hash": "a814caa36274739f3f7df8b84fe8efbe23cb329124e7934f5d8e6e2c7fc82ddc"
+    },
+    {
+      "date": 1759472296160,
+      "name": "logs\\app-03-10-2025.log",
+      "hash": "b44ff30a5dfdcee4aff8cbcf77b85936136617ef82713425931a053eebbeb0ec"
+    },
+    {
+      "date": 1759566167724,
+      "name": "logs\\app-04-10-2025.log",
+      "hash": "a72f1aee03b66a63547b065f99a2abe409d30f18209c7691cd6404839d95279e"
+    },
+    {
+      "date": 1759602601818,
+      "name": "logs\\app-05-10-2025.log",
+      "hash": "a1823ceb4172a73906acf4ebae903a4d38f127d14a2aef52f3444f5ce0dcbbcf"
+    },
+    {
+      "date": 1759689274286,
+      "name": "logs\\app-06-10-2025.log",
+      "hash": "ebb1182792603990ef3bdc1e13d095c9d56782af60091a32e2fe37d4be3d8a7e"
+    },
+    {
+      "date": 1759810152222,
+      "name": "logs\\app-07-10-2025.log",
+      "hash": "4008ba12b9782f4260a8c1d3d5af99f19236a17f9fd3a31a7c35388b6b2d2dfd"
+    }
+  ],
+  "hashType": "sha256"
+}
+>>>>>>> backend-dto-and-model-cleanup

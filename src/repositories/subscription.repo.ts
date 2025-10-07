@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { ISubscription } from '../models/subscription.model';
 import Subscription from '../models/subscription.model';
 import { IPremiumUsers } from '../services/interfaces/admin.service.interface';
@@ -10,40 +11,73 @@ export class SubscriptionRepo extends BaseRepository<ISubscription> implements I
 
   async subscriptionInfoWithUser(
     filterBy: string,
+    search: string,
+    sort: 'A-Z' | 'Z-A' | string,
     skip: number,
     limit: number,
-  ): Promise<IPremiumUsers[]> {
+  ): Promise<{ subscriptions: IPremiumUsers[]; total: number; totalEarnings: number }> {
     const now = Date.now();
-    let match: Record<string, any> = {};
+    const match: Record<string, any> = {};
+    if (filterBy === 'Active') match.expiresAt = { $gte: now };
+    else if (filterBy === 'InActive') match.expiresAt = { $lt: now };
 
-    if (filterBy === 'Active') {
-      match.expiresAt = { $gte: now };
-    } else if (filterBy === 'InActive') {
-      match.expiresAt = { $lt: now };
-    }
-
-    const subscriptions = await Subscription.find(match)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .populate({
-        path: 'userId',
-        select: 'name -_id',
-      })
-      .lean<IPremiumUsers[]>();
-
-    return subscriptions;
-  }
-
-  async totalEarnings(): Promise<number> {
-    const result = await Subscription.aggregate([
+    const pipeline: mongoose.PipelineStage[] = [
+      { $match: match },
       {
-        $group: {
-          _id: null,
-          totalEarnings: { $sum: '$amount' },
+        $lookup: {
+          from: 'users',
+          localField: 'userId',
+          foreignField: '_id',
+          as: 'user',
         },
       },
-    ]);
-    return result[0].totalEarnings || 0;
+      { $unwind: '$user' },
+    ];
+
+    if (search && search.trim()) {
+      pipeline.push({
+        $match: {
+          'user.name': { $regex: search, $options: 'i' },
+        },
+      });
+    }
+
+    // Facet to get paginated results, total count, and total earnings
+    pipeline.push({
+      $facet: {
+        results: [
+          { $sort: { 'user.name': sort === 'Z-A' ? -1 : 1 } },
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $project: {
+              _id: 1,
+              amount: 1,
+              expiresAt: 1,
+              takenAt: 1,
+              type: 1,
+              'user.name': 1,
+            },
+          },
+        ],
+        totalCount: [{ $count: 'count' }],
+        totalEarnings: [
+          {
+            $group: {
+              _id: null,
+              totalEarnings: { $sum: '$amount' },
+            },
+          },
+        ],
+      },
+    });
+
+    const [data] = await this.model.aggregate(pipeline);
+
+    const subscriptions = data.results;
+    const total = data.totalCount[0]?.count ?? 0;
+    const totalEarnings = data.totalEarnings[0]?.totalEarnings ?? 0;
+
+    return { subscriptions, total, totalEarnings };
   }
 }

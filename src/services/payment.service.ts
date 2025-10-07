@@ -4,7 +4,7 @@ import { IWalletRepo } from '../repositories/interfaces/wallet.repo.interface';
 import { IPaymentService } from './interfaces/payment.service.interface';
 import Stripe from 'stripe';
 import { getIO } from '../utils/socket';
-import { getFromRedis, removeFromRedis, updateDriverFelids } from '../config/redis';
+import { getFromRedis, removeFromRedis, setToRedis, updateDriverFelids } from '../config/redis';
 import { IRideRepo } from '../repositories/interfaces/ride.repo.interface';
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
@@ -14,30 +14,23 @@ import { ISubscriptionRepo } from '../repositories/interfaces/subscription.repo.
 import { getThisMonthRange, getThisWeekRange, getTodayRange } from '../utils/dateUtilities';
 import { IRideHistory } from '../models/ride.history.model';
 import { ICommissionRepo } from '../repositories/interfaces/commission.repo.interface';
+import { DriverWalletResDTO, WalletResDTO } from '../dtos/response/wallet.res.dto';
+import { WalletMapper } from '../mappers/wallet.mapper';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
 const YOUR_DOMAIN = process.env.FRONT_END_URL;
 export class PaymentService implements IPaymentService {
   constructor(
-    private driverRepo: IDriverRepo,
-    private userRepo: IUserRepo,
-    private walletRepo: IWalletRepo,
-    private rideRepo: IRideRepo,
-    private subscriptionRepo: ISubscriptionRepo,
-    private commissionRepo: ICommissionRepo,
+    private _driverRepo: IDriverRepo,
+    private _userRepo: IUserRepo,
+    private _walletRepo: IWalletRepo,
+    private _rideRepo: IRideRepo,
+    private _subscriptionRepo: ISubscriptionRepo,
+    private _commissionRepo: ICommissionRepo,
   ) {}
 
-  async addMoneyToWallet(id: string, amount: number) {
-    if (!id || !amount) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-    if (amount < 50) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.WALLET_MINIMUM_AMOUNT);
-    } else if (amount > 3000) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.WALLET_MAX_AMOUNT);
-    }
-
-    const user = await this.userRepo.findById(id);
+  async addMoneyToWallet(id: string, amount: number): Promise<string | null> {
+    const user = await this._userRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
     }
@@ -66,16 +59,16 @@ export class PaymentService implements IPaymentService {
 
     return session.url;
   }
-  async getWalletInfo(id: string, page: number) {
+  async getWalletInfo(id: string, page: number): Promise<{ wallet: WalletResDTO; total: number }> {
     const limit = 8;
     const skip = (page - 1) * limit;
 
-    const user = await this.userRepo.findById(id);
+    const user = await this._userRepo.findById(id);
     if (!user) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
     }
 
-    const wallet = await this.walletRepo.findOne({ userId: id });
+    const wallet = await this._walletRepo.findOne({ userId: id });
     if (!wallet) {
       throw new AppError(HttpStatus.NOT_FOUND, 'Wallet not found');
     }
@@ -93,21 +86,11 @@ export class PaymentService implements IPaymentService {
       transactions: paginatedTransactions,
     };
 
-    return { wallet: updatedWallet, total };
+    return { wallet: WalletMapper.toUserWallet(updatedWallet), total };
   }
 
   // ! This is the payment related section
-  async webHook(body: any, sig: string) {
-    console.log('webhook service layer ');
-    console.log('Secret key ', process.env.WEBHOOK_SECRET_KEY);
-    console.log('typeof body:', typeof body); // must be 'object' (Buffer)
-    console.log('Is buffer:', Buffer.isBuffer(body)); // must be true
-
-    // let event = stripe.webhooks.constructEvent(
-    //   body,
-    //   sig,
-    //   process.env.WEBHOOK_SECRET_KEY as string
-    // );
+  async webHook(body: any, sig: string): Promise<void> {
     let event;
     try {
       event = stripe.webhooks.constructEvent(body, sig, process.env.WEBHOOK_SECRET_KEY as string);
@@ -128,7 +111,7 @@ export class PaymentService implements IPaymentService {
         const amount = session.amount_total! / 100;
 
         //  update the wallet
-        await this.walletRepo.updateOne(
+        await this._walletRepo.updateOne(
           { userId },
           {
             $inc: { balance: amount },
@@ -146,16 +129,17 @@ export class PaymentService implements IPaymentService {
         console.log('ride payment ');
 
         const rideId = session.metadata.rideId;
-        const ride = await this.rideRepo.findById(rideId);
+        const ride = await this._rideRepo.findById(rideId);
         if (!ride) {
           throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
         }
+        await removeFromRedis(`ride:payment:${ride.userId}`);
         await this._handlePostPayment(ride, 'stripe');
       } else if (session.metadata && session.metadata.action == 'upgrade_to_plus') {
         console.log('Upgrade to plus');
 
         const userId = session.metadata.userId;
-        const user = await this.userRepo.findById(userId);
+        const user = await this._userRepo.findById(userId);
         if (!user) {
           throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
         }
@@ -174,27 +158,33 @@ export class PaymentService implements IPaymentService {
           expiresAt,
           takenAt: Date.now(),
         };
-        await this.subscriptionRepo.create(details);
-        await this.userRepo.updateById(user.id, {
+        await this._subscriptionRepo.create(details);
+        await this._userRepo.updateById(user.id, {
           $set: {
             isSubscribed: true,
             subscriptionExpire: expiresAt,
             subscriptionType: type,
           },
         });
+        await removeFromRedis(`sub:payment:${user.id}`);
       }
     }
   }
 
   //! This is where the user pay with wallet
-  async payUsingWallet(userId: string, rideId: string) {
-    const ride = await this.rideRepo.findById(rideId);
+  async payUsingWallet(userId: string, rideId: string): Promise<void> {
+    const ride = await this._rideRepo.findById(rideId);
 
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
-
-    const userWallet = await this.walletRepo.findOne({ userId });
+    if (ride.paymentStatus == 'completed') {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_ALREADY_DONE);
+    }
+    if (await getFromRedis(`ride:payment:${userId}`)) {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_INITIATED);
+    }
+    const userWallet = await this._walletRepo.findOne({ userId });
 
     if (!userWallet || userWallet.balance === undefined || userWallet.balance == 0) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INSUFFICIENT_BALANCE);
@@ -204,7 +194,7 @@ export class PaymentService implements IPaymentService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INSUFFICIENT_BALANCE);
     }
 
-    await this.walletRepo.updateOne(
+    await this._walletRepo.updateOne(
       { userId },
       {
         $inc: { balance: -ride.totalFare },
@@ -217,18 +207,23 @@ export class PaymentService implements IPaymentService {
         },
       },
     );
-    console.log('Calling post payment from wallet payment');
 
     await this._handlePostPayment(ride, 'wallet');
   }
 
-  async payUsingStripe(userId: string, rideId: string) {
+  async payUsingStripe(userId: string, rideId: string): Promise<string | null> {
     if (!userId || !rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const ride = await this.rideRepo.findById(rideId);
+    const ride = await this._rideRepo.findById(rideId);
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
+    }
+    if (ride.paymentStatus == 'completed') {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_ALREADY_DONE);
+    }
+    if (await getFromRedis(`ride:payment:${userId}`)) {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_INITIATED);
     }
 
     const totalFare = ride.totalFare;
@@ -256,19 +251,23 @@ export class PaymentService implements IPaymentService {
         action: 'ride_payment',
       },
     });
+    await setToRedis(`ride:payment:${userId}`, 'true', 180);
     return session.url;
   }
 
-  async getDriverWalletInfo(driverId: string, page: number) {
+  async getDriverWalletInfo(
+    driverId: string,
+    page: number,
+  ): Promise<{ wallet: DriverWalletResDTO; total: number }> {
     const limit = 8;
     const skip = (page - 1) * limit;
 
-    const driver = await this.driverRepo.findById(driverId);
+    const driver = await this._driverRepo.findById(driverId);
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
 
-    const wallet = await this.walletRepo.getDriverWalletInfo(driverId);
+    const wallet = await this._walletRepo.getDriverWalletInfo(driverId);
     if (!wallet) {
       throw new AppError(HttpStatus.NOT_FOUND, 'Wallet not found');
     }
@@ -286,23 +285,23 @@ export class PaymentService implements IPaymentService {
       transactions: paginatedTransactions,
     };
 
-    return { wallet: updatedWallet, total };
+    return { wallet: WalletMapper.toDriverWallet(updatedWallet), total };
   }
 
   async upgradeToPlus(id: string, type: string): Promise<string | null> {
-    if (!id) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
+    if (await getFromRedis(`sub:payment:${id}`)) {
+      throw new AppError(HttpStatus.CONFLICT, messages.PAYMENT_INITIATED);
     }
     if (type == 'yearly' || type == 'monthly') {
       const price = getPlusAmount(type);
       if (!price) throw new AppError(HttpStatus.INTERNAL_SERVER_ERROR, messages.MISSING_FIELDS);
       const amount = parseInt(price);
 
-      const user = await this.userRepo.findById(id);
+      const user = await this._userRepo.findById(id);
       if (!user) {
         throw new AppError(HttpStatus.NOT_FOUND, messages.USER_NOT_FOUND);
       }
-      const existingPremium = await this.subscriptionRepo.findOne({
+      const existingPremium = await this._subscriptionRepo.findOne({
         userId: id,
         expiresAt: { $gt: Date.now() },
       });
@@ -333,6 +332,7 @@ export class PaymentService implements IPaymentService {
           amount,
         },
       });
+      await setToRedis(`sub:payment:${id}`, 'true', 180);
 
       return session.url;
     }
@@ -350,7 +350,7 @@ export class PaymentService implements IPaymentService {
     if (!id) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }
-    const data = await this.rideRepo.paymentInfos(id, requestedBy);
+    const data = await this._rideRepo.paymentInfos(id, requestedBy);
 
     return data;
   }
@@ -361,15 +361,17 @@ export class PaymentService implements IPaymentService {
     Week: number;
     Month: number;
   }> {
-    if (!id) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-    }
-    const data = await this.walletRepo.getEarningsSummary(
+    const data = await this._walletRepo.getEarningsSummary(
       id,
       getTodayRange().start,
       getThisWeekRange().start,
       getThisMonthRange().start,
     );
+    return data;
+  }
+
+  async earningsBreakdown(id: string): Promise<{ day: string; totalEarnings: number }[]> {
+    const data = await this._walletRepo.getLastSevenDaysEarnings(id);
     return data;
   }
 
@@ -391,11 +393,11 @@ export class PaymentService implements IPaymentService {
       driverEarnings: ride.driverEarnings,
       paymentMethod,
     };
-    await this.commissionRepo.create(applicationFeesDetails);
+    await this._commissionRepo.create(applicationFeesDetails);
     console.log('Created commission repo ', applicationFeesDetails);
 
-    await this.walletRepo.addMoneyToDriver(ride.driverId as string, ride.id, ride.driverEarnings);
-    await this.rideRepo.updateById(ride.id, {
+    await this._walletRepo.addMoneyToDriver(ride.driverId as string, ride.id, ride.driverEarnings);
+    await this._rideRepo.updateById(ride.id, {
       $set: {
         paymentMethod,
         paymentStatus: 'completed',
@@ -403,7 +405,6 @@ export class PaymentService implements IPaymentService {
         endedAt: Date.now(),
       },
     });
-    console.log('Wallet and ride info updated in post payment ');
 
     const driverSocketId = await getFromRedis(`OD:${ride.driverId}`);
     console.log('Driver socket id ', driverSocketId);
@@ -413,30 +414,28 @@ export class PaymentService implements IPaymentService {
     await updateDriverFelids(`driver:${ride.driverId}`, 'status', 'online');
     console.log('Driver filed updated to status online ');
 
-    const user = await this.userRepo.findById(ride.userId as string);
-    const driver = await this.driverRepo.findById(ride.driverId as string);
+    const user = await this._userRepo.findById(ride.userId as string);
+    const driver = await this._driverRepo.findById(ride.driverId as string);
     const io = getIO();
     if (driverSocketId) {
       console.log('Driver socket id found sending to the recieved event ');
 
       io.to(driverSocketId).emit('payment-received');
       if (driver?.softBlock) {
-        await this.driverRepo.updateById(ride.driverId as string, {
+        await this._driverRepo.updateById(ride.driverId as string, {
           $set: { isBlocked: true, softBlock: false },
         });
       }
     }
     if (userSocketId) {
-      console.log('User payment success');
       io.to(userSocketId).emit('payment-success');
       if (user?.softBlock) {
-        await this.userRepo.updateById(ride.userId as string, {
+        await this._userRepo.updateById(ride.userId as string, {
           $set: { isBlocked: true, softBlock: false },
         });
       }
     }
     await removeFromRedis(`URID:${ride.userId}`);
     await removeFromRedis(`DRID:${ride.driverId}`);
-    console.log('Finished post payment');
   }
 }

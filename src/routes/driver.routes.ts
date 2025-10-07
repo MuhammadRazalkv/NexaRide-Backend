@@ -3,6 +3,7 @@ import driverController, { driverRepo } from '../bindings/driver.bindings';
 import { authenticateWithRoles } from '../middlewares/auth.middleware';
 import rideController from '../bindings/ride.bindings';
 import paymentController from '../bindings/payment.binding';
+import { complaintsController } from '../bindings/complaints.bindings';
 
 const driverRoutes = Router();
 const authMiddleware = authenticateWithRoles('driver', driverRepo);
@@ -31,13 +32,12 @@ driverRoutes.patch('/updateDriverInfo', authMiddleware, driverController.updateD
 driverRoutes.patch('/updateProfilePic', authMiddleware, driverController.updateProfilePic);
 driverRoutes.patch('/updateAvailability', authMiddleware, driverController.updateAvailability);
 
-driverRoutes.post('/upload', driverController.upload);
-
 driverRoutes.post('/useRandomLocation', authMiddleware, rideController.assignRandomLocation);
 driverRoutes.post('/verifyRideOTP', authMiddleware, rideController.verifyRideOTP);
 
 driverRoutes.get('/getWalletInfo', authMiddleware, paymentController.getDriverWalletInfo);
 driverRoutes.get('/earnings-summary', authMiddleware, paymentController.earningsSummary);
+driverRoutes.get('/earnings-breakdown', authMiddleware, paymentController.earningsBreakDown);
 
 driverRoutes.get('/ride-summary', authMiddleware, rideController.rideSummary);
 driverRoutes.get('/feedback-summary', authMiddleware, rideController.feedBackSummary);
@@ -45,8 +45,9 @@ driverRoutes.get('/feedback-summary', authMiddleware, rideController.feedBackSum
 driverRoutes.get('/getRideHistory', authMiddleware, rideController.getRideHistoryDriver);
 
 driverRoutes.get('/getRideInfo', authMiddleware, rideController.getRIdeInfoForDriver);
+driverRoutes.get('/paymentStatus/:rideId', authMiddleware, rideController.checkPaymentStatus);
 
-driverRoutes.post('/submitComplaint', authMiddleware, rideController.fileComplaint);
+driverRoutes.post('/submitComplaint', authMiddleware, complaintsController.fileComplaint);
 
 //! This only need in dev stage
 driverRoutes.get('/getCurrentLoc', authMiddleware, driverController.getCurrentLocation);

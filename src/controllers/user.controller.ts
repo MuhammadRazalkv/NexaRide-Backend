@@ -5,14 +5,25 @@ import IUserService from '../services/interfaces/user.service.interface';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
 import { AppError } from '../utils/appError';
+import { validate } from '../utils/validators/validateZod';
+import {
+  emailDTO,
+  emailOTPValidation,
+  loginDTO,
+  nameDTO,
+  phoneDTO,
+  userSchemaDTO,
+} from '../dtos/request/auth.req.dto';
+import { sendSuccess } from '../utils/response.util';
+import { objectIdSchema } from '../dtos/request/common.req.dto';
 export class UserController implements IUserController {
-  constructor(private userService: IUserService) {}
+  constructor(private _userService: IUserService) {}
 
   async emailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const email = req.body.email;
-      await this.userService.emailVerification(email);
-      res.status(HttpStatus.CREATED).json({ success: true, message: messages.OTP_SENT_SUCCESS });
+      const email = validate(emailDTO, req.body.email);
+      await this._userService.emailVerification(email);
+      sendSuccess(res, HttpStatus.CREATED, {}, messages.OTP_SENT_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -20,9 +31,12 @@ export class UserController implements IUserController {
 
   async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, otp } = req.body;
-      await this.userService.verifyOTP(email, otp);
-      res.status(HttpStatus.OK).json({ message: messages.EMAIL_VERIFICATION_SUCCESS });
+      const { email, OTP } = validate(emailOTPValidation, {
+        email: req.body.email,
+        OTP: req.body.otp,
+      });
+      await this._userService.verifyOTP(email, OTP);
+      sendSuccess(res, HttpStatus.OK, {}, messages.EMAIL_VERIFICATION_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -30,22 +44,17 @@ export class UserController implements IUserController {
 
   async addInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = await this.userService.addInfo(req.body);
+      const userData = validate(userSchemaDTO, req.body);
+      const { accessToken, refreshToken, user } = await this._userService.addInfo(userData);
 
-      // Securely store the refresh token in an HTTP-only cookie
-
-      res.cookie('userRefreshToken', data.refreshToken, {
+      res.cookie('userRefreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
-      res.status(HttpStatus.CREATED).json({
-        message: messages.USER_CREATION_SUCCESS,
-        accessToken: data.accessToken,
-        user: data.user,
-      });
+      sendSuccess(res, HttpStatus.CREATED, { user, accessToken });
     } catch (error) {
       next(error);
     }
@@ -53,9 +62,9 @@ export class UserController implements IUserController {
 
   async reSendOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email } = req.body;
-      await this.userService.reSendOTP(email);
-      res.status(HttpStatus.CREATED).json({ message: messages.OTP_SENT_SUCCESS });
+      const email = validate(emailDTO, req.body.email);
+      await this._userService.reSendOTP(email);
+      sendSuccess(res, HttpStatus.CREATED, {}, messages.OTP_SENT_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -63,20 +72,16 @@ export class UserController implements IUserController {
 
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = req.body;
-      const data = await this.userService.login(email, password);
-      res.cookie('userRefreshToken', data.refreshToken, {
+      const { email, password } = validate(loginDTO, req.body);
+      const { accessToken, refreshToken, user } = await this._userService.login(email, password);
+      res.cookie('userRefreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
-      res.status(HttpStatus.OK).json({
-        message: messages.LOGIN_SUCCESS,
-        accessToken: data.accessToken,
-        user: data.user,
-      });
+      sendSuccess(res, HttpStatus.OK, { user, accessToken }, messages.LOGIN_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -84,21 +89,22 @@ export class UserController implements IUserController {
 
   async googleLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, googleId, name } = req.body;
-      const data = await this.userService.googleLogin(email, googleId, name);
+      const email = validate(emailDTO, req.body.email);
+      const { googleId, name } = req.body;
+      const { accessToken, refreshToken, user } = await this._userService.googleLogin(
+        email,
+        googleId,
+        name,
+      );
 
-      res.cookie('userRefreshToken', data.refreshToken, {
+      res.cookie('userRefreshToken', refreshToken, {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
-      res.status(HttpStatus.OK).json({
-        message: messages.LOGIN_SUCCESS,
-        accessToken: data.accessToken,
-        user: data.user,
-      });
+      sendSuccess(res, HttpStatus.OK, { accessToken, user }, messages.LOGIN_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -106,10 +112,9 @@ export class UserController implements IUserController {
 
   async requestPasswordReset(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      await this.userService.requestPasswordReset(req.body.email);
-      res.status(HttpStatus.OK).json({
-        message: messages.PASSWORD_RESET_LINK_SENT,
-      });
+      const email = validate(emailDTO, req.body.email);
+      await this._userService.requestPasswordReset(email);
+      sendSuccess(res, HttpStatus.OK, {}, messages.PASSWORD_RESET_LINK_SENT);
     } catch (error) {
       next(error);
     }
@@ -117,9 +122,11 @@ export class UserController implements IUserController {
 
   async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { id, token, password } = req.body;
-      await this.userService.resetPassword(id, token, password);
-      res.status(HttpStatus.OK).json({ message: messages.PASSWORD_RESET_SUCCESS });
+      const id = validate(objectIdSchema, req.body.id);
+      const { token, password } = req.body;
+
+      await this._userService.resetPassword(id, token, password);
+      sendSuccess(res, HttpStatus.OK, {}, messages.PASSWORD_RESET_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -127,13 +134,10 @@ export class UserController implements IUserController {
 
   async getUserInfo(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const user = await this.userService.getUserInfo(id);
+      const id = validate(objectIdSchema, req.id);
+      const user = await this._userService.getUserInfo(id);
 
-      res.status(HttpStatus.OK).json({ user: user });
+      sendSuccess(res, HttpStatus.OK, { user });
     } catch (error) {
       next(error);
     }
@@ -144,23 +148,20 @@ export class UserController implements IUserController {
       const refreshToken = req.cookies?.userRefreshToken;
 
       if (!refreshToken) {
-        res.status(HttpStatus.UNAUTHORIZED).json({ message: messages.TOKEN_NOT_PROVIDED });
-        return;
+        throw new AppError(HttpStatus.UNAUTHORIZED, messages.TOKEN_NOT_PROVIDED);
       }
 
-      const response = await this.userService.refreshToken(refreshToken);
+      const { newAccessToken, newRefreshToken } =
+        await this._userService.refreshToken(refreshToken);
 
-      res.cookie('refreshToken', response.newRefreshToken, {
+      res.cookie('refreshToken', newRefreshToken, {
         httpOnly: true,
         secure: process.env.PRODUCTION === 'production',
         sameSite: 'strict',
         maxAge: parseInt(process.env.REFRESH_MAX_AGE as string),
       });
 
-      res.status(HttpStatus.CREATED).json({
-        message: messages.TOKEN_CREATED,
-        accessToken: response.newAccessToken,
-      });
+      sendSuccess(res, HttpStatus.CREATED, { accessToken: newAccessToken }, messages.TOKEN_CREATED);
     } catch (error) {
       next(error);
     }
@@ -168,14 +169,12 @@ export class UserController implements IUserController {
 
   async updateUserName(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      const name = req.body.name;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const user = await this.userService.updateUserName(id, name);
+      const id = validate(objectIdSchema, req.id);
+      const name = validate(nameDTO, req.body.name);
 
-      res.status(HttpStatus.OK).json({ success: true, name: user });
+      const data = await this._userService.updateUserName(id, name);
+
+      sendSuccess(res, HttpStatus.OK, { name: data });
     } catch (error) {
       next(error);
     }
@@ -183,14 +182,11 @@ export class UserController implements IUserController {
 
   async updateUserPhone(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
-      const phone = req.body.phone;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const newPhone = await this.userService.updateUserPhone(id, phone);
+      const id = validate(objectIdSchema, req.id);
+      const phone = validate(phoneDTO, String(req.body.phone));
+      const newPhone = await this._userService.updateUserPhone(id, parseInt(phone));
 
-      res.status(HttpStatus.OK).json({ success: true, phone: newPhone });
+      sendSuccess(res, HttpStatus.OK, { phone: newPhone });
     } catch (error) {
       next(error);
     }
@@ -198,14 +194,12 @@ export class UserController implements IUserController {
 
   async updateUserPfp(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = req.id;
+      const id = validate(objectIdSchema, req.id);
       const image = req.body.image;
-      if (!id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const newImg = await this.userService.updateUserPfp(id, image);
 
-      res.status(HttpStatus.OK).json({ success: true, image: newImg });
+      const newImg = await this._userService.updateUserPfp(id, image);
+
+      sendSuccess(res, HttpStatus.OK, { image: newImg });
     } catch (error) {
       next(error);
     }
@@ -213,12 +207,9 @@ export class UserController implements IUserController {
 
   async subscriptionStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.id;
-      if (!userId) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
-      const result = await this.userService.subscriptionStatus(userId);
-      res.status(200).json({ success: true, result });
+      const userId = validate(objectIdSchema, req.id);
+      const result = await this._userService.subscriptionStatus(userId);
+      sendSuccess(res, HttpStatus.OK, { result });
     } catch (error) {
       next(error);
     }
@@ -230,34 +221,33 @@ export class UserController implements IUserController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      if (!req.id) {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
-      }
+      const id = validate(objectIdSchema, req.id);
       const page = parseInt(req.query.page as string);
 
-      const { history, total } = await this.userService.subscriptionHistory(req.id, page);
-      res.status(HttpStatus.OK).json({ success: true, history, total });
+      const { history, total } = await this._userService.subscriptionHistory(id, page);
+      sendSuccess(res, HttpStatus.OK, { history, total });
     } catch (error) {
       next(error);
     }
   }
 
-  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async logout(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      const id = validate(objectIdSchema, req.id);
       const refreshToken = req.cookies.userRefreshToken as string;
       const authHeader = req.headers.authorization;
       const accessToken = authHeader && authHeader.split(' ')[1];
       if (!accessToken) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.TOKEN_NOT_PROVIDED);
       }
-      await this.userService.logout(refreshToken, accessToken);
+      await this._userService.logout(id, refreshToken, accessToken);
       res.clearCookie('userRefreshToken', {
         httpOnly: true,
         secure: true,
         sameSite: 'none',
       });
 
-      res.status(HttpStatus.OK).json({ success: true });
+      sendSuccess(res, HttpStatus.OK, {});
     } catch (error) {
       next(error);
     }

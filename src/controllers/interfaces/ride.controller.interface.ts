@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { ExtendedRequest } from '../../middlewares/auth.middleware';
 export interface IRideController {
   checkCabs(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
@@ -8,8 +8,6 @@ export interface IRideController {
   getRideHistoryDriver(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
   checkPaymentStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
   getRIdeInfoForUser(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
-  fileComplaint(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
-  // getRIdeInfoForDriver(req:ExtendedRequest,res:Response , next:NextFunction):Promise<void>
   getRIdeInfoForDriver(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
   giveFeedBack(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;
   rideSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void>;

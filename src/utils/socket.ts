@@ -8,7 +8,7 @@ import {
   getAvailableDriversByGeo,
   updateDriverFelids,
   removeDriverFromGeoIndex,
-  changeExpInRedis,
+  DriverCategory,
 } from '../config/redis';
 import { extractUserIdFromToken } from './jwt';
 import { AppError } from './appError';
@@ -44,6 +44,7 @@ export const initializeSocket = (server: any) => {
       next();
     } catch (error) {
       // console.log("Invalid token");
+      if (error instanceof Error) next(new AppError(HttpStatus.UNAUTHORIZED, error.message));
       next(new AppError(HttpStatus.UNAUTHORIZED, messages.INVALID_ID));
     }
   });
@@ -66,7 +67,7 @@ export const initializeSocket = (server: any) => {
         if (driver) {
           await saveDriverStatusToRedis(`driver:${decodedId}`, {
             socketId: socket.id,
-            category: driver.vehicleDetails.category,
+            category: driver.vehicleDetails.category as DriverCategory,
             status: 'online',
             latitude: driver.location?.coordinates[1] || 0,
             longitude: driver.location?.coordinates[0] || 0,
@@ -160,15 +161,8 @@ export const initializeSocket = (server: any) => {
           return;
         }
 
-        const {
-          finalFare,
-          bestDiscount,
-          bestOffer,
-          driverShare,
-          originalFare,
-          isPremiumUser,
-          premiumDiscount,
-        } = fareData;
+        const { finalFare, bestDiscount, bestOffer, driverShare, originalFare, premiumDiscount } =
+          fareData;
 
         const rideResult = await findDriverForRide(
           nearestDrivers,
@@ -181,7 +175,6 @@ export const initializeSocket = (server: any) => {
           bestDiscount,
           originalFare,
           routeInfo.distance, //! this is in meter need to change to km
-          isPremiumUser,
           premiumDiscount,
           io,
         );

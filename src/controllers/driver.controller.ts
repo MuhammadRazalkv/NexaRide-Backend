@@ -39,7 +39,10 @@ export class DriverController implements IDriverController {
 
   async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const data = validate(emailOTPValidation, req.body);
+      const data = validate(emailOTPValidation, {
+        email: req.body.email,
+        OTP: req.body.otp,
+      });
       await this._driverService.verifyOTP(data.email, data.OTP);
       sendSuccess(res, HttpStatus.OK, {}, messages.EMAIL_VERIFICATION_SUCCESS);
     } catch (error) {

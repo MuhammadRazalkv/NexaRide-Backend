@@ -24,7 +24,7 @@ export class UserMapper {
       name: user.name,
       email: user.email,
       isBlocked: user.isBlocked,
-      softBlock: user.isBlocked,
+      softBlock: user.softBlock,
       phone: user.phone || 0,
     };
   }

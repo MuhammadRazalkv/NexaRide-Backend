@@ -7,9 +7,12 @@ import { DriverRepo } from '../repositories/driver.repo';
 import { getFromRedis } from '../config/redis';
 
 const ACCESS_SECRET = process.env.ACCESS_SECRET || 'access_secret';
-export interface ExtendedRequest extends Request {
+export interface ExtendedRequest<B = any, Q = any> extends Request {
   id?: string;
+  validatedBody?: B;
+  validatedQuery?: Q;
 }
+
 interface JwtPayload {
   id: string;
   role: string;
@@ -24,8 +27,6 @@ export const authenticateWithRoles = (
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-      console.log('No token error ');
-
       res.status(HttpStatus.UNAUTHORIZED).json({ message: messages.FORBIDDEN });
       return;
     }
@@ -34,8 +35,6 @@ export const authenticateWithRoles = (
       const decoded = jwt.verify(token, ACCESS_SECRET) as JwtPayload;
 
       if (decoded.role !== role) {
-        console.log('No matching role ');
-
         res.status(HttpStatus.FORBIDDEN).json({ message: messages.FORBIDDEN });
         return;
       }

@@ -4,20 +4,23 @@ import { messages } from '../constants/httpMessages';
 import { IAdminService } from '../services/interfaces/admin.service.interface';
 import { IAdminController } from './interfaces/admin.controller.interface';
 import { AppError } from '../utils/appError';
-import { loginDTO } from '../dtos/request/auth.req.dto';
+// import { loginDTO } from '../dtos/request/auth.req.dto';
 import { sendSuccess } from '../utils/response.util';
 import { validate } from '../utils/validators/validateZod';
-import { objectIdSchema } from '../dtos/request/common.req.dto';
-import { fareSchema } from '../dtos/request/fare.req.dto';
+import { IdDTO, objectIdSchema } from '../dtos/request/common.req.dto';
+import { FareSchemaDTO } from '../dtos/request/fare.req.dto';
+import { ExtendedRequest } from '../middlewares/auth.middleware';
+import { LoginDTO } from '../dtos/request/auth.req.dto';
+import { QuerySchemaDTO } from '../dtos/request/query.req.dto';
 const maxAge = parseInt(process.env.REFRESH_MAX_AGE as string);
 export class AdminController implements IAdminController {
   constructor(private _adminService: IAdminService) {}
 
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async login(req: ExtendedRequest<LoginDTO>, res: Response, next: NextFunction): Promise<void> {
     try {
-      const loginData = validate(loginDTO, req.body);
+      const { email, password } = req.validatedBody!;
 
-      const data = await this._adminService.login(loginData.email, loginData.password);
+      const data = await this._adminService.login(email, password);
       res.cookie('adminRefreshToken', data.refreshToken, {
         httpOnly: true,
         secure: true,
@@ -31,11 +34,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async getUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getUsers(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const search = req.query.search || '';
-      const sort = req.query.sort || '';
+      const { page, search, sort } = req.validatedQuery!;
       const data = await this._adminService.getUsers(page, search as string, sort as string);
 
       sendSuccess(
@@ -59,9 +64,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async changeUserStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async changeUserStatus(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const result = await this._adminService.changeUserStatus(req.body.id);
+      const result = await this._adminService.changeUserStatus(req.validatedBody?.id!);
 
       sendSuccess(res, HttpStatus.OK, { user: result.user }, result.message);
     } catch (error) {
@@ -69,11 +78,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async getDrivers(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getDrivers(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const search = req.query.search || '';
-      const sort = req.query.sort || '';
+      const { page, search, sort } = req.validatedQuery!;
       const data = await this._adminService.getDrivers(page, search as string, sort as string);
 
       sendSuccess(
@@ -87,9 +98,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async changeDriverStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async changeDriverStatus(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const result = await this._adminService.changeDriverStatus(req.body.id);
+      const result = await this._adminService.changeDriverStatus(req.validatedBody?.id!);
 
       sendSuccess(res, HttpStatus.OK, { driver: result.driver }, result.message);
     } catch (error) {
@@ -104,17 +119,19 @@ export class AdminController implements IAdminController {
   ): Promise<void> {
     try {
       const drivers = await this._adminService.getPendingDriversWithVehicle();
-      console.log(drivers);
-
       sendSuccess(res, HttpStatus.OK, { drivers }, messages.DATA_FETCH_SUCCESS);
     } catch (error) {
       next(error);
     }
   }
 
-  async rejectDriver(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async rejectDriver(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const driverId = validate(objectIdSchema, req.body.driverId);
+      const driverId = req.validatedBody?.id!;
       const result = await this._adminService.rejectDriver(driverId, req.body.reason);
 
       sendSuccess(res, HttpStatus.OK, { driver: result.driver }, result.message);
@@ -123,9 +140,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async approveDriver(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async approveDriver(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const driverId = validate(objectIdSchema, req.body.driverId);
+      const driverId = req.validatedBody?.id!;
       const result = await this._adminService.approveDriver(driverId);
 
       sendSuccess(res, HttpStatus.OK, { driver: result.driver }, result.message);
@@ -145,10 +166,14 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async approveVehicle(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async approveVehicle(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { category } = req.body;
-      const vehicleId = validate(objectIdSchema, req.body.vehicleId);
+      const vehicleId = req.validatedBody?.id!;
       const result = await this._adminService.approveVehicle(vehicleId, category);
 
       sendSuccess(res, HttpStatus.OK, { vehicle: result.vehicle }, result.message);
@@ -157,9 +182,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async rejectVehicle(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async rejectVehicle(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const vehicleId = validate(objectIdSchema, req.body.vehicleId);
+      const vehicleId = req.validatedBody?.id!;
       const result = await this._adminService.rejectVehicle(vehicleId, req.body.reason);
 
       sendSuccess(res, HttpStatus.OK, { vehicle: result.vehicle }, result.message);
@@ -168,9 +197,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async updateFare(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async updateFare(
+    req: ExtendedRequest<FareSchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const data = validate(fareSchema, req.body.fare);
+      const data = req.validatedBody!;
       const result = await this._adminService.updateFare(data);
 
       sendSuccess(res, HttpStatus.OK, { fares: result }, messages.FARE_UPDATED);
@@ -218,16 +251,14 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async getAllComplaints(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getAllComplaints(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const filterBy = (req.query.filter as string) || '';
-      const search = String(req.query.search);
-      const { complaints, total } = await this._adminService.getAllComplaints(
-        page,
-        filterBy,
-        search,
-      );
+      const { page, filter, search } = req.validatedQuery!;
+      const { complaints, total } = await this._adminService.getAllComplaints(page, filter, search);
 
       sendSuccess(res, HttpStatus.OK, { complaints, total });
     } catch (error) {
@@ -235,10 +266,14 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async getComplaintInDetail(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getComplaintInDetail(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const complaintId = validate(objectIdSchema, req.query.complaintId);
-
+      const complaintId = req.validatedQuery?.id!;
+      console.log('complaintID', complaintId);
       const { complaint, rideInfo } = await this._adminService.getComplaintInDetail(complaintId);
       sendSuccess(res, HttpStatus.OK, { complaint, rideInfo });
     } catch (error) {
@@ -246,9 +281,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async changeComplaintStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async changeComplaintStatus(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const complaintId = validate(objectIdSchema, req.body.complaintId);
+      const complaintId = req.validatedBody?.id!;
       const { type } = req.body;
       if (!complaintId || !type) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
@@ -260,10 +299,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async sendWarningMail(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async sendWarningMail(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const complaintId = validate(objectIdSchema, req.body.complaintId);
-      console.log('Warning Mail', complaintId);
+      const complaintId = req.validatedBody?.id!;
 
       await this._adminService.sendWarningMail(complaintId);
       sendSuccess(res, HttpStatus.OK, {});
@@ -281,10 +323,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async rideEarnings(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async rideEarnings(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const search = String(req.query.search) || '';
+      const { page, search } = req.validatedQuery!;
       const data = await this._adminService.rideEarnings(page, search);
       sendSuccess(res, HttpStatus.OK, data);
     } catch (error) {
@@ -292,12 +337,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async premiumUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async premiumUsers(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const filter = String(req.query.filter);
-      const search = String(req.query.search);
-      const sort = String(req.query.sort);
+      const { filter, page, search, sort } = req.validatedQuery!;
       const data = await this._adminService.premiumUsers(page, filter, search, sort);
       sendSuccess(res, HttpStatus.OK, data);
     } catch (error) {
@@ -305,9 +351,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async driverInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async driverInfo(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const driverId = validate(objectIdSchema, req.query.driverId);
+      const driverId = req.validatedQuery?.id!;
       const driver = await this._adminService.diverInfo(driverId);
       sendSuccess(res, HttpStatus.OK, { driver });
     } catch (error) {
@@ -315,9 +365,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async driverRideAndRating(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async driverRideAndRating(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const driverId = validate(objectIdSchema, req.query.driverId);
+      const driverId = req.validatedQuery?.id!;
 
       const data = await this._adminService.driverRideAndRating(driverId);
 
@@ -327,9 +381,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async vehicleInfoByDriverId(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async vehicleInfoByDriverId(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const driverId = validate(objectIdSchema, req.query.driverId);
+      const driverId = req.validatedQuery?.id!;
 
       const vehicle = await this._adminService.vehicleInfoByDriverId(driverId);
       sendSuccess(res, HttpStatus.OK, { vehicle });
@@ -338,9 +396,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async userInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async userInfo(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const userId = validate(objectIdSchema, req.query.userId);
+      const userId = req.validatedQuery?.id!;
 
       const user = await this._adminService.userInfo(userId);
       sendSuccess(res, HttpStatus.OK, { user });
@@ -349,9 +411,13 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async userRideAndRating(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async userRideAndRating(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const userId = validate(objectIdSchema, req.query.userId);
+      const userId = req.validatedQuery?.id!;
 
       const data = await this._adminService.userRideAndRating(userId);
       sendSuccess(res, HttpStatus.OK, data);
@@ -381,22 +447,32 @@ export class AdminController implements IAdminController {
     }
   }
 
-  async rideHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async rideHistory(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const sort = (req.query.sort as string) || '';
-      const filterBy = (req.query.filter as 'all' | 'ongoing' | 'canceled' | 'completed') || 'all';
-      const search = String(req.query.search) || '';
-      const data = await this._adminService.rideHistory(page, sort, filterBy, search);
+      const { filter, page, search, sort } = req.validatedQuery!;
+      const data = await this._adminService.rideHistory(
+        page,
+        sort,
+        (filter as 'all' | 'ongoing' | 'canceled' | 'completed') || 'all',
+        search,
+      );
       sendSuccess(res, HttpStatus.OK, data);
     } catch (error) {
       next(error);
     }
   }
 
-  async rideInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async rideInfo(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const rideId = validate(objectIdSchema, req.query.rideId);
+      const rideId = req.validatedQuery?.id!;
       const rideInfo = await this._adminService.rideInfo(rideId);
       sendSuccess(res, HttpStatus.OK, { rideInfo });
     } catch (error) {

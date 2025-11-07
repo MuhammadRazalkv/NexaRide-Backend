@@ -116,7 +116,6 @@ export class AdminService implements IAdminService {
         userId: id,
         status: 'ongoing',
       });
-
       if (ongoingRide) {
         const updatedSoftUser = await this._userRepo.updateById(id, {
           $set: { softBlock: true },

@@ -185,14 +185,26 @@ export const userSchemaDTO = z.object({
   profilePic: z.string().optional(),
   googleId: z.string().optional(),
 });
-export const nameDTO = z
-  .string()
-  .min(3, 'Name must be at least 3 characters')
-  .max(15, 'Name cannot exceed 15 characters ');
+export const nameDTO = z.object({
+  name: z
+    .string()
+    .min(3, 'Name must be at least 3 characters')
+    .max(15, 'Name cannot exceed 15 characters '),
+});
+export type NameDTO = z.infer<typeof nameDTO>;
 export type UserSchemaDTO = z.infer<typeof userSchemaDTO>;
 
-export const phoneDTO = z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number');
-
+export const phoneDTO = z.object({
+  phone: z.coerce
+    .number({
+      required_error: 'Phone number is required',
+      invalid_type_error: 'Phone must be a number',
+    })
+    .refine((val) => /^[6-9]\d{9}$/.test(String(val)), {
+      message: 'Invalid phone number',
+    }),
+});
+export type PhoneDTO = z.infer<typeof phoneDTO>;
 export const googleAuthDTO = z.object({
   email: z.string().email(messages.INVALID_EMAIL),
   id: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),

@@ -2,20 +2,22 @@ import { Response, NextFunction } from 'express';
 import { IPaymentController } from './interfaces/payment.controller.interface';
 import { ExtendedRequest } from '../middlewares/auth.middleware';
 import { IPaymentService } from '../services/interfaces/payment.service.interface';
-import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
-import { messages } from '../constants/httpMessages';
-import { validate } from '../utils/validators/validateZod';
-import { objectIdSchema } from '../dtos/request/common.req.dto';
-import { amountDTO, subTypeDTO } from '../dtos/request/payment.req.dto';
+import { IdDTO } from '../dtos/request/common.req.dto';
+import { AmountDTO, SubTypeDTO } from '../dtos/request/payment.req.dto';
 import { sendSuccess } from '../utils/response.util';
 import { QuerySchemaDTO } from '../dtos/request/query.req.dto';
+import { RequestedByDTO } from '../dtos/request/ride.req.dto';
 export class PaymentController implements IPaymentController {
   constructor(private _paymentService: IPaymentService) {}
-  async addMoneyToWallet(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async addMoneyToWallet(
+    req: ExtendedRequest<AmountDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const id = req.id!;
-      const amount = validate(amountDTO, req.body.amount);
+      const amount = req.validatedBody?.amount!;
 
       const url = await this._paymentService.addMoneyToWallet(id, amount);
 
@@ -25,10 +27,14 @@ export class PaymentController implements IPaymentController {
     }
   }
 
-  async getWalletInfo(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getWalletInfo(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const id = req.id!;
-      const page = parseInt(req.query.page as string) || 1;
+      const page = req.validatedQuery?.page!;
 
       const { wallet, total } = await this._paymentService.getWalletInfo(id, page);
       sendSuccess(res, HttpStatus.OK, { wallet, total });
@@ -48,10 +54,14 @@ export class PaymentController implements IPaymentController {
     }
   }
 
-  async payUsingWallet(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async payUsingWallet(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const id = req.id!;
-      const rideId = validate(objectIdSchema, req.body.rideId);
+      const rideId = req.validatedBody?.id!;
 
       await this._paymentService.payUsingWallet(id, rideId);
       sendSuccess(res, HttpStatus.OK, {});
@@ -60,10 +70,14 @@ export class PaymentController implements IPaymentController {
     }
   }
 
-  async payUsingStripe(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async payUsingStripe(
+    req: ExtendedRequest<IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const id = req.id!;
-      const rideId = validate(objectIdSchema, req.body.rideId);
+      const rideId = req.validatedBody?.id!;
       const url = await this._paymentService.payUsingStripe(id, rideId);
 
       sendSuccess(res, HttpStatus.CREATED, { url });
@@ -88,10 +102,14 @@ export class PaymentController implements IPaymentController {
     }
   }
 
-  async upgradeToPlus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async upgradeToPlus(
+    req: ExtendedRequest<SubTypeDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const userId = req.id!;
-      const type = validate(subTypeDTO, req.body.type);
+      const type = req.validatedBody?.type!;
       const url = await this._paymentService.upgradeToPlus(userId, type);
       sendSuccess(res, HttpStatus.CREATED, { url });
     } catch (error) {
@@ -99,13 +117,14 @@ export class PaymentController implements IPaymentController {
     }
   }
 
-  async transactionSummary(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async transactionSummary(
+    req: ExtendedRequest<any, RequestedByDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const id = req.id!;
-      const requestedBy = req.query.requestedBy;
-      if (requestedBy !== 'user' && requestedBy !== 'driver') {
-        throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_PARAMETERS);
-      }
+      const requestedBy = req.validatedQuery?.requestedBy!;
       const data = await this._paymentService.transactionSummary(id, requestedBy);
       sendSuccess(res, HttpStatus.OK, { data });
     } catch (error) {

@@ -3,19 +3,22 @@ import { Response, NextFunction } from 'express';
 import { IRideController } from './interfaces/ride.controller.interface';
 import { IRideService } from '../services/interfaces/ride.service.interface';
 import { HttpStatus } from '../constants/httpStatusCodes';
-import { validate } from '../utils/validators/validateZod';
-import { IdDTO, objectIdSchema } from '../dtos/request/common.req.dto';
-import { checkCabsDTO, OTPDTO, RequestedByDTO } from '../dtos/request/ride.req.dto';
+import { IdDTO } from '../dtos/request/common.req.dto';
+import { CheckCabs, OTPDTO, RequestedByDTO } from '../dtos/request/ride.req.dto';
 import { sendSuccess } from '../utils/response.util';
 import { QuerySchemaDTO } from '../dtos/request/query.req.dto';
 import { FeedBakReqDTO } from '../dtos/request/feedback.req.dto';
 
 export class RideController implements IRideController {
   constructor(private _rideService: IRideService) {}
-  async checkCabs(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async checkCabs(
+    req: ExtendedRequest<CheckCabs>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const userId = req.id!;
-      const data = validate(checkCabsDTO, req.body.data);
+      const data = req.validatedBody!;
       const availableCabs = await this._rideService.checkCabs(userId, data);
       sendSuccess(res, HttpStatus.OK, { availableCabs });
     } catch (error) {
@@ -44,7 +47,7 @@ export class RideController implements IRideController {
   ): Promise<void> {
     try {
       const driverId = req.id!;
-      const OTP = req.validatedBody!;
+      const OTP = req.validatedBody?.otp!;
       const response = await this._rideService.verifyRideOTP(driverId, OTP);
 
       sendSuccess(res, HttpStatus.OK, { startedAt: response.date, rideId: response.rideId });
@@ -53,12 +56,15 @@ export class RideController implements IRideController {
     }
   }
 
-  async getRideHistory(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getRideHistory(
+    req: ExtendedRequest<any, QuerySchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const id = req.id!;
-      const page = parseInt(req.query.page as string);
-      const sort = req.query.sort;
-      const { history, total } = await this._rideService.getRideHistory(id, page, sort as string);
+      const { page, sort } = req.validatedQuery!;
+      const { history, total } = await this._rideService.getRideHistory(id, page, sort);
 
       sendSuccess(res, HttpStatus.OK, { history, total });
     } catch (error) {
@@ -95,11 +101,14 @@ export class RideController implements IRideController {
     }
   }
 
-  async getRIdeInfoForUser(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async getRIdeInfoForUser(
+    req: ExtendedRequest<any, IdDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const id = req.id!;
-      const rideId = validate(objectIdSchema, req.query.rideId);
-
+      const rideId = req.validatedQuery?.id!;
       const { ride, complaintInfo } = await this._rideService.findUserRideInfo(rideId, id);
       sendSuccess(res, HttpStatus.OK, { ride, complaintInfo });
     } catch (error) {

@@ -14,10 +14,12 @@ export const checkCabsDTO = z.object({
 });
 export type CheckCabs = z.infer<typeof checkCabsDTO>;
 
-export const otpDTO = z
-  .string()
-  .length(4, 'OTP must be exactly 4 digits')
-  .regex(/^\d{4}$/, 'OTP must contain only digits');
+export const otpDTO = z.object({
+  otp: z
+    .string()
+    .length(4, 'OTP must be exactly 4 digits')
+    .regex(/^\d{4}$/, 'OTP must contain only digits'),
+});
 
 export type OTPDTO = z.infer<typeof otpDTO>;
 export const requestedByDTO = z.object({

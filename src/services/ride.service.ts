@@ -226,6 +226,7 @@ export class RideService implements IRideService {
   }
 
   async checkPaymentStatus(rideId: string): Promise<string | undefined> {
+    console.log('rideId:- ', rideId);
     if (!rideId) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.MISSING_FIELDS);
     }

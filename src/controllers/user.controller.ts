@@ -5,17 +5,17 @@ import IUserService from '../services/interfaces/user.service.interface';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
 import { AppError } from '../utils/appError';
-import { validate } from '../utils/validators/validateZod';
 import {
   EmailDTO,
-  emailOTPValidation,
-  loginDTO,
-  nameDTO,
-  phoneDTO,
-  userSchemaDTO,
+  EmailOTPDto,
+  LoginDTO,
+  NameDTO,
+  PasswordResetDTO,
+  PhoneDTO,
+  UserSchemaDTO,
 } from '../dtos/request/auth.req.dto';
 import { sendSuccess } from '../utils/response.util';
-import { objectIdSchema } from '../dtos/request/common.req.dto';
+import { QuerySchemaDTO } from '../dtos/request/query.req.dto';
 export class UserController implements IUserController {
   constructor(private _userService: IUserService) {}
 
@@ -33,12 +33,13 @@ export class UserController implements IUserController {
     }
   }
 
-  async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async verifyOTP(
+    req: ExtendedRequest<EmailOTPDto>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const { email, otp } = validate(emailOTPValidation, {
-        email: req.body.email,
-        otp: req.body.otp,
-      });
+      const { email, otp } = req.validatedBody!;
       await this._userService.verifyOTP(email, otp);
       sendSuccess(res, HttpStatus.OK, {}, messages.EMAIL_VERIFICATION_SUCCESS);
     } catch (error) {
@@ -46,9 +47,13 @@ export class UserController implements IUserController {
     }
   }
 
-  async addInfo(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async addInfo(
+    req: ExtendedRequest<UserSchemaDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const userData = validate(userSchemaDTO, req.body);
+      const userData = req.validatedBody!;
       const { accessToken, refreshToken, user } = await this._userService.addInfo(userData);
 
       res.cookie('userRefreshToken', refreshToken, {
@@ -78,9 +83,9 @@ export class UserController implements IUserController {
     }
   }
 
-  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async login(req: ExtendedRequest<LoginDTO>, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, password } = validate(loginDTO, req.body);
+      const { email, password } = req.validatedBody!;
       const { accessToken, refreshToken, user } = await this._userService.login(email, password);
       res.cookie('userRefreshToken', refreshToken, {
         httpOnly: true,
@@ -136,10 +141,13 @@ export class UserController implements IUserController {
     }
   }
 
-  async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async resetPassword(
+    req: ExtendedRequest<PasswordResetDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const id = validate(objectIdSchema, req.body.id);
-      const { token, password } = req.body;
+      const { token, password, id } = req.validatedBody!;
 
       await this._userService.resetPassword(id, token, password);
       sendSuccess(res, HttpStatus.OK, {}, messages.PASSWORD_RESET_SUCCESS);
@@ -150,7 +158,7 @@ export class UserController implements IUserController {
 
   async getUserInfo(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = validate(objectIdSchema, req.id);
+      const id = req.id!;
       const user = await this._userService.getUserInfo(id);
 
       sendSuccess(res, HttpStatus.OK, { user });
@@ -183,10 +191,14 @@ export class UserController implements IUserController {
     }
   }
 
-  async updateUserName(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async updateUserName(
+    req: ExtendedRequest<NameDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const id = validate(objectIdSchema, req.id);
-      const name = validate(nameDTO, req.body.name);
+      const id = req.id!;
+      const name = req.validatedBody?.name!;
 
       const data = await this._userService.updateUserName(id, name);
 
@@ -196,11 +208,15 @@ export class UserController implements IUserController {
     }
   }
 
-  async updateUserPhone(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
+  async updateUserPhone(
+    req: ExtendedRequest<PhoneDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const id = validate(objectIdSchema, req.id);
-      const phone = validate(phoneDTO, String(req.body.phone));
-      const newPhone = await this._userService.updateUserPhone(id, parseInt(phone));
+      const id = req.id!;
+      const phone = req.validatedBody?.phone!;
+      const newPhone = await this._userService.updateUserPhone(id, phone);
 
       sendSuccess(res, HttpStatus.OK, { phone: newPhone });
     } catch (error) {
@@ -210,7 +226,7 @@ export class UserController implements IUserController {
 
   async updateUserPfp(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = validate(objectIdSchema, req.id);
+      const id = req.id!;
       const image = req.body.image;
 
       const newImg = await this._userService.updateUserPfp(id, image);
@@ -223,7 +239,7 @@ export class UserController implements IUserController {
 
   async subscriptionStatus(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = validate(objectIdSchema, req.id);
+      const userId = req.id!;
       const result = await this._userService.subscriptionStatus(userId);
       sendSuccess(res, HttpStatus.OK, { result });
     } catch (error) {
@@ -232,13 +248,13 @@ export class UserController implements IUserController {
   }
 
   async subscriptionHistory(
-    req: ExtendedRequest,
+    req: ExtendedRequest<any, QuerySchemaDTO>,
     res: Response,
     next: NextFunction,
   ): Promise<void> {
     try {
-      const id = validate(objectIdSchema, req.id);
-      const page = parseInt(req.query.page as string);
+      const id = req.id!;
+      const page = req.validatedQuery?.page!;
 
       const { history, total } = await this._userService.subscriptionHistory(id, page);
       sendSuccess(res, HttpStatus.OK, { history, total });
@@ -249,7 +265,7 @@ export class UserController implements IUserController {
 
   async logout(req: ExtendedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const id = validate(objectIdSchema, req.id);
+      const id = req.id!;
       const refreshToken = req.cookies.userRefreshToken as string;
       const authHeader = req.headers.authorization;
       const accessToken = authHeader && authHeader.split(' ')[1];

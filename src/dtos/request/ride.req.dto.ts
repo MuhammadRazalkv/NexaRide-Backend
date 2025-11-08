@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { messages } from '../../constants/httpMessages';
 
 export const checkCabsDTO = z.object({
   pickUpPoint: z.object({
@@ -20,8 +19,8 @@ export const otpDTO = z
   .length(4, 'OTP must be exactly 4 digits')
   .regex(/^\d{4}$/, 'OTP must contain only digits');
 
-export const requestedByDTO = z.enum(['driver', 'user'], {
-  errorMap: () => ({
-    message: messages.INVALID_PARAMETERS,
-  }),
+export type OTPDTO = z.infer<typeof otpDTO>;
+export const requestedByDTO = z.object({
+  requestedBy: z.enum(['driver', 'user']),
 });
+export type RequestedByDTO = z.infer<typeof requestedByDTO>;

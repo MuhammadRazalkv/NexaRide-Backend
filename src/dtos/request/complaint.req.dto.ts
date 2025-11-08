@@ -4,7 +4,6 @@ import { messages } from '../../constants/httpMessages';
 export const complaintReqDTO = z
   .object({
     rideId: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
-    filedById: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
     filedByRole: z.enum(['user', 'driver'], {
       errorMap: () => ({
         message: 'Invalid role . You must be a driver or user to file a complaint',

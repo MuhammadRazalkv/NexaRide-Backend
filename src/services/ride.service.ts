@@ -77,16 +77,16 @@ export class RideService implements IRideService {
 
   async assignRandomLocation(id: string): Promise<number[]> {
     const randomLocations = [
-      [77.5946, 12.9716], // MG Road (Central Hub)
-      [77.6074, 12.9746], // Brigade Road (Shopping & Dining)
-      [77.567, 12.9776], // Cubbon Park (Nature & Leisure)
-      [77.5806, 12.9351], // Koramangala (IT & Dining Hub)
-      [77.6484, 12.9784], // Indiranagar (Nightlife & Cafes)
-      [77.7025, 12.9608], // Whitefield (Tech Park Area)
-      [77.6143, 12.926], // HSR Layout (Residential & Startups)
-      [77.5671, 12.9985], // Malleshwaram (Traditional Market)
-      [77.5625, 12.9242], // Jayanagar (Residential & Shopping)
-      [77.7135, 12.8951], // Electronic City (Tech Hub)
+      [77.5946, 12.9716],
+      [77.6074, 12.9746],
+      [77.567, 12.9776],
+      [77.5806, 12.9351],
+      [77.6484, 12.9784],
+      [77.7025, 12.9608],
+      [77.6143, 12.926],
+      [77.5671, 12.9985],
+      [77.5625, 12.9242],
+      [77.7135, 12.8951],
     ];
 
     const randomCoordinate = randomLocations[Math.floor(Math.random() * randomLocations.length)];
@@ -295,9 +295,7 @@ export class RideService implements IRideService {
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
-    if (rating > 5 || rating < 0) {
-      throw new AppError(HttpStatus.BAD_REQUEST, messages.RATING_ERROR);
-    }
+
     let ratedById: mongoose.Types.ObjectId;
     let ratedAgainstId: mongoose.Types.ObjectId;
     let ratedAgainstRole: 'user' | 'driver';

@@ -1,4 +1,4 @@
-import { VehicleSchemaDTO } from '../../dtos/request/auth.req.dto';
+import { VehicleReapplyDTO, VehicleSchemaDTO } from '../../dtos/request/auth.req.dto';
 export interface IVehicleService {
   addVehicle(data: VehicleSchemaDTO): Promise<{
     driver: {
@@ -9,7 +9,7 @@ export interface IVehicleService {
   }>;
   reApplyVehicle(
     id: string,
-    data: VehicleSchemaDTO,
+    data: VehicleReapplyDTO,
   ): Promise<{
     driver: {
       name: any;

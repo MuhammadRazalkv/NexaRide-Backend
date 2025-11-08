@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IVehicle extends Document {
-  driverId: mongoose.Types.ObjectId;
+  // driverId: mongoose.Types.ObjectId;
   nameOfOwner: string;
   addressOfOwner: string;
   brand: string;

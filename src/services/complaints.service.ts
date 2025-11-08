@@ -13,13 +13,13 @@ export class ComplaintsService implements IComplaintsService {
     private _complaintsRepo: IComplaintsRepo,
     private _rideRepo: IRideRepo,
   ) {}
-  async fileComplaint(data: ComplaintReqDTO): Promise<ComplaintResDTO | null> {
+  async fileComplaint(id: string, data: ComplaintReqDTO): Promise<ComplaintResDTO | null> {
     const ride = await this._rideRepo.findById(data.rideId);
     if (!ride) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.RIDE_NOT_FOUND);
     }
-
-    const complaint = await this._complaintsRepo.create(data);
+    const updatedData = { ...data, filedById: id };
+    const complaint = await this._complaintsRepo.create(updatedData);
     return ComplaintsMapper.toComplaint(complaint);
   }
 }

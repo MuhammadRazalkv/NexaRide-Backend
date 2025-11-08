@@ -7,7 +7,7 @@ import { messages } from '../constants/httpMessages';
 import { AppError } from '../utils/appError';
 import { validate } from '../utils/validators/validateZod';
 import {
-  emailDTO,
+  EmailDTO,
   emailOTPValidation,
   loginDTO,
   nameDTO,
@@ -19,9 +19,13 @@ import { objectIdSchema } from '../dtos/request/common.req.dto';
 export class UserController implements IUserController {
   constructor(private _userService: IUserService) {}
 
-  async emailVerification(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async emailVerification(
+    req: ExtendedRequest<EmailDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const email = validate(emailDTO, req.body.email);
+      const email = req.validatedBody?.email!;
       await this._userService.emailVerification(email);
       sendSuccess(res, HttpStatus.CREATED, {}, messages.OTP_SENT_SUCCESS);
     } catch (error) {
@@ -31,11 +35,11 @@ export class UserController implements IUserController {
 
   async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { email, OTP } = validate(emailOTPValidation, {
+      const { email, otp } = validate(emailOTPValidation, {
         email: req.body.email,
-        OTP: req.body.otp,
+        otp: req.body.otp,
       });
-      await this._userService.verifyOTP(email, OTP);
+      await this._userService.verifyOTP(email, otp);
       sendSuccess(res, HttpStatus.OK, {}, messages.EMAIL_VERIFICATION_SUCCESS);
     } catch (error) {
       next(error);
@@ -60,9 +64,13 @@ export class UserController implements IUserController {
     }
   }
 
-  async reSendOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async reSendOTP(
+    req: ExtendedRequest<EmailDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const email = validate(emailDTO, req.body.email);
+      const email = req.validatedBody?.email!;
       await this._userService.reSendOTP(email);
       sendSuccess(res, HttpStatus.CREATED, {}, messages.OTP_SENT_SUCCESS);
     } catch (error) {
@@ -87,9 +95,13 @@ export class UserController implements IUserController {
     }
   }
 
-  async googleLogin(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async googleLogin(
+    req: ExtendedRequest<EmailDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const email = validate(emailDTO, req.body.email);
+      const email = req.validatedBody?.email!;
       const { googleId, name } = req.body;
       const { accessToken, refreshToken, user } = await this._userService.googleLogin(
         email,
@@ -110,9 +122,13 @@ export class UserController implements IUserController {
     }
   }
 
-  async requestPasswordReset(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async requestPasswordReset(
+    req: ExtendedRequest<EmailDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const email = validate(emailDTO, req.body.email);
+      const email = req.validatedBody?.email!;
       await this._userService.requestPasswordReset(email);
       sendSuccess(res, HttpStatus.OK, {}, messages.PASSWORD_RESET_LINK_SENT);
     } catch (error) {

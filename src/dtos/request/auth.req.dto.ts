@@ -7,13 +7,13 @@ export const loginDTO = z.object({
 });
 export type LoginDTO = z.infer<typeof loginDTO>;
 
-export const emailDTO = z.string().email(messages.INVALID_EMAIL);
+export const emailDTO = z.object({ email: z.string().email(messages.INVALID_EMAIL) });
 
 export type EmailDTO = z.infer<typeof emailDTO>;
 
 export const emailOTPValidation = z.object({
   email: z.string().email('Invalid email address'),
-  OTP: z
+  otp: z
     .string()
     .length(4, 'OTP must be exactly 4 digits')
     .regex(/^\d{4}$/, 'OTP must contain only digits'),
@@ -153,6 +153,11 @@ export const vehicleSchemaDTO = z.object({
 
 export type VehicleSchemaDTO = z.infer<typeof vehicleSchemaDTO>;
 
+export const vehicleReapplyDTO = vehicleSchemaDTO.omit({
+  driverId: true,
+});
+export type VehicleReapplyDTO = z.infer<typeof vehicleReapplyDTO>;
+
 const fieldSchemas = driverSchemaDTO.shape;
 
 const updateSchemas = Object.entries(fieldSchemas).map(([key, schema]) =>
@@ -187,3 +192,18 @@ export const nameDTO = z
 export type UserSchemaDTO = z.infer<typeof userSchemaDTO>;
 
 export const phoneDTO = z.string().regex(/^[6-9]\d{9}$/, 'Invalid phone number');
+
+export const googleAuthDTO = z.object({
+  email: z.string().email(messages.INVALID_EMAIL),
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
+});
+
+export type GoogleAuthDTO = z.infer<typeof googleAuthDTO>;
+
+export const passwordResetDTO = z.object({
+  id: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  token: z.string().regex(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/, 'Invalid JWT format'),
+});
+
+export type PasswordResetDTO = z.infer<typeof passwordResetDTO>;

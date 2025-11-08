@@ -6,7 +6,7 @@ import { IDriverRepo } from '../repositories/interfaces/driver.repo.interface';
 import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
-import { VehicleSchemaDTO } from '../dtos/request/auth.req.dto';
+import { VehicleReapplyDTO, VehicleSchemaDTO } from '../dtos/request/auth.req.dto';
 
 export class VehicleService implements IVehicleService {
   constructor(
@@ -50,7 +50,6 @@ export class VehicleService implements IVehicleService {
     // Register the vehicle with updated images
     const vehicleData = {
       ...data,
-      driverId: new mongoose.Types.ObjectId(data.driverId),
       vehicleImages,
     };
     try {
@@ -80,7 +79,7 @@ export class VehicleService implements IVehicleService {
 
   async reApplyVehicle(
     id: string,
-    data: VehicleSchemaDTO,
+    data: VehicleReapplyDTO,
   ): Promise<{
     driver: {
       name: any;
@@ -123,7 +122,7 @@ export class VehicleService implements IVehicleService {
       const vehicleData = { ...data, vehicleImages };
 
       await this._vehicleRepo.updateById(vehicleId, {
-        $set: { ...vehicleData, status: 'pending' },
+        $set: { ...vehicleData, driverId: driver.id, status: 'pending' },
       });
 
       return {

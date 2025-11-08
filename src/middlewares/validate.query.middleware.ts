@@ -7,6 +7,7 @@ export const validateQuery =
   <T extends ZodTypeAny>(schema: T) =>
   (req: ExtendedRequest<any, z.infer<T>>, res: Response, next: NextFunction) => {
     try {
+      console.log(req.query);
       const parsed = validate(schema, req.query);
       req.validatedQuery = parsed;
       next();

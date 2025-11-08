@@ -150,14 +150,14 @@ export class DriverService implements IDriverService {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_CREDENTIALS);
     }
 
-    const activeUser = await getFromRedis(`OD:${driver.id}`);
+    // const activeUser = await getFromRedis(`OD:${driver.id}`);
 
-    if (activeUser) {
-      throw new AppError(
-        HttpStatus.BAD_REQUEST,
-        'Driver is already logged in from another device or session.',
-      );
-    }
+    // if (activeUser) {
+    //   throw new AppError(
+    //     HttpStatus.BAD_REQUEST,
+    //     'Driver is already logged in from another device or session.',
+    //   );
+    // }
 
     // Generate tokens
     return {

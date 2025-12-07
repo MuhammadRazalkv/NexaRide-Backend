@@ -6,21 +6,18 @@ import { IVehicleService } from '../services/interfaces/vehicle.interface';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
 import { AppError } from '../utils/appError';
-import { validate } from '../utils/validators/validateZod';
 import {
   DriverReApplyDTO,
   DriverSchemaDTO,
   EmailDTO,
-  emailOTPValidation,
+  EmailOTPDto,
   GoogleAuthDTO,
   LoginDTO,
   PasswordResetDTO,
   UpdateDriverInfoDTO,
-  updateDriverInfoDTO,
   VehicleSchemaDTO,
 } from '../dtos/request/auth.req.dto';
 import { sendSuccess } from '../utils/response.util';
-import { IdDTO, objectIdSchema } from '../dtos/request/common.req.dto';
 
 export class DriverController implements IDriverController {
   constructor(
@@ -41,14 +38,15 @@ export class DriverController implements IDriverController {
     }
   }
 
-  async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async verifyOTP(
+    req: ExtendedRequest<EmailOTPDto>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
-      const data = validate(emailOTPValidation, {
-        email: req.body.email,
-        otp: req.body.otp,
-      });
-      await this._driverService.verifyOTP(data.email, data.otp);
-      sendSuccess(res, HttpStatus.OK, {}, messages.EMAIL_VERIFICATION_SUCCESS);
+      const { email, otp } = req.validatedBody!;
+      const sessionId = await this._driverService.verifyOTP(email, otp);
+      sendSuccess(res, HttpStatus.OK, { sessionId }, messages.EMAIL_VERIFICATION_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -75,14 +73,9 @@ export class DriverController implements IDriverController {
   ): Promise<void> {
     try {
       const data = req.validatedBody!;
-      const response = await this._driverService.addInfo(data);
+      await this._driverService.addInfo(data);
 
-      sendSuccess(
-        res,
-        HttpStatus.CREATED,
-        { driverId: response.driverId },
-        messages.DRIVER_CREATION_SUCCESS,
-      );
+      sendSuccess(res, HttpStatus.CREATED, {}, messages.DRIVER_CREATION_SUCCESS);
     } catch (error) {
       next(error);
     }
@@ -95,9 +88,9 @@ export class DriverController implements IDriverController {
   ): Promise<void> {
     try {
       const data = req.validatedBody!;
-      const response = await this._vehicleService.addVehicle(data);
+      const { driver, token } = await this._vehicleService.addVehicle(data);
 
-      sendSuccess(res, HttpStatus.CREATED, { response }, messages.VEHICLE_CREATION_SUCCESS);
+      sendSuccess(res, HttpStatus.CREATED, { driver, token }, messages.VEHICLE_CREATION_SUCCESS);
     } catch (error) {
       next(error);
     }

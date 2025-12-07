@@ -101,7 +101,8 @@ export function validateLicensePlate(value: string): boolean {
   return licensePlateRegex.test(value);
 }
 export const vehicleSchemaDTO = z.object({
-  driverId: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
+  // driverId: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
+  email: z.string().email('Invalid email address'),
   nameOfOwner: z.string().min(1, 'Name of owner is required').trim(),
 
   addressOfOwner: z.string().min(1, 'Street address is required').trim(),
@@ -154,7 +155,7 @@ export const vehicleSchemaDTO = z.object({
 export type VehicleSchemaDTO = z.infer<typeof vehicleSchemaDTO>;
 
 export const vehicleReapplyDTO = vehicleSchemaDTO.omit({
-  driverId: true,
+  email: true,
 });
 export type VehicleReapplyDTO = z.infer<typeof vehicleReapplyDTO>;
 
@@ -207,7 +208,7 @@ export const phoneDTO = z.object({
 export type PhoneDTO = z.infer<typeof phoneDTO>;
 export const googleAuthDTO = z.object({
   email: z.string().email(messages.INVALID_EMAIL),
-  id: z.string().regex(/^[0-9a-fA-F]{24}$/, messages.INVALID_ID),
+  id: z.string().regex(/^\d{21}$/, messages.INVALID_ID),
 });
 
 export type GoogleAuthDTO = z.infer<typeof googleAuthDTO>;

@@ -23,6 +23,7 @@ import { querySchema } from '../dtos/request/query.req.dto';
 import { idSchema } from '../dtos/request/common.req.dto';
 import { complaintReqDTO } from '../dtos/request/complaint.req.dto';
 import { feedBakReqDTO } from '../dtos/request/feedback.req.dto';
+import { verifySignupSession } from '../middlewares/signup.session.middleware';
 
 const driverRoutes = Router();
 const authMiddleware = authenticateWithRoles('driver', driverRepo);
@@ -30,8 +31,13 @@ driverRoutes
   .post('/verify-email', validateBody(emailDTO), driverController.emailVerification)
   .post('/verify-otp', validateBody(emailOTPValidation), driverController.verifyOTP)
   .post('/resend-otp', validateBody(emailDTO), driverController.reSendOTP)
-  .post('/addInfo', validateBody(driverSchemaDTO), driverController.addInfo)
-  .post('/addVehicle', validateBody(vehicleSchemaDTO), driverController.addVehicle)
+  .post('/addInfo', verifySignupSession(), validateBody(driverSchemaDTO), driverController.addInfo)
+  .post(
+    '/addVehicle',
+    verifySignupSession(),
+    validateBody(vehicleSchemaDTO),
+    driverController.addVehicle,
+  )
   .post('/login', validateBody(loginDTO), driverController.login)
   .post('/google-login', validateBody(emailDTO), driverController.googleLogin)
   .post('/refreshToken', driverController.refreshToken)

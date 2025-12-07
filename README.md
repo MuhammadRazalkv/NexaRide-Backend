@@ -6,13 +6,13 @@ A clean, simple, and scalable backend for the **NexaRide** taxi service app. Bui
 
 ## ⚙️ Tech Stack
 
-* **Node.js + Express**
-* **TypeScript**
-* **MongoDB + Mongoose**
-* **Redis** (caching & sockets)
-* **Socket.IO** (real-time communication)
-* **Stripe** (payments)
-* **Geoapify** (location/ETA)
+- **Node.js + Express**
+- **TypeScript**
+- **MongoDB + Mongoose**
+- **Redis** (caching & sockets)
+- **Socket.IO** (real-time communication)
+- **Stripe** (payments)
+- **Geoapify** (location/ETA)
 
 ---
 
@@ -20,31 +20,31 @@ A clean, simple, and scalable backend for the **NexaRide** taxi service app. Bui
 
 ### 🔐 Authentication
 
-* JWT-based auth
-* Role-based access (User / Driver / Admin)
+- JWT-based auth
+- Role-based access (User / Driver / Admin)
 
 ### 🚖 Ride System
 
-* Real-time ride requests
-* Driver online/offline tracking
-* Ride acceptance, start, finish
-* Distance & ETA using Geoapify
+- Real-time ride requests
+- Driver online/offline tracking
+- Ride acceptance, start, finish
+- Distance & ETA using Geoapify
 
 ### 💳 Wallet & Payments
 
-* Wallet top-up using Stripe
-* Ride payment processing
-* Stripe webhook verification
+- Wallet top-up using Stripe
+- Ride payment processing
+- Stripe webhook verification
 
 ### 💬 Chat
 
-* Real-time user ↔ driver chat
+- Real-time user ↔ driver chat
 
 ### 🛠 Admin Controls
 
-* Monitor rides, users, drivers
-* Block/unblock users
-* offer managment
+- Monitor rides, users, drivers
+- Block/unblock users
+- offer managment
 
 ---
 
@@ -99,25 +99,23 @@ MONGO_URL=your_mongo_url
 
 RETENTION_PERIOD_LOGGER=your_retention_period
 ```
+
 ### 4️⃣ Start the development server
 
 ```bash
 npm run dev
 ```
 
-
-
 ## 🔒 Security
 
-* JWT protection
-* Zod input validation
-* Rate limiting
-* Bcrypt password hashing
-* Role-based authorization
-* Stripe webhook signature checks
+- JWT protection
+- Zod input validation
+- Rate limiting
+- Bcrypt password hashing
+- Role-based authorization
+- Stripe webhook signature checks
 
 ---
-
 
 ## 📞 Contact
 

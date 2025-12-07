@@ -52,15 +52,17 @@ export class DriverService implements IDriverService {
     });
   }
 
-  async verifyOTP(email: string, otp: string): Promise<void> {
+  async verifyOTP(email: string, otp: string): Promise<string> {
     const SOTP = await OTPRepo.getOTP(email);
 
     if (!SOTP || otp !== SOTP) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_OTP);
     }
-
+    const sessionId = crypto.randomUUID();
     OTPRepo.markEmailVerified(email);
     OTPRepo.deleteOTP(email);
+    await setToRedis(`signup:${sessionId}`, email, 86400);
+    return sessionId;
   }
 
   async reSendOTP(email: string): Promise<void> {
@@ -75,7 +77,7 @@ export class DriverService implements IDriverService {
     });
   }
 
-  async addInfo(data: DriverSchemaDTO): Promise<{ driverId: string }> {
+  async addInfo(data: DriverSchemaDTO): Promise<void> {
     if (!(await OTPRepo.isEmailVerified(data.email))) {
       throw new AppError(HttpStatus.BAD_REQUEST, messages.EMAIL_NOT_VERIFIED);
     }
@@ -106,10 +108,10 @@ export class DriverService implements IDriverService {
       location: { type: 'Point', coordinates: randomCoordinate },
     };
     try {
-      const newDriver = await this._driverRepo.create(updatedData);
+      await this._driverRepo.create(updatedData);
       await OTPRepo.deleteVerifiedEmail(data.email);
 
-      return { driverId: newDriver._id as string };
+      // return { driverId: newDriver._id as string };
     } catch (error: any) {
       if (error instanceof mongoose.Error.CastError) {
         throw new AppError(HttpStatus.BAD_REQUEST, messages.INVALID_ID);

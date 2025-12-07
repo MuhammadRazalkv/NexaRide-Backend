@@ -14,11 +14,9 @@ export interface IDriverWithVehicle extends Omit<Partial<IDrivers>, 'vehicleId'>
 
 export interface IDriverService {
   emailVerification(email: string): Promise<void>;
-  verifyOTP(email: string, otp: string): Promise<void>;
+  verifyOTP(email: string, otp: string): Promise<string>;
   reSendOTP(email: string): Promise<void>;
-  addInfo(data: DriverSchemaDTO): Promise<{
-    driverId: string;
-  }>;
+  addInfo(data: DriverSchemaDTO): Promise<void>;
   login(driverData: LoginDTO): Promise<LoginResDTO>;
   getStatus(driverId: string): Promise<{
     driverStatus: string;

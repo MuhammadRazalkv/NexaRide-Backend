@@ -7,6 +7,7 @@ import { AppError } from '../utils/appError';
 import { HttpStatus } from '../constants/httpStatusCodes';
 import { messages } from '../constants/httpMessages';
 import { VehicleReapplyDTO, VehicleSchemaDTO } from '../dtos/request/auth.req.dto';
+import { generateAccessToken } from '../utils/jwt';
 
 export class VehicleService implements IVehicleService {
   constructor(
@@ -19,12 +20,13 @@ export class VehicleService implements IVehicleService {
       email: any;
       status: string;
     };
+    token: string;
   }> {
     // Convert driverId to ObjectId
-    const driverId = data.driverId.toString();
+    const email = data.email;
 
     // Check if driver exists
-    const driver = await this._driverRepo.findById(driverId);
+    const driver = await this._driverRepo.findOne({ email });
     if (!driver) {
       throw new AppError(HttpStatus.NOT_FOUND, messages.DRIVER_NOT_FOUND);
     }
@@ -54,15 +56,17 @@ export class VehicleService implements IVehicleService {
     };
     try {
       const vehicle = await this._vehicleRepo.create(vehicleData);
-      await this._driverRepo.updateById(driverId, {
+      await this._driverRepo.updateById(driver.id, {
         $set: { vehicleId: vehicle._id },
       });
+      const accessToken = generateAccessToken(driver.id, 'driver');
       return {
         driver: {
           name: driver.name,
           email: driver.email,
           status: 'Pending',
         },
+        token: accessToken,
       };
     } catch (error: any) {
       if (error.code === 11000) {

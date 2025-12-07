@@ -6,6 +6,7 @@ export interface IVehicleService {
       email: any;
       status: string;
     };
+    token: string;
   }>;
   reApplyVehicle(
     id: string,

@@ -116,10 +116,8 @@ npm run dev
 - Stripe webhook signature checks
 
 ---
-## 🚪Frontend
-    ```bash
-     https://github.com/MuhammadRazalkv/NexaRide-Frontend
-      ```
+## 🚪 Frontend
+🔗 [NexaRide Frontend](https://github.com/MuhammadRazalkv/NexaRide-Frontend)
 ---
 ## 📞 Contact
 
